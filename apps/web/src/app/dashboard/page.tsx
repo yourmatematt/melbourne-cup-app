@@ -54,25 +54,23 @@ function DashboardContent() {
 
       setUser(user)
 
-      const { data: tenantUser, error: tenantError } = await supabase
-        .from('tenant_users')
-        .select('tenant_id')
-        .eq('user_id', user.id)
-        .single()
+     const { data: tenantUser, error: tenantError } = await supabase
+  .from('tenant_users')
+  .select('tenant_id')
+  .eq('user_id', user.id)
+  .single()
 
-      if (tenantError) throw tenantError
-      if (!tenantUser) throw new Error('No tenant found for user')
+if (tenantError) throw tenantError
+if (!tenantUser) throw new Error('No tenant found for user')
 
-      const { data: eventsData, error: eventsError } = await supabase
-        .from('events')
-        .select('id,name,starts_at,status,capacity,mode,created_at')
-        .eq('tenant_id', tenantUser.tenant_id)
-        .order('created_at', { ascending: false })
+// Fetch events via API route
+const response = await fetch(`/api/events?tenant_id=${(tenantUser as any).tenant_id}`)
+const { data: eventsData, error: eventsError } = await response.json()
 
-      if (eventsError) throw eventsError
+if (eventsError) throw new Error(eventsError)
 
       const eventsWithCounts = await Promise.all(
-        (eventsData || []).map(async (event) => {
+        (eventsData || []).map(async (event: any) => {
           const { count } = await supabase
             .from('patron_entries')
             .select('*', { count: 'exact', head: true })
