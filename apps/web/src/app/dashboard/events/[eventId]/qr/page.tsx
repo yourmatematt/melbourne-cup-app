@@ -43,12 +43,15 @@ export default function EventQRPage() {
   const [error, setError] = useState<string | null>(null)
 
   const publicUrl = typeof window !== 'undefined'
-    ? `${window.location.origin}/e/${eventId}`
-    : `https://melcup.app/e/${eventId}`
+    ? `${window.location.origin}/e/${eventId || ''}`
+    : `https://melcup.app/e/${eventId || ''}`
 
   useEffect(() => {
     if (eventId) {
       loadEventData()
+    } else {
+      setError('Event ID is missing')
+      setLoading(false)
     }
   }, [eventId])
 
@@ -93,6 +96,7 @@ export default function EventQRPage() {
         .single()
 
       if (eventError) throw eventError
+      if (!eventData) throw new Error('Event not found')
 
       // Get participant count
       const { count } = await supabase
@@ -103,7 +107,7 @@ export default function EventQRPage() {
       setEvent({
         ...eventData,
         participant_count: count || 0,
-        tenant: eventData.tenants
+        tenant: eventData.tenants || { name: 'Unknown Venue' }
       })
 
     } catch (err) {
@@ -126,9 +130,9 @@ export default function EventQRPage() {
 
   const handleDownloadQR = () => {
     const canvas = document.querySelector('#large-qr-canvas') as HTMLCanvasElement
-    if (canvas) {
+    if (canvas && event?.name) {
       const link = document.createElement('a')
-      link.download = `${event?.name.replace(/[^a-zA-Z0-9]/g, '-')}-qr-code.png`
+      link.download = `${event.name.replace(/[^a-zA-Z0-9]/g, '-')}-qr-code.png`
       link.href = canvas.toDataURL()
       link.click()
       toast.success('QR code downloaded!')
@@ -256,14 +260,16 @@ export default function EventQRPage() {
           {/* QR Code */}
           <div className="flex flex-col items-center space-y-6 print:space-y-4">
             <div className="bg-white p-8 rounded-lg border-4 border-gray-200 print:p-4 print:border-2">
-              <QRCode
-                id="large-qr-canvas"
-                value={publicUrl}
-                size={320}
-                level="H"
-                includeMargin={true}
-                className="print:!w-64 print:!h-64"
-              />
+              {publicUrl && (
+                <QRCode
+                  id="large-qr-canvas"
+                  value={publicUrl}
+                  size={320}
+                  level="H"
+                  includeMargin={true}
+                  className="print:!w-64 print:!h-64"
+                />
+              )}
             </div>
 
             {/* Instructions */}
@@ -300,7 +306,7 @@ export default function EventQRPage() {
             {/* Venue branding */}
             <div className="text-center pt-6 border-t print:pt-4">
               <p className="text-lg font-medium text-gray-900 print:text-base">
-                {event.tenant.name}
+                {event.tenant?.name || 'Melbourne Cup Event'}
               </p>
               <p className="text-sm text-gray-600">
                 Melbourne Cup 2025
