@@ -33,6 +33,15 @@ function DashboardContent() {
   const router = useRouter()
   const supabase = createClient()
 
+async function fetchUserAndEvents() {
+  try {
+    // DEBUG: Check environment variables
+    console.log('SUPABASE_URL:', process.env.NEXT_PUBLIC_SUPABASE_URL)
+    console.log('SUPABASE_KEY:', process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ? 'EXISTS' : 'MISSING')
+    console.log('Supabase client:', supabase)
+    
+    console.log('Fetching user and events...')
+
   useEffect(() => {
     fetchUserAndEvents()
   }, [])
