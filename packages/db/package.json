@@ -1,0 +1,22 @@
+{
+  "name": "@melbourne-cup/db",
+  "version": "0.1.0",
+  "private": true,
+  "main": "./index.ts",
+  "types": "./index.ts",
+  "scripts": {
+    "migrate": "supabase migration up",
+    "migration:new": "supabase migration new",
+    "reset": "supabase db reset",
+    "types": "supabase gen types typescript --local > types/database.types.ts",
+    "type-check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.38.0",
+    "zod": "^3.22.0"
+  },
+  "devDependencies": {
+    "supabase": "^1.120.0",
+    "typescript": "^5.0.0"
+  }
+}

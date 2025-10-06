@@ -1,0 +1,12 @@
+{
+  "dependencies": {
+    "recharts": "^2.8.0",
+    "papaparse": "^5.4.1",
+    "pdfkit": "^0.14.0",
+    "@types/papaparse": "^5.3.14",
+    "@types/pdfkit": "^0.12.12"
+  },
+  "devDependencies": {
+    "@types/node": "^20.8.0"
+  }
+}

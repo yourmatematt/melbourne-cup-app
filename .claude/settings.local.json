@@ -1,0 +1,26 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(mkdir:*)",
+      "Bash(npx create-next-app:*)",
+      "Bash(npm install:*)",
+      "Bash(npx:*)",
+      "Bash(npm run dev:*)",
+      "Bash(curl:*)",
+      "Bash(pkill:*)",
+      "Bash(taskkill:*)",
+      "Bash(wmic process where:*)",
+      "Bash(node:*)",
+      "Bash(find:*)",
+      "Bash(set -a)",
+      "Bash(source:*)",
+      "Bash(set +a)",
+      "Bash(NODE_OPTIONS='--max-old-space-size=4096' npm run dev)",
+      "Bash(Remove-Item -Recurse -Force .next)",
+      "Bash(npm run build:*)",
+      "WebSearch"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
