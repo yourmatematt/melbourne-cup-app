@@ -103,16 +103,16 @@ export function AddParticipantModal({
       // Generate join code
       const joinCode = Math.random().toString(36).substring(2, 8).toUpperCase()
 
-      const { error } = await supabase
-        .from('patron_entries')
-        .insert({
-          event_id: event.id,
-          display_name: newParticipant.displayName.trim(),
-          email: email || null,
-          phone: newParticipant.phone.trim() || null,
-          consent: newParticipant.marketingConsent,
-          join_code: joinCode
-        })
+  const { error } = await supabase
+  .from('patron_entries')
+  .insert({
+    event_id: event.id,
+    participant_name: newParticipant.displayName.trim(),
+    email: email || null,
+    phone: newParticipant.phone.trim() || null,
+    marketing_consent: newParticipant.marketingConsent,
+    join_code: joinCode
+  } as any)
 
       if (error) {
         if (error.code === '23505') {
