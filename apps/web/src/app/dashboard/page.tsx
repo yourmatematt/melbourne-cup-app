@@ -9,8 +9,6 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { QRCodeShare } from '@/components/ui/qr-code'
 import { AddParticipantModal } from '@/components/shared/add-participant-modal'
-// import { BrandingProvider, useBranding } from '@/contexts/branding-context'
-// import { useBrandColors, getBrandTailwindClasses } from '@/hooks/use-brand-colors'
 
 type Event = {
   id: string
@@ -35,29 +33,23 @@ function DashboardContent() {
   const router = useRouter()
   const supabase = createClient()
 
-  // const { brandKit } = useBranding()
-  // const brandColors = useBrandColors()
-  // const brandClasses = getBrandTailwindClasses(brandColors)
-
   useEffect(() => {
     fetchUserAndEvents()
   }, [])
 
   async function fetchUserAndEvents() {
     try {
-      console.log('🔍 Fetching user and events...')
+      console.log('Fetching user and events...')
 
       // Get current user
       const { data: { user }, error: userError } = await supabase.auth.getUser()
       if (userError) throw userError
 
       if (!user) {
-        console.log('❌ No user found, redirecting to login')
         router.push('/login')
         return
       }
 
-      console.log('✅ User found:', user.id)
       setUser(user)
 
       // Get user's tenant ID
@@ -67,57 +59,17 @@ function DashboardContent() {
         .eq('user_id', user.id)
         .single()
 
-      if (tenantError) {
-        console.log('❌ Tenant error:', tenantError)
-        throw tenantError
-      }
-
-      if (!tenantUser) {
-        console.log('❌ No tenant found for user')
-        throw new Error('No tenant found for user')
-      }
-
-      console.log('✅ Tenant found:', tenantUser.tenant_id)
-
-      // Debug Supabase client
-      console.log('🔍 Supabase client info:', {
-        url: supabase.supabaseUrl,
-        key: supabase.supabaseKey?.substring(0, 20) + '...',
-        restUrl: supabase.rest?.url,
-        headers: supabase.rest?.headers
-      })
+      if (tenantError) throw tenantError
+      if (!tenantUser) throw new Error('No tenant found for user')
 
       // Fetch events for this tenant
-      console.log('📊 About to fetch events with query:', {
-        table: 'events',
-        method: 'select',
-        tenant_id: tenantUser.tenant_id
-      })
-
-      // Test 1: Simple query first
-      console.log('🧪 Testing simple query first...')
-      const { data: testData, error: testError } = await supabase
-        .from('events')
-        .select('id, name')
-        .limit(1)
-
-      console.log('🧪 Simple query result:', { data: testData, error: testError })
-
-      // Test 2: Simplified query without multiline string
-      console.log('🧪 Testing simplified query...')
       const { data: eventsData, error: eventsError } = await supabase
         .from('events')
         .select('id,name,starts_at,status,capacity,mode,created_at')
         .eq('tenant_id', tenantUser.tenant_id)
         .order('created_at', { ascending: false })
 
-      if (eventsError) {
-        console.log('❌ Events error:', eventsError)
-        throw eventsError
-      }
-
-      console.log('✅ Events fetched:', eventsData?.length || 0, 'events')
-      console.log('📊 Events data:', eventsData)
+      if (eventsError) throw eventsError
 
       // For each event, get participant count
       const eventsWithCounts = await Promise.all(
@@ -143,13 +95,11 @@ function DashboardContent() {
       setStats({
         totalEvents,
         activeParticipants,
-        revenue: 0 // Revenue calculation not implemented yet
+        revenue: 0
       })
 
-      console.log('📈 Stats calculated:', { totalEvents, activeParticipants })
-
     } catch (err) {
-      console.error('❌ Error fetching data:', err)
+      console.error('Error fetching data:', err)
       setError(err instanceof Error ? err.message : 'Failed to fetch data')
     } finally {
       setLoading(false)
@@ -261,13 +211,6 @@ function DashboardContent() {
         <div className="flex justify-between items-center mb-8">
           <div>
             <div className="flex items-center space-x-4 mb-2">
-              {/* {brandKit?.logo_url && (
-                <img
-                  src={brandKit.logo_url}
-                  alt="Venue Logo"
-                  className="h-12 object-contain"
-                />
-              )} */}
               <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
             </div>
             <p className="mt-2 text-gray-600">
@@ -471,16 +414,6 @@ function DashboardContent() {
           </Card>
         </div>
 
-        {/* Sponsor Banner */}
-        {/* {brandKit?.sponsor_banner_url && (
-          <div className="mt-8 text-center">
-            <img
-              src={brandKit.sponsor_banner_url}
-              alt="Sponsor"
-              className="h-16 mx-auto object-contain opacity-90"
-            />
-          </div>
-        )} */}
       </div>
 
       {/* Add Participant Modal */}

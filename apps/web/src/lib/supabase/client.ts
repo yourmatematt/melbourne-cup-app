@@ -1,37 +1,26 @@
 import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 
-export function createClient() {
-  console.log('🔧 Creating Supabase client with regular supabase-js instead of SSR')
+// Singleton Supabase client to prevent multiple instances
+let supabaseClient: ReturnType<typeof createSupabaseClient> | null = null
 
-  const client = createSupabaseClient(
+export function createClient() {
+  // Return existing client if already created
+  if (supabaseClient) {
+    return supabaseClient
+  }
+
+  // Create new client only once
+  supabaseClient = createSupabaseClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
-      db: {
-        schema: 'public'
-      },
       auth: {
         persistSession: true,
-        autoRefreshToken: true
+        autoRefreshToken: true,
+        detectSessionInUrl: true
       }
     }
   )
 
-  // Add debugging to see what method is being used
-  const originalFrom = client.from.bind(client)
-  client.from = function(relation) {
-    console.log(`🔍 Supabase query starting for table: ${relation}`)
-    const query = originalFrom(relation)
-
-    // Override the select method to log details
-    const originalSelect = query.select.bind(query)
-    query.select = function(columns, options) {
-      console.log(`📊 SELECT query: table=${relation}, columns=${columns}, options=`, options)
-      return originalSelect(columns, options)
-    }
-
-    return query
-  }
-
-  return client
+  return supabaseClient
 }
