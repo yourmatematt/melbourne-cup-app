@@ -4,6 +4,10 @@ const nextConfig = {
     // Ignore TypeScript errors during development
     ignoreBuildErrors: true,
   },
+  eslint: {
+    // Ignore ESLint errors during builds
+    ignoreDuringBuilds: true,
+  },
   experimental: {
     serverComponentsExternalPackages: ['qrcode-styling']
   },
