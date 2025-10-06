@@ -79,18 +79,35 @@ function DashboardContent() {
 
       console.log('✅ Tenant found:', tenantUser.tenant_id)
 
+      // Debug Supabase client
+      console.log('🔍 Supabase client info:', {
+        url: supabase.supabaseUrl,
+        key: supabase.supabaseKey?.substring(0, 20) + '...',
+        restUrl: supabase.rest?.url,
+        headers: supabase.rest?.headers
+      })
+
       // Fetch events for this tenant
+      console.log('📊 About to fetch events with query:', {
+        table: 'events',
+        method: 'select',
+        tenant_id: tenantUser.tenant_id
+      })
+
+      // Test 1: Simple query first
+      console.log('🧪 Testing simple query first...')
+      const { data: testData, error: testError } = await supabase
+        .from('events')
+        .select('id, name')
+        .limit(1)
+
+      console.log('🧪 Simple query result:', { data: testData, error: testError })
+
+      // Test 2: Simplified query without multiline string
+      console.log('🧪 Testing simplified query...')
       const { data: eventsData, error: eventsError } = await supabase
         .from('events')
-        .select(`
-          id,
-          name,
-          starts_at,
-          status,
-          capacity,
-          mode,
-          created_at
-        `)
+        .select('id,name,starts_at,status,capacity,mode,created_at')
         .eq('tenant_id', tenantUser.tenant_id)
         .order('created_at', { ascending: false })
 
