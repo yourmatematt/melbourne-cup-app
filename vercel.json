@@ -1,7 +1,7 @@
 {
   "version": 2,
   "buildCommand": "turbo build",
-  "outputDirectory": "apps/web/.next",
+  "outputDirectory": ".next",
   "installCommand": "npm install",
   "framework": "nextjs",
   "functions": {
