@@ -42,7 +42,7 @@ export async function POST(
     // Get event details
     const { data: event, error: eventError } = await supabase
       .from('events')
-      .select('id, name, status, capacity')
+      .select('id, name, status, capacity, requires_payment')
       .eq('id', eventId)
       .single()
 
@@ -113,7 +113,7 @@ export async function POST(
         marketing_consent: body.marketingConsent || false,
         join_code: joinCode,
         entry_method: 'self-registered',
-        payment_status: 'free',
+        payment_status: event.requires_payment ? 'pending' : 'paid',
         created_at: new Date().toISOString()
       })
       .select('id, join_code, participant_name, email')
