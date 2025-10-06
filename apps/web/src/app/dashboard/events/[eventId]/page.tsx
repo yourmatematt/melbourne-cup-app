@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge'
 import { ArrowLeft, Calendar, Users, Clock, Play, Trophy, Share2, Settings, Plus, Eye, QrCode, Award } from 'lucide-react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
+import { AddParticipantModal } from '@/components/shared/add-participant-modal'
 
 type Event = {
   id: string
@@ -53,6 +54,9 @@ export default function EventManagePage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [user, setUser] = useState<any>(null)
+  const [showAddParticipantModal, setShowAddParticipantModal] = useState(false)
+  const [selectedEvent, setSelectedEvent] = useState<Event | null>(null)
+  const [eventParticipants, setEventParticipants] = useState<any[]>([])
 
   const router = useRouter()
   const params = useParams()
@@ -184,6 +188,45 @@ export default function EventManagePage() {
       setError(err instanceof Error ? err.message : 'Failed to fetch event data')
     } finally {
       setLoading(false)
+    }
+  }
+
+  async function handleAddParticipant(event: Event) {
+    try {
+      setSelectedEvent(event)
+
+      const { data: participants, error } = await supabase
+        .from('patron_entries')
+        .select('id, participant_name, email, phone, marketing_consent, join_code, created_at')
+        .eq('event_id', event.id)
+        .order('created_at', { ascending: false })
+
+      if (error) {
+        console.error('Error fetching participants:', error)
+        alert('Failed to load participant data')
+        return
+      }
+
+      setEventParticipants(participants || [])
+      setShowAddParticipantModal(true)
+    } catch (err) {
+      console.error('Error opening add participant modal:', err)
+      alert('Failed to open add participant form')
+    }
+  }
+
+  async function handleParticipantAdded() {
+    if (selectedEvent) {
+      const { count } = await supabase
+        .from('patron_entries')
+        .select('*', { count: 'exact', head: true })
+        .eq('event_id', selectedEvent.id)
+
+      setParticipants(prevParticipants => {
+        // Refresh participants data
+        fetchEventData()
+        return prevParticipants
+      })
     }
   }
 
@@ -384,9 +427,14 @@ export default function EventManagePage() {
                     Current registered participants for this event
                   </CardDescription>
                 </div>
-                <Button size="sm">
+                <Button
+                  size="sm"
+                  onClick={() => handleAddParticipant(event)}
+                  disabled={(participants.length) >= (event.capacity)}
+                  title={(participants.length) >= (event.capacity) ? 'Event is full' : 'Add participant manually'}
+                >
                   <Plus className="mr-2 h-4 w-4" />
-                  Add Participant
+                  {(participants.length) >= (event.capacity) ? 'Full' : 'Add Participant'}
                 </Button>
               </div>
             </CardHeader>
@@ -523,6 +571,16 @@ export default function EventManagePage() {
           </Button>
         </div>
       </div>
+
+      {selectedEvent && (
+        <AddParticipantModal
+          isOpen={showAddParticipantModal}
+          onOpenChange={setShowAddParticipantModal}
+          event={selectedEvent}
+          participants={eventParticipants}
+          onParticipantAdded={handleParticipantAdded}
+        />
+      )}
     </div>
   )
 }
