@@ -33,24 +33,17 @@ function DashboardContent() {
   const router = useRouter()
   const supabase = createClient()
 
-async function fetchUserAndEvents() {
-  try {
-    // DEBUG: Check environment variables
-    console.log('SUPABASE_URL:', process.env.NEXT_PUBLIC_SUPABASE_URL)
-    console.log('SUPABASE_KEY:', process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ? 'EXISTS' : 'MISSING')
-    console.log('Supabase client:', supabase)
-    
-    console.log('Fetching user and events...')
-
   useEffect(() => {
     fetchUserAndEvents()
   }, [])
 
   async function fetchUserAndEvents() {
     try {
+      console.log('SUPABASE_URL:', process.env.NEXT_PUBLIC_SUPABASE_URL)
+      console.log('SUPABASE_KEY:', process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ? 'EXISTS' : 'MISSING')
+      console.log('Supabase client:', supabase)
       console.log('Fetching user and events...')
 
-      // Get current user
       const { data: { user }, error: userError } = await supabase.auth.getUser()
       if (userError) throw userError
 
@@ -61,7 +54,6 @@ async function fetchUserAndEvents() {
 
       setUser(user)
 
-      // Get user's tenant ID
       const { data: tenantUser, error: tenantError } = await supabase
         .from('tenant_users')
         .select('tenant_id')
@@ -71,7 +63,6 @@ async function fetchUserAndEvents() {
       if (tenantError) throw tenantError
       if (!tenantUser) throw new Error('No tenant found for user')
 
-      // Fetch events for this tenant
       const { data: eventsData, error: eventsError } = await supabase
         .from('events')
         .select('id,name,starts_at,status,capacity,mode,created_at')
@@ -80,7 +71,6 @@ async function fetchUserAndEvents() {
 
       if (eventsError) throw eventsError
 
-      // For each event, get participant count
       const eventsWithCounts = await Promise.all(
         (eventsData || []).map(async (event) => {
           const { count } = await supabase
@@ -97,7 +87,6 @@ async function fetchUserAndEvents() {
 
       setEvents(eventsWithCounts)
 
-      // Calculate stats
       const totalEvents = eventsWithCounts.length
       const activeParticipants = eventsWithCounts.reduce((sum, event) => sum + (event.participant_count || 0), 0)
 
@@ -119,7 +108,6 @@ async function fetchUserAndEvents() {
     try {
       setSelectedEvent(event)
 
-      // Fetch current participants for this event
       const { data: participants, error } = await supabase
         .from('patron_entries')
         .select('id, participant_name, email, phone, marketing_consent, join_code, created_at')
@@ -141,14 +129,12 @@ async function fetchUserAndEvents() {
   }
 
   async function handleParticipantAdded() {
-    // Refresh the specific event's participant count
     if (selectedEvent) {
       const { count } = await supabase
         .from('patron_entries')
         .select('*', { count: 'exact', head: true })
         .eq('event_id', selectedEvent.id)
 
-      // Update the event in the events array
       setEvents(prevEvents =>
         prevEvents.map(event =>
           event.id === selectedEvent.id
@@ -157,7 +143,6 @@ async function fetchUserAndEvents() {
         )
       )
 
-      // Refresh stats
       fetchUserAndEvents()
     }
   }
@@ -234,7 +219,6 @@ async function fetchUserAndEvents() {
           </Link>
         </div>
 
-        {/* Quick stats */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -276,7 +260,6 @@ async function fetchUserAndEvents() {
           </Card>
         </div>
 
-        {/* Events List */}
         {events.length > 0 ? (
           <>
             <div className="flex justify-between items-center mb-6">
@@ -331,7 +314,6 @@ async function fetchUserAndEvents() {
                         </div>
                       </div>
 
-                      {/* QR Code and sharing options */}
                       {event.status === 'active' && (
                         <div className="border-t pt-3">
                           <div className="flex items-center justify-between">
@@ -360,7 +342,6 @@ async function fetchUserAndEvents() {
                         </div>
                       )}
 
-                      {/* Show QR option for draft events but disabled */}
                       {event.status === 'draft' && (
                         <div className="border-t pt-3">
                           <div className="flex items-center justify-between">
@@ -384,7 +365,6 @@ async function fetchUserAndEvents() {
           </>
         ) : null}
 
-        {/* Quick actions */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <Card>
             <CardHeader>
@@ -422,10 +402,8 @@ async function fetchUserAndEvents() {
             </CardContent>
           </Card>
         </div>
-
       </div>
 
-      {/* Add Participant Modal */}
       {selectedEvent && (
         <AddParticipantModal
           isOpen={showAddParticipantModal}
