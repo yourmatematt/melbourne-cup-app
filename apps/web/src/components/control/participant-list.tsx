@@ -72,9 +72,9 @@ export function ParticipantList({
 
   // Filter participants based on search and filters
   const filteredParticipants = participants.filter(participant => {
-    const matchesSearch = participant.display_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         (participant.email && participant.email.toLowerCase().includes(searchTerm.toLowerCase())) ||
-                         (participant.join_code && participant.join_code.toLowerCase().includes(searchTerm.toLowerCase()))
+    const matchesSearch = (participant.display_name?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+                         (participant.email?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+                         (participant.join_code?.toLowerCase() || '').includes(searchTerm.toLowerCase())
 
     const assignment = assignments.find(a => a.patron_entry_id === participant.id)
     const isAssigned = !!assignment

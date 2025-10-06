@@ -79,9 +79,9 @@ export function WinnersManagement({ event, onDataChange }: WinnersManagementProp
   const supabase = createClient()
 
   const filteredWinners = winners.filter(winner =>
-    winner.participant_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    winner.join_code.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    winner.horse_number.toString().includes(searchTerm)
+    (winner.participant_name?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+    (winner.join_code?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+    (winner.horse_number?.toString() || '').includes(searchTerm)
   )
 
   useEffect(() => {
