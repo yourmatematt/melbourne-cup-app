@@ -176,9 +176,32 @@ export default function PublicEntryPage() {
         return
       }
 
-      // Redirect to success page with registration data
-      const registrationData = encodeURIComponent(JSON.stringify(data.data))
-      router.push(`/events/${eventId}/success?data=${registrationData}`)
+      // Format registration data for success page
+      const registrationData = {
+        id: data.data.participant.id,
+        joinCode: data.data.participant.joinCode,
+        name: data.data.participant.name,
+        paymentStatus: 'paid' as const, // For free events, status is 'paid'
+        paymentDeadline: null,
+        paymentAmount: 0,
+        requiresPayment: false,
+        promo: {
+          enabled: false,
+          message: null,
+          deadline: null,
+          duration: 0
+        },
+        event: {
+          id: data.data.event.id,
+          name: data.data.event.name,
+          entryFee: 0,
+          paymentTimeoutMinutes: 0
+        }
+      }
+
+      // Redirect to success page with formatted data
+      const encodedData = encodeURIComponent(JSON.stringify(registrationData))
+      router.push(`/events/${eventId}/success?data=${encodedData}`)
 
     } catch (err) {
       console.error('Registration error:', err)
