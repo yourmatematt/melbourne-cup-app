@@ -80,8 +80,8 @@ function secureShuffleArray<T>(array: T[], seed?: string): { shuffled: T[], used
 function assignToHorses(
   shuffledParticipants: any[],
   availableHorses: any[]
-): { participantId: string, horseId: string, drawOrder: number }[] {
-  const assignments: { participantId: string, horseId: string, drawOrder: number }[] = []
+): { participantId: string, horseId: string, horseNumber: number, drawOrder: number }[] {
+  const assignments: { participantId: string, horseId: string, horseNumber: number, drawOrder: number }[] = []
 
   if (availableHorses.length === 0) {
     throw new Error('No available horses for assignment')
@@ -94,6 +94,7 @@ function assignToHorses(
     assignments.push({
       participantId: participant.id,
       horseId: horse.id,
+      horseNumber: horse.number,
       drawOrder: index + 1
     })
   })
@@ -253,9 +254,22 @@ export async function POST(
       .order('number', { ascending: true })
 
     if (horsesError) {
+      console.error(`❌ Draw API: Failed to fetch horses for event ${eventId}:`, horsesError)
       return NextResponse.json(
         { success: false, error: `Failed to fetch horses: ${horsesError.message}` },
         { status: 500 }
+      )
+    }
+
+    console.log(`🐎 Draw API: Found ${allHorses?.length || 0} horses for event ${eventId}`, {
+      horses: allHorses?.map(h => ({ id: h.id, number: h.number, name: h.name, scratched: h.is_scratched }))
+    })
+
+    if (!allHorses || allHorses.length === 0) {
+      console.error(`❌ Draw API: No horses found for event ${eventId}. Horses must be created before drawing.`)
+      return NextResponse.json(
+        { success: false, error: 'No horses found for this event. Please create horses before running the draw.' },
+        { status: 400 }
       )
     }
 
@@ -278,8 +292,15 @@ export async function POST(
         availableBeforeFilter: allHorses?.filter(h => !assignedHorseIds.includes(h.id)).length || 0,
         scratched: allHorses?.filter(h => h.is_scratched).length || 0
       })
+
+      const errorMessage = allHorses?.length === 0
+        ? 'No horses found for this event. Please create horses before running the draw.'
+        : assignedHorseIds.length === allHorses?.length
+        ? 'All horses have already been assigned. No more draws can be performed.'
+        : 'No available horses found for assignment. All remaining horses may be scratched.'
+
       return NextResponse.json(
-        { success: false, error: 'No available horses found for assignment' },
+        { success: false, error: errorMessage },
         { status: 400 }
       )
     }
@@ -322,7 +343,8 @@ export async function POST(
         .insert({
           event_id: eventId,
           patron_entry_id: assignment.participantId,
-          event_horse_id: assignment.horseId
+          event_horse_id: assignment.horseId,
+          horse_number: assignment.horseNumber
         })
         .select(`
           id,
