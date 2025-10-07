@@ -41,6 +41,12 @@ export function SignupForm() {
     setError(null)
 
     try {
+      console.log('Attempting signup with:', {
+        email: data.email,
+        redirectTo: `${window.location.origin}/auth/callback`,
+        supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL
+      })
+
       // Sign up the user with email confirmation
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: data.email,
@@ -53,13 +59,25 @@ export function SignupForm() {
         }
       })
 
+      console.log('Signup response:', { authData, authError })
+
       if (authError) {
+        console.error('Signup auth error:', authError)
         throw authError
       }
 
       if (!authData.user) {
+        console.error('No user returned from signup')
         throw new Error('Failed to create user account')
       }
+
+      // Log whether email confirmation is required
+      console.log('User created:', {
+        id: authData.user.id,
+        email: authData.user.email,
+        emailConfirmed: authData.user.email_confirmed_at,
+        confirmationSentAt: authData.user.confirmation_sent_at
+      })
 
       // Redirect to check email page (tenant creation happens during onboarding after email verification)
       router.push(`/auth/check-email?email=${encodeURIComponent(data.email)}`)

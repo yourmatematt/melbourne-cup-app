@@ -1,15 +1,71 @@
 'use client'
 
-import { Suspense } from 'react'
+import { Suspense, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
+import { createClient } from '@/lib/supabase/client'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Mail, ArrowLeft } from 'lucide-react'
+import { Mail, ArrowLeft, CheckCircle, AlertCircle } from 'lucide-react'
 import Link from 'next/link'
 
 function CheckEmailContent() {
   const searchParams = useSearchParams()
   const email = searchParams.get('email')
+  const supabase = createClient()
+
+  const [isResending, setIsResending] = useState(false)
+  const [resendCooldown, setResendCooldown] = useState(0)
+  const [message, setMessage] = useState<{ type: 'success' | 'error' | null, text: string }>({ type: null, text: '' })
+
+  const handleResendEmail = async () => {
+    if (!email || isResending || resendCooldown > 0) return
+
+    setIsResending(true)
+    setMessage({ type: null, text: '' })
+
+    try {
+      const { error } = await supabase.auth.resend({
+        type: 'signup',
+        email: email,
+        options: {
+          emailRedirectTo: `${window.location.origin}/auth/callback`
+        }
+      })
+
+      if (error) {
+        console.error('Resend email error:', error)
+        setMessage({
+          type: 'error',
+          text: error.message || 'Failed to resend verification email'
+        })
+      } else {
+        setMessage({
+          type: 'success',
+          text: 'Verification email sent! Check your inbox and spam folder.'
+        })
+
+        // Start 60-second cooldown
+        setResendCooldown(60)
+        const timer = setInterval(() => {
+          setResendCooldown(prev => {
+            if (prev <= 1) {
+              clearInterval(timer)
+              return 0
+            }
+            return prev - 1
+          })
+        }, 1000)
+      }
+    } catch (err) {
+      console.error('Resend error:', err)
+      setMessage({
+        type: 'error',
+        text: 'Failed to resend verification email. Please try again.'
+      })
+    } finally {
+      setIsResending(false)
+    }
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
@@ -33,6 +89,21 @@ function CheckEmailContent() {
               </div>
             )}
 
+            {message.type && (
+              <div className={`p-3 rounded-md flex items-center space-x-2 ${
+                message.type === 'success'
+                  ? 'bg-green-50 text-green-800 border border-green-200'
+                  : 'bg-red-50 text-red-800 border border-red-200'
+              }`}>
+                {message.type === 'success' ? (
+                  <CheckCircle className="h-4 w-4 flex-shrink-0" />
+                ) : (
+                  <AlertCircle className="h-4 w-4 flex-shrink-0" />
+                )}
+                <p className="text-sm">{message.text}</p>
+              </div>
+            )}
+
             <div className="space-y-4">
               <h3 className="font-medium text-gray-900">Next steps:</h3>
               <ol className="text-sm text-gray-600 space-y-2">
@@ -52,14 +123,34 @@ function CheckEmailContent() {
             </div>
 
             <div className="pt-4 border-t">
-              <p className="text-xs text-gray-500 text-center mb-4">
-                Didn't receive the email? Check your spam folder or try signing up again.
-              </p>
+              <div className="text-xs text-gray-500 text-center mb-4 space-y-1">
+                <p>Didn't receive the email? Here are some things to check:</p>
+                <ul className="text-left space-y-1 mt-2">
+                  <li>• Check your spam/junk folder</li>
+                  <li>• Make sure you entered the correct email address</li>
+                  <li>• Wait a few minutes - emails can take time to arrive</li>
+                  <li>• Some email providers may block automated emails</li>
+                </ul>
+              </div>
 
               <div className="space-y-2">
+                <Button
+                  onClick={handleResendEmail}
+                  disabled={isResending || resendCooldown > 0 || !email}
+                  className="w-full"
+                  variant="outline"
+                >
+                  {isResending
+                    ? 'Sending...'
+                    : resendCooldown > 0
+                      ? `Resend in ${resendCooldown}s`
+                      : 'Resend Verification Email'
+                  }
+                </Button>
+
                 <Link href="/signup">
-                  <Button variant="outline" className="w-full">
-                    Try Again
+                  <Button variant="ghost" className="w-full text-xs">
+                    Sign up with different email
                   </Button>
                 </Link>
 
