@@ -34,10 +34,25 @@ export function OnboardingWizard() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) {
         router.push('/login')
+      } else if (!user.email_confirmed_at) {
+        // User hasn't confirmed their email yet
+        router.push(`/auth/check-email?email=${encodeURIComponent(user.email || '')}`)
       } else {
         setUser(user)
         // Get venue name from user metadata (set during signup)
         setUserVenueName(user.user_metadata?.name || '')
+
+        // Check if user already has a tenant - if so, skip onboarding
+        const { data: existingTenant } = await supabase
+          .from('tenant_users')
+          .select('tenant_id')
+          .eq('user_id', user.id)
+          .single()
+
+        if (existingTenant) {
+          // User already has a tenant, redirect to dashboard
+          router.push('/dashboard')
+        }
       }
     }
     getUser()

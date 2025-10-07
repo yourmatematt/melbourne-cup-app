@@ -49,6 +49,12 @@ export function LoginForm() {
         throw new Error('Login failed')
       }
 
+      // Check if user has confirmed their email
+      if (!authData.user.email_confirmed_at) {
+        router.push(`/auth/check-email?email=${encodeURIComponent(authData.user.email || '')}`)
+        return
+      }
+
       // Check if user has completed onboarding
       const { data: tenantUsers } = await supabase
         .from('tenant_users')

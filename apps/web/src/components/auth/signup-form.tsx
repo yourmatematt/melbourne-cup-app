@@ -41,14 +41,15 @@ export function SignupForm() {
     setError(null)
 
     try {
-      // Sign up the user
+      // Sign up the user with email confirmation
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: data.email,
         password: data.password,
         options: {
           data: {
             name: data.venueName
-          }
+          },
+          emailRedirectTo: `${window.location.origin}/auth/callback`
         }
       })
 
@@ -60,30 +61,8 @@ export function SignupForm() {
         throw new Error('Failed to create user account')
       }
 
-      // Create a slug from venue name
-      const slug = data.venueName
-        .toLowerCase()
-        .replace(/[^a-z0-9\s-]/g, '')
-        .replace(/\s+/g, '-')
-        .replace(/-+/g, '-')
-        .trim()
-
-      // Create tenant
-      const { error: tenantError } = await supabase
-        .from('tenants')
-        .insert({
-          name: data.venueName,
-          slug: slug,
-          billing_status: 'trial'
-        })
-
-      if (tenantError) {
-        console.error('Tenant creation error:', tenantError)
-        // Continue anyway - the user is created, tenant can be created later
-      }
-
-      // Redirect to onboarding
-      router.push('/onboard')
+      // Redirect to check email page (tenant creation happens during onboarding after email verification)
+      router.push(`/auth/check-email?email=${encodeURIComponent(data.email)}`)
     } catch (err) {
       console.error('Signup error:', err)
       setError(err instanceof Error ? err.message : 'Failed to create account')
