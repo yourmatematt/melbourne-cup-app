@@ -13,7 +13,6 @@ import {
   Trophy,
   Share2,
   RefreshCw,
-  Horse,
   Sparkles,
   Calendar
 } from 'lucide-react'
@@ -193,7 +192,7 @@ export function WaitingRoom({ event, patronEntry }: WaitingRoomProps) {
           <Card className="border-2 border-green-200 bg-green-50">
             <CardHeader className="text-center">
               <CardTitle className="flex items-center justify-center space-x-2 text-green-800">
-                <Horse className="w-5 h-5" />
+                <Sparkles className="w-5 h-5" />
                 <span>Your Horse</span>
                 <Sparkles className="w-5 h-5" />
               </CardTitle>
