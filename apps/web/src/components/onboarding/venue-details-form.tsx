@@ -14,7 +14,7 @@ import {
   FormMessage,
 } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback, useMemo } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { debounce } from 'lodash'
 
@@ -58,10 +58,10 @@ export function VenueDetailsForm({ onSubmit, isLoading, defaultValues, userVenue
       const generatedSlug = generateSlug(watchedName)
       form.setValue('slug', generatedSlug, { shouldValidate: true })
     }
-  }, [watchedName, form])
+  }, [watchedName, form.formState.dirtyFields.slug, form.setValue])
 
-  // Debounced slug availability check
-  const checkSlugAvailability = debounce(async (slug: string) => {
+  // Slug availability check function (stable reference)
+  const checkSlugAvailabilityRaw = useCallback(async (slug: string) => {
     if (slug.length < 3) {
       setSlugAvailable(null)
       return
@@ -87,7 +87,13 @@ export function VenueDetailsForm({ onSubmit, isLoading, defaultValues, userVenue
     } finally {
       setCheckingSlug(false)
     }
-  }, 500)
+  }, [supabase])
+
+  // Debounced version with stable reference
+  const checkSlugAvailability = useMemo(
+    () => debounce(checkSlugAvailabilityRaw, 500),
+    [checkSlugAvailabilityRaw]
+  )
 
   // Check slug availability when slug changes
   useEffect(() => {
@@ -95,6 +101,14 @@ export function VenueDetailsForm({ onSubmit, isLoading, defaultValues, userVenue
       checkSlugAvailability(watchedSlug)
     } else {
       setSlugAvailable(null)
+      setCheckingSlug(false)
+      // Cancel any pending debounced calls
+      checkSlugAvailability.cancel()
+    }
+
+    // Cleanup function to cancel debounced calls on unmount
+    return () => {
+      checkSlugAvailability.cancel()
     }
   }, [watchedSlug, checkSlugAvailability])
 
