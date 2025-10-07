@@ -632,9 +632,6 @@ export class RLSTestRunner {
   }
 }
 
-// Export singleton instance
-export const rlsTestRunner = new RLSTestRunner()
-
 // Helper function to run tests from command line or API
 export async function runRLSTests(): Promise<{
   suites: RLSTestSuite[]
@@ -646,6 +643,8 @@ export async function runRLSTests(): Promise<{
     successRate: number
   }
 }> {
+  // Create test runner instance inside function to avoid module-level Supabase client creation
+  const rlsTestRunner = new RLSTestRunner()
   const suites = await rlsTestRunner.runAllTests()
   const report = rlsTestRunner.generateReport(suites)
 

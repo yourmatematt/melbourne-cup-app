@@ -1,6 +1,9 @@
 import { createBrowserClient } from '@supabase/ssr'
 
 export function createClient() {
+  // Check if we're in a browser environment
+  const isBrowser = typeof window !== 'undefined'
+
   // Create browser client with proper cookie configuration for PKCE
   return createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -8,6 +11,9 @@ export function createClient() {
     {
       cookies: {
         get(name: string) {
+          // Only access document.cookie in browser environment
+          if (!isBrowser) return undefined
+
           // Get cookie from document.cookie
           const value = `; ${document.cookie}`
           const parts = value.split(`; ${name}=`)
@@ -16,6 +22,9 @@ export function createClient() {
           }
         },
         set(name: string, value: string, options: any) {
+          // Only set cookies in browser environment
+          if (!isBrowser) return
+
           // Set cookie with proper options for PKCE persistence
           const cookieOptions = {
             path: '/',
@@ -47,6 +56,9 @@ export function createClient() {
           })
         },
         remove(name: string, options: any) {
+          // Only remove cookies in browser environment
+          if (!isBrowser) return
+
           // Remove cookie by setting expired date
           const cookieOptions = {
             path: '/',
