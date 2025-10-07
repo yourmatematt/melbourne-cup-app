@@ -749,6 +749,137 @@ CREATE TRIGGER trigger_match_winners
     EXECUTE FUNCTION match_event_winners();
 
 -- =============================================================================
+-- UTILITY FUNCTIONS
+-- =============================================================================
+
+-- Function to get event statistics
+CREATE OR REPLACE FUNCTION get_event_stats(event_uuid UUID)
+RETURNS TABLE(
+    total_entries INTEGER,
+    total_assignments INTEGER,
+    available_horses INTEGER,
+    capacity INTEGER,
+    is_full BOOLEAN
+) AS $$
+BEGIN
+    RETURN QUERY
+    SELECT
+        COALESCE(pe_count.count, 0)::INTEGER as total_entries,
+        COALESCE(a_count.count, 0)::INTEGER as total_assignments,
+        COALESCE(eh_count.available, 0)::INTEGER as available_horses,
+        e.capacity,
+        COALESCE(pe_count.count, 0) >= e.capacity as is_full
+    FROM events e
+    LEFT JOIN (
+        SELECT event_id, COUNT(*) as count
+        FROM patron_entries
+        WHERE event_id = event_uuid
+        GROUP BY event_id
+    ) pe_count ON pe_count.event_id = e.id
+    LEFT JOIN (
+        SELECT event_id, COUNT(*) as count
+        FROM assignments
+        WHERE event_id = event_uuid
+        GROUP BY event_id
+    ) a_count ON a_count.event_id = e.id
+    LEFT JOIN (
+        SELECT event_id, COUNT(*) as available
+        FROM event_horses
+        WHERE event_id = event_uuid AND is_scratched = false
+        GROUP BY event_id
+    ) eh_count ON eh_count.event_id = e.id
+    WHERE e.id = event_uuid;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Grant permissions
+GRANT EXECUTE ON FUNCTION get_event_stats(UUID) TO authenticated;
+
+-- Function to validate event capacity
+CREATE OR REPLACE FUNCTION check_event_capacity()
+RETURNS TRIGGER AS $$
+DECLARE
+    current_entries INTEGER;
+    event_capacity INTEGER;
+BEGIN
+    -- Get current entry count and capacity
+    SELECT COUNT(*), e.capacity
+    INTO current_entries, event_capacity
+    FROM patron_entries pe
+    JOIN events e ON e.id = pe.event_id
+    WHERE pe.event_id = NEW.event_id
+    GROUP BY e.capacity;
+
+    -- Check if we're exceeding capacity
+    IF current_entries > event_capacity THEN
+        RAISE EXCEPTION 'Event capacity of % exceeded', event_capacity;
+    END IF;
+
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Trigger to check event capacity when patron entries are added
+DROP TRIGGER IF EXISTS check_patron_entry_capacity ON patron_entries;
+CREATE TRIGGER check_patron_entry_capacity
+    AFTER INSERT ON patron_entries
+    FOR EACH ROW
+    EXECUTE FUNCTION check_event_capacity();
+
+-- Function to prevent assignments to scratched horses
+CREATE OR REPLACE FUNCTION prevent_scratched_horse_assignment()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF EXISTS (
+        SELECT 1 FROM event_horses eh
+        WHERE eh.id = NEW.event_horse_id
+        AND eh.is_scratched = true
+    ) THEN
+        RAISE EXCEPTION 'Cannot assign scratched horse';
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Trigger to prevent scratched horse assignments
+DROP TRIGGER IF EXISTS prevent_scratched_assignment ON assignments;
+CREATE TRIGGER prevent_scratched_assignment
+    BEFORE INSERT OR UPDATE ON assignments
+    FOR EACH ROW
+    EXECUTE FUNCTION prevent_scratched_horse_assignment();
+
+-- Function to clean up assignments when horse is scratched
+CREATE OR REPLACE FUNCTION handle_horse_scratching()
+RETURNS TRIGGER AS $$
+BEGIN
+    -- If horse is being scratched, remove any assignments
+    IF NEW.is_scratched = true AND OLD.is_scratched = false THEN
+        DELETE FROM assignments WHERE event_horse_id = NEW.id;
+
+        -- Log the scratching event
+        INSERT INTO audit_logs (event_id, action, details)
+        VALUES (
+            NEW.event_id,
+            'horse_scratched',
+            jsonb_build_object(
+                'horse_id', NEW.id,
+                'horse_number', NEW.number,
+                'horse_name', NEW.name
+            )
+        );
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Trigger for horse scratching
+DROP TRIGGER IF EXISTS handle_scratching ON event_horses;
+CREATE TRIGGER handle_scratching
+    AFTER UPDATE ON event_horses
+    FOR EACH ROW
+    EXECUTE FUNCTION handle_horse_scratching();
+
+-- =============================================================================
 -- Database Schema Deployment Complete
 -- =============================================================================
 -- The Melbourne Cup Venue Sweep Platform database schema has been successfully created.
