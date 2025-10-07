@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import QRCode from 'qrcode.react'
+import { QRCodeSVG } from 'qrcode.react'
 import { Loader2, AlertCircle } from 'lucide-react'
 
 interface Event {
@@ -185,7 +185,7 @@ export default function QRPosterPage() {
 
         {/* QR Code */}
         <div className="mb-8 p-8 bg-white border-4 border-gray-200 rounded-lg shadow-lg">
-          <QRCode
+          <QRCodeSVG
             value={joinUrl}
             size={300}
             level="H"

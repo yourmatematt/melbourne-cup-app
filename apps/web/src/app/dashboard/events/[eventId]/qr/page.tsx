@@ -6,7 +6,7 @@ import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import QRCode from 'qrcode.react'
+import { QRCodeSVG } from 'qrcode.react'
 import {
   ArrowLeft,
   Download,
@@ -261,7 +261,7 @@ export default function EventQRPage() {
           <div className="flex flex-col items-center space-y-6 print:space-y-4">
             <div className="bg-white p-8 rounded-lg border-4 border-gray-200 print:p-4 print:border-2">
               {publicUrl && (
-                <QRCode
+                <QRCodeSVG
                   id="large-qr-canvas"
                   value={publicUrl}
                   size={320}
