@@ -31,16 +31,25 @@ export async function GET(
     const format = searchParams.get('format') || 'csv'
     const includeAssignments = searchParams.get('include_assignments') === 'true'
 
-    // Validate event exists
+    // Get current user and validate access
+    const { data: { user }, error: userError } = await supabase.auth.getUser()
+    if (userError || !user) {
+      return NextResponse.json(
+        { success: false, error: 'Authentication required' },
+        { status: 401 }
+      )
+    }
+
+    // Validate event exists and user has access (RLS will enforce tenant filtering)
     const { data: event, error: eventError } = await supabase
       .from('events')
-      .select('name, created_at')
+      .select('name, created_at, tenant_id')
       .eq('id', eventId)
       .single()
 
     if (eventError || !event) {
       return NextResponse.json(
-        { success: false, error: 'Event not found' },
+        { success: false, error: 'Event not found or access denied' },
         { status: 404 }
       )
     }

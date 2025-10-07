@@ -66,55 +66,30 @@ export function OnboardingWizard() {
 
       if (userUpdateError) throw userUpdateError
 
-      // Create or update tenant
-      const { data: existingTenant } = await supabase
-        .from('tenant_users')
-        .select('tenant_id')
-        .eq('user_id', user.id)
+      // Create new tenant (each venue gets its own tenant for proper isolation)
+      const { data: newTenant, error: tenantError } = await supabase
+        .from('tenants')
+        .insert({
+          name: venueData.name,
+          slug: venueData.slug,
+          billing_status: 'trial'
+        })
+        .select()
         .single()
 
-      let tenantId: string
+      if (tenantError) throw tenantError
+      const tenantId = newTenant.id
 
-      if (existingTenant) {
-        // Update existing tenant
-        const { data: updatedTenant, error } = await supabase
-          .from('tenants')
-          .update({
-            name: venueData.name,
-            slug: venueData.slug
-          })
-          .eq('id', existingTenant.tenant_id)
-          .select()
-          .single()
+      // Create tenant_user relationship
+      const { error: relationError } = await supabase
+        .from('tenant_users')
+        .insert({
+          tenant_id: tenantId,
+          user_id: user.id,
+          role: 'owner'
+        })
 
-        if (error) throw error
-        tenantId = updatedTenant.id
-      } else {
-        // Create new tenant
-        const { data: newTenant, error: tenantError } = await supabase
-          .from('tenants')
-          .insert({
-            name: venueData.name,
-            slug: venueData.slug,
-            billing_status: 'trial'
-          })
-          .select()
-          .single()
-
-        if (tenantError) throw tenantError
-        tenantId = newTenant.id
-
-        // Create tenant_user relationship
-        const { error: relationError } = await supabase
-          .from('tenant_users')
-          .insert({
-            tenant_id: tenantId,
-            user_id: user.id,
-            role: 'owner'
-          })
-
-        if (relationError) throw relationError
-      }
+      if (relationError) throw relationError
 
       setData(prev => ({ ...prev, venue: venueData }))
       setCurrentStep('branding')
