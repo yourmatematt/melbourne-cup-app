@@ -34,7 +34,7 @@ interface Event {
 interface Assignment {
   id: string
   patron_entry: {
-    display_name: string
+    participant_name: string
   }
   event_horse: {
     number: number
@@ -137,7 +137,7 @@ export default function LiveViewPage() {
           id,
           created_at,
           patron_entries!patron_entry_id (
-            display_name
+            participant_name
           ),
           event_horses!event_horse_id (
             number,
@@ -482,7 +482,7 @@ export default function LiveViewPage() {
                   >
                     <div>
                       <div className="font-medium text-gray-900">
-                        {assignment.patron_entry.display_name}
+                        {assignment.patron_entry.participant_name}
                       </div>
                       <div className="text-sm text-gray-500">
                         {new Date(assignment.created_at).toLocaleTimeString('en-AU', {

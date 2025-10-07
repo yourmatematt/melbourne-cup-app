@@ -420,7 +420,7 @@ export function DrawControls({
                       <SelectContent>
                         {unassignedParticipants.map((participant) => (
                           <SelectItem key={participant.id} value={participant.id}>
-                            {participant.display_name}
+                            {participant.participant_name}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -523,7 +523,7 @@ export function DrawControls({
                           const horse = getHorseForAssignment(assignment.id)
                           return (
                             <SelectItem key={assignment.id} value={assignment.id}>
-                              {participant?.display_name} - #{horse?.number} {horse?.name}
+                              {participant?.participant_name} - #{horse?.number} {horse?.name}
                             </SelectItem>
                           )
                         })}
@@ -577,7 +577,7 @@ export function DrawControls({
                       className="flex justify-between items-center p-3 bg-gray-50 rounded-lg"
                     >
                       <div>
-                        <div className="font-medium">{participant?.display_name}</div>
+                        <div className="font-medium">{participant?.participant_name}</div>
                         <div className="text-sm text-gray-500">
                           {new Date(assignment.created_at).toLocaleTimeString('en-AU', {
                             hour: '2-digit',

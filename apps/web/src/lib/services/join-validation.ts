@@ -331,7 +331,7 @@ export class JoinValidationService {
         return {
           isDuplicate: true,
           existingParticipant: similarNameCheck.participant,
-          reason: `A participant with a similar name (${similarNameCheck.participant.display_name}) has already joined. If this is you, please use the same contact details.`
+          reason: `A participant with a similar name (${similarNameCheck.participant.participant_name}) has already joined. If this is you, please use the same contact details.`
         }
       }
     }
@@ -345,7 +345,7 @@ export class JoinValidationService {
   private async checkSimilarNames(eventId: string, displayName: string) {
     const { data: participants, error } = await this.supabase
       .from('patron_entries')
-      .select('display_name, email, phone')
+      .select('participant_name, email, phone')
       .eq('event_id', eventId)
 
     if (error || !participants) {
@@ -355,7 +355,7 @@ export class JoinValidationService {
     const normalizedName = displayName.toLowerCase().trim()
 
     for (const participant of participants) {
-      const participantName = participant.display_name.toLowerCase().trim()
+      const participantName = participant.participant_name.toLowerCase().trim()
 
       // Exact match
       if (participantName === normalizedName) {

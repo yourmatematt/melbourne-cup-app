@@ -375,7 +375,7 @@ export function SpectatorMode({
                               </Badge>
                               <div>
                                 <div className="font-medium">
-                                  {assignment.patron_entry?.display_name || 'Anonymous'}
+                                  {assignment.patron_entry?.participant_name || 'Anonymous'}
                                 </div>
                               </div>
                             </div>

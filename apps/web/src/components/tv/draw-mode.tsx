@@ -234,7 +234,7 @@ export function DrawMode({
                   <Users className="w-16 h-16 text-white mx-auto mb-4" />
                   <h2 className="text-3xl font-bold text-white mb-2">PARTICIPANT</h2>
                   <div className="text-5xl font-bold text-white mb-4">
-                    {participant.display_name}
+                    {participant.participant_name}
                   </div>
                   <div className="bg-white/20 rounded-full px-6 py-2 inline-block">
                     <span className="text-white font-mono text-xl">
@@ -460,7 +460,7 @@ export function DrawMode({
                 } : {}}
                 transition={{ duration: 2, repeat: isCurrent ? Infinity : 0 }}
               >
-                <div className="text-white font-medium">{assignedParticipant?.display_name}</div>
+                <div className="text-white font-medium">{assignedParticipant?.participant_name}</div>
                 <div className="text-yellow-300 text-xs">
                   #{assignedHorse?.number} {assignedHorse?.name}
                 </div>

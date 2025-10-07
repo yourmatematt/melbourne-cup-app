@@ -72,7 +72,7 @@ export function ParticipantList({
 
   // Filter participants based on search and filters
   const filteredParticipants = participants.filter(participant => {
-    const matchesSearch = (participant.display_name?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+    const matchesSearch = (participant.participant_name?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
                          (participant.email?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
                          (participant.join_code?.toLowerCase() || '').includes(searchTerm.toLowerCase())
 
@@ -121,7 +121,7 @@ export function ParticipantList({
         .from('patron_entries')
         .insert({
           event_id: event.id,
-          display_name: newParticipant.displayName.trim(),
+          participant_name: newParticipant.displayName.trim(),
           email: email || null,
           phone: newParticipant.phone.trim() || null,
           consent: newParticipant.marketingConsent,
@@ -377,7 +377,7 @@ export function ParticipantList({
                       <div className="flex items-center space-x-3">
                         <div>
                           <h3 className="font-medium text-lg">
-                            {participant.display_name}
+                            {participant.participant_name}
                           </h3>
                           <div className="flex items-center space-x-2 text-sm text-gray-500">
                             <Clock className="w-3 h-3" />
@@ -443,7 +443,7 @@ export function ParticipantList({
                           <AlertDialogHeader>
                             <AlertDialogTitle>Remove Participant</AlertDialogTitle>
                             <AlertDialogDescription>
-                              Are you sure you want to remove {participant.display_name} from the event?
+                              Are you sure you want to remove {participant.participant_name} from the event?
                               This will also remove any horse assignment.
                             </AlertDialogDescription>
                           </AlertDialogHeader>

@@ -90,7 +90,7 @@ export function WaitingRoom({ event, patronEntry }: WaitingRoomProps) {
         // Load recent participants
         const { data: participantData } = await supabase
           .from('patron_entries')
-          .select('id, display_name, created_at')
+          .select('id, participant_name, created_at')
           .eq('event_id', event.id)
           .order('created_at', { ascending: false })
           .limit(10)
@@ -317,7 +317,7 @@ export function WaitingRoom({ event, patronEntry }: WaitingRoomProps) {
                 {participants.slice(0, 5).map((participant, index) => (
                   <div key={participant.id} className="flex justify-between items-center text-sm">
                     <span className="truncate">
-                      {participant.display_name}
+                      {participant.participant_name}
                       {participant.id === patronEntry.id && (
                         <Badge variant="secondary" className="ml-2 text-xs">You</Badge>
                       )}

@@ -52,7 +52,7 @@ interface Assignment {
   id: string
   horse_number: number
   patron_entries: {
-    display_name: string
+    participant_name: string
     join_code: string
   }
   event_horses: {
@@ -113,7 +113,7 @@ export function ResultsEntry({ event, onDataChange }: ResultsEntryProps) {
           id,
           horse_number,
           patron_entries (
-            display_name,
+            participant_name,
             join_code
           ),
           event_horses (
@@ -379,7 +379,7 @@ export function ResultsEntry({ event, onDataChange }: ResultsEntryProps) {
                   {result.horseNumber && (
                     <div className="mt-2 p-2 bg-white rounded border">
                       <div className="text-sm">
-                        <div className="font-medium">{getParticipantForHorse(result.horseNumber)?.patron_entries.display_name}</div>
+                        <div className="font-medium">{getParticipantForHorse(result.horseNumber)?.patron_entries.participant_name}</div>
                         <div className="text-gray-500">
                           Code: {getParticipantForHorse(result.horseNumber)?.patron_entries.join_code}
                         </div>

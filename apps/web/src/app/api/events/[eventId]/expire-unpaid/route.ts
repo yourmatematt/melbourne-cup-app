@@ -73,7 +73,7 @@ export async function GET(
       .from('patron_entries')
       .select(`
         id,
-        display_name,
+        participant_name,
         join_code,
         payment_deadline,
         payment_amount,

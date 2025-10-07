@@ -89,7 +89,7 @@ export function ConfirmationScreen({ event, patronEntry, onContinue }: Confirmat
               You're In! 🎉
             </h1>
             <p className="text-gray-600">
-              Welcome to the {event.name} sweep, {patronEntry.display_name}!
+              Welcome to the {event.name} sweep, {patronEntry.participant_name}!
             </p>
           </div>
         </div>

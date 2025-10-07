@@ -245,7 +245,7 @@ export function WinnerMode({
               transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
             >
               <div className="text-6xl font-bold text-white mb-4">
-                {winnerParticipant.display_name}
+                {winnerParticipant.participant_name}
               </div>
 
               <div className="flex items-center justify-center space-x-6 mb-6">

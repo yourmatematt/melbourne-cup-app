@@ -274,7 +274,7 @@ export function useRealtimeNotifications() {
     addNotification({
       type: 'participant_added',
       title: 'New Participant!',
-      message: `${participant.display_name} joined the sweep`,
+      message: `${participant.participant_name} joined the sweep`,
       autoHide: true,
       duration: 4000,
       data: participant
@@ -286,7 +286,7 @@ export function useRealtimeNotifications() {
     addNotification({
       type: 'assignment_created',
       title: 'Horse Assigned!',
-      message: `${participant.display_name} got #${horse.number} ${horse.name}`,
+      message: `${participant.participant_name} got #${horse.number} ${horse.name}`,
       autoHide: true,
       duration: 6000,
       data: { participant, horse }
@@ -316,7 +316,7 @@ export function useRealtimeNotifications() {
     addNotification({
       type: 'winner_announced',
       title: '🏆 We have a winner!',
-      message: `${winner.participant.display_name} wins with ${winner.horse.name}!`,
+      message: `${winner.participant.participant_name} wins with ${winner.horse.name}!`,
       autoHide: false,
       data: winner
     })

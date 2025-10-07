@@ -218,7 +218,7 @@ export function ShuffleMode({
                   transition={{ duration: 1, repeat: isShuffling ? Infinity : 0 }}
                 >
                   <div className="text-center text-white">
-                    <div className="font-bold text-sm">{card.data.display_name}</div>
+                    <div className="font-bold text-sm">{card.data.participant_name}</div>
                     <div className="text-xs opacity-75">{card.data.join_code}</div>
                   </div>
                 </motion.div>

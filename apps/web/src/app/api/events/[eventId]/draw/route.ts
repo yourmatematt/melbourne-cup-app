@@ -27,7 +27,7 @@ interface Assignment {
   event_horse_id: string
   created_at: string
   patron_entry: {
-    display_name: string
+    participant_name: string
     email?: string
   }
   event_horse: {
@@ -201,7 +201,7 @@ export async function POST(
     // Get unassigned participants
     const { data: allParticipants, error: participantsError } = await supabase
       .from('patron_entries')
-      .select('id, display_name, email')
+      .select('id, participant_name, email')
       .eq('event_id', eventId)
       .order('created_at', { ascending: true })
 
@@ -330,7 +330,7 @@ export async function POST(
           event_horse_id,
           created_at,
           patron_entries!patron_entry_id (
-            display_name,
+            participant_name,
             email
           ),
           event_horses!event_horse_id (
@@ -412,7 +412,7 @@ export async function GET(
         event_horse_id,
         created_at,
         patron_entries!patron_entry_id (
-          display_name,
+          participant_name,
           email
         ),
         event_horses!event_horse_id (

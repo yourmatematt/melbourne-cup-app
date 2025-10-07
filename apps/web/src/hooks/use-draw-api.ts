@@ -28,7 +28,7 @@ interface Assignment {
   draw_order: number
   created_at: string
   patron_entry: {
-    display_name: string
+    participant_name: string
     email?: string
   }
   event_horse: {

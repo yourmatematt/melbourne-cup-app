@@ -7,7 +7,7 @@ import type { RealtimeChannel } from '@supabase/supabase-js'
 interface Participant {
   id: string
   event_id: string
-  display_name: string
+  participant_name: string
   email?: string
   phone?: string
   join_code: string

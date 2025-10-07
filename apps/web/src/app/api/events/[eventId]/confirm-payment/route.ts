@@ -32,7 +32,7 @@ export async function POST(
       .from('patron_entries')
       .select(`
         id,
-        display_name,
+        participant_name,
         join_code,
         payment_status,
         payment_deadline,
@@ -123,7 +123,7 @@ export async function POST(
         updated_at: new Date().toISOString()
       })
       .eq('id', participant.id)
-      .select('id, display_name, join_code, payment_status, paid_at, payment_amount, promo_claimed')
+      .select('id, participant_name, join_code, payment_status, paid_at, payment_amount, promo_claimed')
       .single()
 
     if (updateError) {
@@ -145,7 +145,7 @@ export async function POST(
       data: {
         participant: updatedParticipant,
         promoClaimed,
-        message: `Payment confirmed for ${updatedParticipant.display_name}${promoMessage}`
+        message: `Payment confirmed for ${updatedParticipant.participant_name}${promoMessage}`
       }
     })
 
@@ -182,7 +182,7 @@ export async function GET(
       .from('patron_entries')
       .select(`
         id,
-        display_name,
+        participant_name,
         email,
         phone,
         join_code,

@@ -85,7 +85,7 @@ function PatronJoinExperienceContent({ event }: PatronJoinExperienceProps) {
     // Optimistic update - add participant immediately
     const optimisticParticipant = {
       event_id: event.id,
-      display_name: data.displayName,
+      participant_name: data.displayName,
       email: data.email || null,
       phone: data.phone || null,
       consent: data.marketingConsent,

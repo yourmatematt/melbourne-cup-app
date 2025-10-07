@@ -70,7 +70,7 @@ export function SpectatorMode({ event, eventStats }: SpectatorModeProps) {
           .select(`
             *,
             event_horses!event_horse_id(*),
-            patron_entries!patron_entry_id(display_name)
+            patron_entries!patron_entry_id(participant_name)
           `)
           .eq('event_id', event.id)
           .order('created_at', { ascending: false })
@@ -82,7 +82,7 @@ export function SpectatorMode({ event, eventStats }: SpectatorModeProps) {
         // Load participants
         const { data: participantData } = await supabase
           .from('patron_entries')
-          .select('id, display_name, created_at')
+          .select('id, participant_name, created_at')
           .eq('event_id', event.id)
           .order('created_at', { ascending: false })
 
@@ -270,7 +270,7 @@ export function SpectatorMode({ event, eventStats }: SpectatorModeProps) {
                     className="flex justify-between items-center p-2 bg-gray-50 rounded text-sm"
                   >
                     <span className="font-medium">
-                      {assignment.patron_entries.display_name}
+                      {assignment.patron_entries.participant_name}
                     </span>
                     <div className="text-right">
                       <div className="font-mono">
@@ -314,7 +314,7 @@ export function SpectatorMode({ event, eventStats }: SpectatorModeProps) {
                   key={participant.id}
                   className="flex justify-between items-center text-sm py-1"
                 >
-                  <span>{participant.display_name}</span>
+                  <span>{participant.participant_name}</span>
                   <span className="text-gray-500 text-xs">
                     #{index + 1}
                   </span>

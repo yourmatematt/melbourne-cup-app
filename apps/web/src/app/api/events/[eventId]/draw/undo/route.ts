@@ -190,7 +190,7 @@ export async function GET(
         draw_order,
         created_at,
         patron_entries!patron_entry_id (
-          display_name
+          participant_name
         ),
         event_horses!event_horse_id (
           number,

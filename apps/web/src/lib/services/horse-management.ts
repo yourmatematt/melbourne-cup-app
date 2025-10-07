@@ -266,7 +266,7 @@ export class HorseManagementService {
       .from('assignments')
       .select(`
         *,
-        patron_entries!patron_entry_id(display_name),
+        patron_entries!patron_entry_id(participant_name),
         event_horses!event_horse_id(number, name),
         event_horses!reassigned_from(number, name)
       `)
@@ -432,7 +432,7 @@ export class HorseManagementService {
         .insert(notificationData)
 
       // Send via external services (email, SMS, push) here
-      console.log('Notification sent to participant:', participant.display_name, notificationData)
+      console.log('Notification sent to participant:', participant.participant_name, notificationData)
     }
   }
 }

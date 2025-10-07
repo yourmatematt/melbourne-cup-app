@@ -59,7 +59,7 @@ BEGIN
   RETURNING id INTO new_assignment_id;
 
   -- Get participant and horse details for return
-  SELECT pe.display_name, eh.number, eh.name
+  SELECT pe.participant_name, eh.number, eh.name
   INTO participant_name, horse_num, horse_name
   FROM patron_entries pe, event_horses eh
   WHERE pe.id = random_participant_id

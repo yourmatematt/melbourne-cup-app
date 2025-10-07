@@ -305,7 +305,7 @@ export function DrawManager({
                       #{assignment.draw_order}
                     </Badge>
                     <div>
-                      <div className="font-medium">{assignment.patron_entry.display_name}</div>
+                      <div className="font-medium">{assignment.patron_entry.participant_name}</div>
                       {assignment.patron_entry.email && (
                         <div className="text-sm text-gray-500">{assignment.patron_entry.email}</div>
                       )}
@@ -421,7 +421,7 @@ export function DrawManager({
                   <div key={index} className="flex justify-between items-center p-2 border rounded">
                     <div className="flex items-center space-x-2">
                       <Badge variant="outline">#{assignment.draw_order}</Badge>
-                      <span>{assignment.patron_entry.display_name}</span>
+                      <span>{assignment.patron_entry.participant_name}</span>
                     </div>
                     <div className="text-right text-sm">
                       <div>Horse #{assignment.event_horse.number}</div>

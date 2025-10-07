@@ -331,7 +331,7 @@ export function EventStats({
                 recentParticipants.map((participant, index) => (
                   <div key={participant.id} className="flex justify-between items-center text-sm">
                     <div>
-                      <div className="font-medium">{participant.display_name}</div>
+                      <div className="font-medium">{participant.participant_name}</div>
                       <div className="text-gray-500 text-xs">{participant.join_code}</div>
                     </div>
                     <div className="text-right text-gray-500 text-xs">
@@ -366,7 +366,7 @@ export function EventStats({
                 recentAssignments.map((assignment) => (
                   <div key={assignment.id} className="flex justify-between items-center text-sm">
                     <div>
-                      <div className="font-medium">{assignment.participant?.display_name}</div>
+                      <div className="font-medium">{assignment.participant?.participant_name}</div>
                       <div className="text-gray-500 text-xs">
                         #{assignment.horse?.number} {assignment.horse?.name}
                       </div>
