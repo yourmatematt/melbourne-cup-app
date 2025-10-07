@@ -657,7 +657,7 @@ export default function EventSettingsPage() {
 
                   <div className="mt-2 flex items-center space-x-4 text-sm">
                     <span className="text-gray-500">
-                      Current participants: <span className="font-medium">{stats.participantCount}</span>
+                      Current participants: <span className="font-medium">{stats?.participantCount || 0}</span>
                     </span>
                     {!stats.canReduceCapacity && (
                       <span className="text-amber-600 flex items-center space-x-1">
@@ -863,7 +863,7 @@ export default function EventSettingsPage() {
                   <h4 className="font-medium text-blue-900 mb-2">Event Statistics</h4>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                     <div>
-                      <div className="text-2xl font-bold text-blue-600">{stats.participantCount}</div>
+                      <div className="text-2xl font-bold text-blue-600">{stats?.participantCount || 0}</div>
                       <div className="text-blue-700">Participants</div>
                     </div>
                     <div>
@@ -1014,7 +1014,7 @@ export default function EventSettingsPage() {
                           <AlertDialogDescription>
                             This will permanently delete:
                             <ul className="list-disc list-inside mt-2 space-y-1">
-                              <li>All participant entries ({stats.participantCount} participants)</li>
+                              <li>All participant entries ({stats?.participantCount || 0} participants)</li>
                               <li>All horse assignments and draw results</li>
                               <li>All event data and settings</li>
                               <li>All results and winner information</li>

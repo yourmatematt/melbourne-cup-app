@@ -246,11 +246,13 @@ export function ControlPanel({ event, user }: ControlPanelProps) {
 
         <TabsContent value="export" className="mt-6">
           <ExportControls
+            eventId={event.id}
             event={realtimeEvent || event}
-            participants={participants}
-            assignments={assignments}
-            horses={horses}
-            realtimeState={realtimeState}
+            stats={{
+              participantCount: eventStats?.total_entries || 0,
+              assignmentCount: eventStats?.total_assignments || 0,
+              hasResults: (realtimeEvent || event)?.results_status === 'final'
+            }}
           />
         </TabsContent>
       </Tabs>

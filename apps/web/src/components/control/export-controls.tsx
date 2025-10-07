@@ -42,7 +42,7 @@ interface ExportControlsProps {
     status: string
     starts_at?: string
   }
-  stats: {
+  stats?: {
     participantCount: number
     assignmentCount: number
     hasResults: boolean
@@ -149,24 +149,24 @@ export default function ExportControls({ eventId, event, stats }: ExportControls
       label: 'All Participants',
       description: 'Complete list with contact details',
       icon: Users,
-      available: stats.participantCount > 0,
-      badge: stats.participantCount.toString()
+      available: (stats?.participantCount || 0) > 0,
+      badge: (stats?.participantCount || 0).toString()
     },
     {
       type: 'draw-results',
       label: 'Draw Results',
       description: 'Horse assignments from draw',
       icon: FileText,
-      available: stats.assignmentCount > 0,
-      badge: stats.assignmentCount.toString()
+      available: (stats?.assignmentCount || 0) > 0,
+      badge: (stats?.assignmentCount || 0).toString()
     },
     {
       type: 'winners',
       label: 'Winners Only',
       description: 'Prize winners and amounts',
       icon: Trophy,
-      available: stats.hasResults,
-      badge: stats.hasResults ? 'Results Available' : 'Pending'
+      available: stats?.hasResults || false,
+      badge: (stats?.hasResults) ? 'Results Available' : 'Pending'
     },
     {
       type: 'audit-log',
@@ -183,19 +183,19 @@ export default function ExportControls({ eventId, event, stats }: ExportControls
       type: 'participants',
       label: 'Participant List',
       description: 'Formatted participant listing',
-      available: stats.participantCount > 0
+      available: (stats?.participantCount || 0) > 0
     },
     {
       type: 'draw-results',
       label: 'Draw Results Sheet',
       description: 'Official draw results for display',
-      available: stats.assignmentCount > 0
+      available: (stats?.assignmentCount || 0) > 0
     },
     {
       type: 'winners',
       label: 'Winner Certificates',
       description: 'Professional winner certificates',
-      available: stats.hasResults
+      available: stats?.hasResults || false
     }
   ]
 
@@ -497,28 +497,28 @@ export default function ExportControls({ eventId, event, stats }: ExportControls
           <h4 className="font-medium text-gray-900 mb-2">Export Availability</h4>
           <div className="grid grid-cols-2 gap-4 text-sm">
             <div className="flex items-center space-x-2">
-              {stats.participantCount > 0 ? (
+              {(stats?.participantCount || 0) > 0 ? (
                 <CheckCircle className="h-4 w-4 text-green-600" />
               ) : (
                 <AlertCircle className="h-4 w-4 text-gray-400" />
               )}
-              <span>Participants ({stats.participantCount})</span>
+              <span>Participants ({stats?.participantCount || 0})</span>
             </div>
             <div className="flex items-center space-x-2">
-              {stats.assignmentCount > 0 ? (
+              {(stats?.assignmentCount || 0) > 0 ? (
                 <CheckCircle className="h-4 w-4 text-green-600" />
               ) : (
                 <AlertCircle className="h-4 w-4 text-gray-400" />
               )}
-              <span>Draw Results ({stats.assignmentCount})</span>
+              <span>Draw Results ({stats?.assignmentCount || 0})</span>
             </div>
             <div className="flex items-center space-x-2">
-              {stats.hasResults ? (
+              {(stats?.hasResults) ? (
                 <CheckCircle className="h-4 w-4 text-green-600" />
               ) : (
                 <AlertCircle className="h-4 w-4 text-gray-400" />
               )}
-              <span>Winners ({stats.hasResults ? 'Available' : 'Pending'})</span>
+              <span>Winners ({(stats?.hasResults) ? 'Available' : 'Pending'})</span>
             </div>
             <div className="flex items-center space-x-2">
               <CheckCircle className="h-4 w-4 text-green-600" />

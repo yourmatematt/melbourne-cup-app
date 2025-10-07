@@ -137,7 +137,7 @@ export default function PrintParticipantListPage() {
   return (
     <PrintLayout
       title="Participant List"
-      subtitle={`Total Participants: ${stats.participantCount}/${event.capacity}`}
+      subtitle={`Total Participants: ${stats?.participantCount || 0}/${event.capacity}`}
       event={event}
       autoPrint={false}
       totalPages={totalPages}
@@ -149,13 +149,13 @@ export default function PrintParticipantListPage() {
             <h3 className="font-semibold mb-2">Event Details</h3>
             <p><strong>Status:</strong> {event.status.charAt(0).toUpperCase() + event.status.slice(1)}</p>
             <p><strong>Capacity:</strong> {event.capacity} participants</p>
-            <p><strong>Registered:</strong> {stats.participantCount} participants</p>
+            <p><strong>Registered:</strong> {stats?.participantCount || 0} participants</p>
           </div>
           <div>
             <h3 className="font-semibold mb-2">Draw Status</h3>
-            <p><strong>Assignments:</strong> {stats.assignmentCount} completed</p>
-            <p><strong>Remaining:</strong> {stats.participantCount - stats.assignmentCount} unassigned</p>
-            <p><strong>Progress:</strong> {Math.round((stats.assignmentCount / stats.participantCount) * 100) || 0}% complete</p>
+            <p><strong>Assignments:</strong> {stats?.assignmentCount || 0} completed</p>
+            <p><strong>Remaining:</strong> {(stats?.participantCount || 0) - (stats?.assignmentCount || 0)} unassigned</p>
+            <p><strong>Progress:</strong> {Math.round(((stats?.assignmentCount || 0) / (stats?.participantCount || 1)) * 100) || 0}% complete</p>
           </div>
         </div>
       </div>
