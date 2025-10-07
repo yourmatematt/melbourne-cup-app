@@ -118,6 +118,7 @@ export async function GET(
         .select(`
           id,
           created_at,
+          horse_number,
           event_horses (
             number,
             name
@@ -128,17 +129,41 @@ export async function GET(
           )
         `)
         .eq('event_id', eventId)
-        .order('created_at', { ascending: true })
+        .order('horse_number', { ascending: true })
 
       if (assignmentsError) {
         throw new Error('Failed to fetch draw results')
       }
 
+      // Get current user details for certification
+      const { data: userData, error: userDataError } = await supabase
+        .from('user_profiles')
+        .select('full_name, email')
+        .eq('id', user.id)
+        .single()
+
+      // Get tenant owner/manager details
+      const { data: tenantOwner, error: tenantOwnerError } = await supabase
+        .from('tenant_users')
+        .select(`
+          users (
+            email
+          ),
+          user_profiles (
+            full_name
+          )
+        `)
+        .eq('tenant_id', event.tenant_id)
+        .eq('role', 'owner')
+        .single()
+
       return NextResponse.json({
         success: true,
         data: {
           event,
-          assignments: assignments || []
+          assignments: assignments || [],
+          drawConductedBy: userData?.full_name || user.email || 'Unknown User',
+          venueManager: tenantOwner?.user_profiles?.full_name || event.tenants?.name || 'Venue Manager'
         }
       })
     }

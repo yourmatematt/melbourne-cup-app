@@ -7,7 +7,11 @@ import { Loader2, AlertCircle } from 'lucide-react'
 
 interface Assignment {
   horse_number: number
-  assigned_at: string
+  created_at: string
+  event_horses: {
+    number: number
+    name: string
+  }
   patron_entries: {
     participant_name: string
     join_code: string
@@ -27,6 +31,8 @@ interface DrawResultsData {
     }
   }
   assignments: Assignment[]
+  drawConductedBy: string
+  venueManager: string
 }
 
 export default function PrintDrawResultsPage() {
@@ -106,7 +112,7 @@ export default function PrintDrawResultsPage() {
     )
   }
 
-  const { event, assignments } = eventData
+  const { event, assignments, drawConductedBy, venueManager } = eventData
 
   if (assignments.length === 0) {
     return (
@@ -127,7 +133,7 @@ export default function PrintDrawResultsPage() {
   }
 
   // Get the draw time from the first assignment
-  const drawTime = assignments[0]?.assigned_at
+  const drawTime = assignments[0]?.created_at
 
   return (
     <PrintLayout
@@ -155,8 +161,8 @@ export default function PrintDrawResultsPage() {
           <thead>
             <tr>
               <th className="w-20 text-center">Horse #</th>
+              <th className="w-1/3 text-left">Horse Name</th>
               <th className="text-left">Participant Name</th>
-              <th className="w-24 text-center">Entry Code</th>
             </tr>
           </thead>
           <tbody>
@@ -166,10 +172,10 @@ export default function PrintDrawResultsPage() {
                   {assignment.horse_number}
                 </td>
                 <td className="font-medium text-lg">
-                  {assignment.patron_entries.participant_name}
+                  {assignment.event_horses?.name || 'Unknown Horse'}
                 </td>
-                <td className="text-center font-mono">
-                  {assignment.patron_entries.join_code}
+                <td className="font-medium text-lg">
+                  {assignment.patron_entries.participant_name}
                 </td>
               </tr>
             ))}
@@ -181,10 +187,10 @@ export default function PrintDrawResultsPage() {
       <div className="mt-8 keep-together">
         <h3 className="font-semibold mb-3">Instructions for Participants</h3>
         <div className="text-sm space-y-2">
-          <p>• Keep your entry code safe - you will need it to claim any prizes</p>
           <p>• Check the race results after the event to see if your horse placed</p>
-          <p>• Winners must present their entry code and valid ID to claim prizes</p>
+          <p>• Winners must present valid ID and their entry confirmation to claim prizes</p>
           <p>• All prizes must be claimed at {event.tenants?.name || 'this venue'}</p>
+          <p>• Prize claims are subject to verification of participation</p>
         </div>
       </div>
 
@@ -195,9 +201,11 @@ export default function PrintDrawResultsPage() {
         <div className="grid grid-cols-2 gap-8 mb-6">
           <div>
             <SignatureLine label="Draw Conducted By" />
+            <p className="text-xs text-gray-600 mt-1">{drawConductedBy}</p>
           </div>
           <div>
             <SignatureLine label="Venue Manager" />
+            <p className="text-xs text-gray-600 mt-1">{venueManager}</p>
           </div>
         </div>
 
@@ -231,15 +239,6 @@ export default function PrintDrawResultsPage() {
         </div>
       </div>
 
-      {/* QR Code Placeholder */}
-      <div className="mt-6 text-right">
-        <div className="inline-block border border-gray-400 p-2 text-xs">
-          <p className="mb-1">Scan to verify draw:</p>
-          <div className="w-16 h-16 border border-gray-300 bg-gray-100 flex items-center justify-center">
-            QR
-          </div>
-        </div>
-      </div>
     </PrintLayout>
   )
 }
