@@ -34,6 +34,7 @@ export function VenueDetailsForm({ onSubmit, isLoading, defaultValues, userVenue
     resolver: zodResolver(venueDetailsSchema),
     defaultValues: defaultValues || {
       name: userVenueName || '',
+      contactName: '',
       slug: ''
     }
   })
@@ -133,6 +134,26 @@ export function VenueDetailsForm({ onSubmit, isLoading, defaultValues, userVenue
                   ? "This was entered during signup. You can edit it if needed."
                   : "The official name of your venue or business"
                 }
+              </FormDescription>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="contactName"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Contact Name</FormLabel>
+              <FormControl>
+                <Input
+                  placeholder="John Smith"
+                  {...field}
+                />
+              </FormControl>
+              <FormDescription>
+                This will appear on official draw certificates as the venue manager
               </FormDescription>
               <FormMessage />
             </FormItem>

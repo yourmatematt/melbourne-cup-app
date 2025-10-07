@@ -20,6 +20,7 @@ export const loginSchema = z.object({
 // Onboarding schemas
 export const venueDetailsSchema = z.object({
   name: z.string().min(1, 'Venue name is required').max(100, 'Name too long'),
+  contactName: z.string().min(2, 'Contact name must be at least 2 characters').max(100, 'Contact name too long'),
   slug: z.string()
     .min(3, 'URL slug must be at least 3 characters')
     .max(50, 'URL slug too long')

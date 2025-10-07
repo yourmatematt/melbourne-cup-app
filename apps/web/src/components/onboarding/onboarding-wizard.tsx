@@ -58,6 +58,14 @@ export function OnboardingWizard() {
     try {
       if (!user) throw new Error('No user found')
 
+      // Update user's name in the users table
+      const { error: userUpdateError } = await supabase
+        .from('users')
+        .update({ name: venueData.contactName })
+        .eq('id', user.id)
+
+      if (userUpdateError) throw userUpdateError
+
       // Create or update tenant
       const { data: existingTenant } = await supabase
         .from('tenant_users')

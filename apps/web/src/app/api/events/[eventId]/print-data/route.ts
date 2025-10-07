@@ -137,8 +137,8 @@ export async function GET(
 
       // Get current user details for certification
       const { data: userData, error: userDataError } = await supabase
-        .from('user_profiles')
-        .select('full_name, email')
+        .from('users')
+        .select('name, email')
         .eq('id', user.id)
         .single()
 
@@ -147,10 +147,8 @@ export async function GET(
         .from('tenant_users')
         .select(`
           users (
+            name,
             email
-          ),
-          user_profiles (
-            full_name
           )
         `)
         .eq('tenant_id', event.tenant_id)
@@ -162,8 +160,8 @@ export async function GET(
         data: {
           event,
           assignments: assignments || [],
-          drawConductedBy: userData?.full_name || user.email || 'Unknown User',
-          venueManager: tenantOwner?.user_profiles?.full_name || event.tenants?.name || 'Venue Manager'
+          drawConductedBy: userData?.name || user.email || 'Unknown User',
+          venueManager: tenantOwner?.users?.name || event.tenants?.name || 'Venue Manager'
         }
       })
     }
