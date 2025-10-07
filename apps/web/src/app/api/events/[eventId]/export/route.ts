@@ -215,8 +215,8 @@ async function exportDrawResults(supabase: any, eventId: string, event: any) {
     .from('assignments')
     .select(`
       horse_number,
-      assigned_at,
-      patron_entries (
+      created_at,
+      patron_entries!patron_entry_id (
         participant_name,
         join_code
       )
@@ -238,7 +238,7 @@ async function exportDrawResults(supabase: any, eventId: string, event: any) {
   ]
 
   const rows = assignments.map((a: any) => {
-    const drawDate = new Date(a.assigned_at)
+    const drawDate = new Date(a.created_at)
     return [
       a.horse_number,
       escapeCsvField(a.patron_entries?.participant_name || ''),
@@ -297,7 +297,7 @@ async function exportWinners(supabase: any, eventId: string, event: any, redacte
     .from('assignments')
     .select(`
       horse_number,
-      patron_entries (
+      patron_entries!patron_entry_id (
         participant_name,
         email,
         phone,
@@ -384,13 +384,13 @@ async function exportAuditLog(supabase: any, eventId: string, event: any) {
   // Draw assignments
   const { data: assignments } = await supabase
     .from('assignments')
-    .select('horse_number, assigned_at, patron_entries(participant_name)')
+    .select('horse_number, created_at, patron_entries!patron_entry_id(participant_name)')
     .eq('event_id', eventId)
-    .order('assigned_at', { ascending: true })
+    .order('created_at', { ascending: true })
 
   assignments?.forEach((a: any) => {
     auditEntries.push({
-      timestamp: a.assigned_at,
+      timestamp: a.created_at,
       action: 'Horse Assigned',
       details: `Horse ${a.horse_number} assigned to ${a.patron_entries?.participant_name}`,
       user: 'Draw System'
