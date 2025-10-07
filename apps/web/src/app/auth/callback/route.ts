@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { createServerClient, type CookieOptions } from '@supabase/ssr'
 
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url)
@@ -62,10 +62,71 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(`${origin}/auth/auth-code-error?error=configuration_error`)
   }
 
-  const supabase = createClient()
+  // Create a response to handle cookies properly for PKCE
+  let response = NextResponse.next()
+
+  // Create Supabase client with proper cookie handling for PKCE
+  const supabase = createServerClient(
+    supabaseUrl,
+    supabaseAnonKey,
+    {
+      cookies: {
+        get(name: string) {
+          return request.cookies.get(name)?.value
+        },
+        set(name: string, value: string, options: CookieOptions) {
+          request.cookies.set({
+            name,
+            value,
+            ...options,
+          })
+          response = NextResponse.next({
+            request: {
+              headers: request.headers,
+            },
+          })
+          response.cookies.set({
+            name,
+            value,
+            ...options,
+          })
+        },
+        remove(name: string, options: CookieOptions) {
+          request.cookies.set({
+            name,
+            value: '',
+            ...options,
+          })
+          response = NextResponse.next({
+            request: {
+              headers: request.headers,
+            },
+          })
+          response.cookies.set({
+            name,
+            value: '',
+            ...options,
+          })
+        },
+      },
+    }
+  )
 
   try {
-    console.log('🔄 Attempting to exchange code for session...')
+    // Debug PKCE-related cookies
+    const pkceCodeVerifier = request.cookies.get('pkce_code_verifier')?.value
+    const supabaseAuthToken = request.cookies.get('sb-auth-token')?.value
+    const supabasePkceCv = request.cookies.get('sb-pkce-code-verifier')?.value
+
+    console.log('🔄 PKCE Debug - Available cookies:', {
+      pkceCodeVerifier: pkceCodeVerifier ? 'present' : 'missing',
+      supabaseAuthToken: supabaseAuthToken ? 'present' : 'missing',
+      supabasePkceCv: supabasePkceCv ? 'present' : 'missing',
+      totalCookies: request.cookies.getAll().length,
+      allCookieNames: request.cookies.getAll().map(c => c.name)
+    })
+
+    console.log('🔄 Attempting to exchange code for session with PKCE...')
 
     const { data, error: exchangeError } = await supabase.auth.exchangeCodeForSession(code)
 
@@ -85,6 +146,12 @@ export async function GET(request: NextRequest) {
         status: exchangeError.status,
         details: exchangeError
       })
+
+      // Check for specific PKCE errors
+      if (exchangeError.message?.includes('code verifier') || exchangeError.message?.includes('PKCE')) {
+        console.error('🔐 PKCE Verification Failed - this is likely a cookie/session issue')
+        return NextResponse.redirect(`${origin}/auth/auth-code-error?error=pkce_failed`)
+      }
 
       return NextResponse.redirect(`${origin}/auth/auth-code-error?error=${encodeURIComponent(exchangeError.message)}`)
     }
@@ -124,7 +191,20 @@ export async function GET(request: NextRequest) {
       userId: data.user.id
     })
 
-    return NextResponse.redirect(redirectUrl)
+    // Use NextResponse.redirect instead of the response object for redirects
+    const redirectResponse = NextResponse.redirect(redirectUrl)
+
+    // Copy any session cookies from our response to the redirect response
+    response.cookies.getAll().forEach(cookie => {
+      redirectResponse.cookies.set(cookie.name, cookie.value, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        maxAge: 60 * 60 * 24 * 7 // 1 week
+      })
+    })
+
+    return redirectResponse
 
   } catch (error) {
     console.error('💥 Unexpected error in auth callback:', {

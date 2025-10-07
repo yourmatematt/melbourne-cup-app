@@ -41,6 +41,7 @@
 - `no_code`: Link missing authorization code
 - `no_session`: Token exchange failed
 - `configuration_error`: Supabase not configured
+- `pkce_failed`: PKCE code verifier missing or invalid (cookie issue)
 
 ### 4. Console Log Patterns
 
@@ -48,7 +49,9 @@
 ```
 ✅ Attempting signup with: { email, redirectTo, supabaseUrl }
 ✅ Signup response: { user, confirmation_sent_at }
+🔐 PKCE cookies after signup: { pkceCookies: ["sb-pkce-code-verifier=..."] }
 ✅ Auth callback received: { code: "abc123...", type: "signup" }
+🔄 PKCE Debug - Available cookies: { supabasePkceCv: "present" }
 ✅ Code exchange result: { hasSession: true, hasUser: true, userConfirmed: true }
 ✅ Email verification successful, redirecting to: /onboard
 ```
@@ -58,6 +61,8 @@
 ❌ No authorization code provided in callback
 ❌ Code exchange failed: { message: "Invalid code", status: 400 }
 ❌ User email not confirmed: { emailConfirmed: null }
+🔐 PKCE Verification Failed - this is likely a cookie/session issue
+🔄 PKCE Debug - Available cookies: { supabasePkceCv: "missing" }
 ```
 
 ### 5. Testing Steps
@@ -77,7 +82,24 @@
 - ✅ Redirect URLs include `/auth/callback`
 - ✅ SMTP provider configured (or using Supabase default)
 
-### 7. Environment Variables
+### 7. PKCE (Security) Issues
+
+**"both auth code and code verifier should be non-empty"**
+
+This error means PKCE cookies are missing. Common causes:
+
+1. **Browser blocks cookies** (incognito mode, strict privacy settings)
+2. **Different browser/device** than signup
+3. **Cookies cleared** between signup and email click
+4. **Third-party cookie blocking**
+
+**Debug steps:**
+1. Check console for "🔐 PKCE cookies after signup"
+2. Verify cookies persist when clicking email link
+3. Try in different browser or incognito mode
+4. Check browser cookie settings
+
+### 8. Environment Variables
 
 Required in `.env.local`:
 ```

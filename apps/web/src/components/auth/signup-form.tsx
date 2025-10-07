@@ -79,6 +79,19 @@ export function SignupForm() {
         confirmationSentAt: authData.user.confirmation_sent_at
       })
 
+      // Debug PKCE cookies after signup
+      setTimeout(() => {
+        const allCookies = document.cookie.split(';').map(c => c.trim())
+        const pkceCookies = allCookies.filter(c =>
+          c.includes('pkce') || c.includes('code-verifier') || c.includes('sb-')
+        )
+        console.log('🔐 PKCE cookies after signup:', {
+          totalCookies: allCookies.length,
+          pkceCookies,
+          allCookieNames: allCookies.map(c => c.split('=')[0])
+        })
+      }, 100)
+
       // Redirect to check email page (tenant creation happens during onboarding after email verification)
       router.push(`/auth/check-email?email=${encodeURIComponent(data.email)}`)
     } catch (err) {

@@ -34,6 +34,11 @@ function AuthCodeErrorContent() {
           title: 'Configuration Error',
           message: 'The application is not properly configured for email verification. Please contact support.'
         }
+      case 'pkce_failed':
+        return {
+          title: 'PKCE Verification Failed',
+          message: 'The security verification failed. This usually happens when cookies are blocked or the verification link is opened in a different browser. Try signing up again in the same browser.'
+        }
       default:
         if (errorCode) {
           return {
