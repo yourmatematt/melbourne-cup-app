@@ -15,9 +15,11 @@ import {
   Loader2,
   RefreshCw,
   Medal,
-  Award
+  Award,
+  Zap
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { useRealtimeAssignments } from '@/hooks/use-realtime-assignments'
 
 interface Event {
   id: string
@@ -33,15 +35,27 @@ interface Event {
 
 interface Assignment {
   id: string
-  patron_entry: {
+  patron_entry_id: string
+  event_horse_id: string
+  created_at: string
+  patron_entries?: {
     participant_name: string
   }
-  event_horse: {
+  event_horses?: {
     number: number
     name: string
     jockey?: string
   }
+}
+
+interface RecentAssignment {
+  id: string
+  participant_name: string
+  horse_number: number
+  horse_name: string
+  jockey?: string
   created_at: string
+  isNew?: boolean
 }
 
 interface Result {
@@ -67,34 +81,83 @@ export default function LiveViewPage() {
   const supabase = createClient()
 
   const [event, setEvent] = useState<Event | null>(null)
-  const [assignments, setAssignments] = useState<Assignment[]>([])
   const [results, setResults] = useState<Result[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [lastUpdate, setLastUpdate] = useState(new Date())
+  const [recentAssignments, setRecentAssignments] = useState<RecentAssignment[]>([])
+  const [newAssignmentId, setNewAssignmentId] = useState<string | null>(null)
+
+  // Use the real-time assignments hook with relations
+  const {
+    assignments,
+    loading: assignmentsLoading,
+    realtimeState
+  } = useRealtimeAssignments(eventId, {
+    includeRelations: true,
+    onAssignmentAdded: (assignment) => {
+      // Handle new assignment with animation
+      setNewAssignmentId(assignment.id)
+      setLastUpdate(new Date())
+
+      // Show flash animation and sound effect (optional)
+      console.log('🎉 New assignment:', assignment)
+
+      // Clear the "new" indicator after animation
+      setTimeout(() => {
+        setNewAssignmentId(null)
+      }, 3000)
+    },
+    onError: (error) => {
+      console.error('Assignment subscription error:', error)
+    }
+  })
+
+  // Convert assignments to recent assignments format
+  useEffect(() => {
+    const formatted = assignments
+      .filter(a => a.patron_entries && a.event_horses)
+      .map(assignment => ({
+        id: assignment.id,
+        participant_name: assignment.patron_entries?.participant_name || 'Unknown',
+        horse_number: assignment.event_horses?.number || 0,
+        horse_name: assignment.event_horses?.name || 'Unknown Horse',
+        jockey: assignment.event_horses?.jockey,
+        created_at: assignment.created_at,
+        isNew: assignment.id === newAssignmentId
+      }))
+      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+
+    setRecentAssignments(formatted)
+  }, [assignments, newAssignmentId])
 
   useEffect(() => {
     if (eventId) {
       loadEventData()
 
-      // Set up real-time updates
+      // Set up real-time updates for other tables (events, results)
       const channel = supabase
-        .channel(`event_${eventId}`)
+        .channel(`event_status_${eventId}`)
         .on('postgres_changes',
           { event: '*', schema: 'public', table: 'patron_entries', filter: `event_id=eq.${eventId}` },
-          () => loadEventData()
-        )
-        .on('postgres_changes',
-          { event: '*', schema: 'public', table: 'assignments', filter: `event_id=eq.${eventId}` },
-          () => loadEventData()
+          () => {
+            loadEventData()
+            setLastUpdate(new Date())
+          }
         )
         .on('postgres_changes',
           { event: '*', schema: 'public', table: 'event_results', filter: `event_id=eq.${eventId}` },
-          () => loadEventData()
+          () => {
+            loadEventData()
+            setLastUpdate(new Date())
+          }
         )
         .on('postgres_changes',
           { event: '*', schema: 'public', table: 'events', filter: `id=eq.${eventId}` },
-          () => loadEventData()
+          () => {
+            loadEventData()
+            setLastUpdate(new Date())
+          }
         )
         .subscribe()
 
@@ -130,33 +193,7 @@ export default function LiveViewPage() {
         participant_count: data.data.participantCount
       })
 
-      // Get assignments (if any)
-      const { data: assignmentData, error: assignmentError } = await supabase
-        .from('assignments')
-        .select(`
-          id,
-          created_at,
-          patron_entries!patron_entry_id (
-            participant_name
-          ),
-          event_horses!event_horse_id (
-            number,
-            name,
-            jockey
-          )
-        `)
-        .eq('event_id', eventId)
-        .order('created_at', { ascending: false })
-
-      if (!assignmentError && assignmentData) {
-        const formattedAssignments = assignmentData.map(assignment => ({
-          id: assignment.id,
-          created_at: assignment.created_at,
-          patron_entry: assignment.patron_entries,
-          event_horse: assignment.event_horses
-        }))
-        setAssignments(formattedAssignments)
-      }
+      // Assignments are now handled by the useRealtimeAssignments hook
 
       // Get results (if event is completed)
       if (data.data.event.status === 'completed') {
@@ -239,7 +276,7 @@ export default function LiveViewPage() {
     )
   }
 
-  if (loading) {
+  if (loading || assignmentsLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
         <div className="text-center">
@@ -318,12 +355,20 @@ export default function LiveViewPage() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-4xl font-bold text-yellow-600 mb-2">
-                {assignments.length}
+              <div className="text-4xl font-bold text-yellow-600 mb-2 flex items-center justify-center space-x-2">
+                <span>{assignments.length}</span>
+                {realtimeState.isConnected && (
+                  <Zap className="h-5 w-5 text-green-500" title="Live updates active" />
+                )}
               </div>
               <div className="text-sm text-gray-500">
                 horses assigned
               </div>
+              {!realtimeState.isConnected && realtimeState.error && (
+                <div className="text-xs text-red-500 mt-1">
+                  Connection lost
+                </div>
+              )}
             </CardContent>
           </Card>
 
@@ -462,27 +507,45 @@ export default function LiveViewPage() {
         )}
 
         {/* Recent Assignments */}
-        {assignments.length > 0 && (
+        {recentAssignments.length > 0 && (
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center space-x-2">
                 <Crown className="h-5 w-5" />
                 <span>Recent Horse Assignments</span>
+                {realtimeState.isConnected && (
+                  <Badge variant="outline" className="text-green-600 border-green-600">
+                    <Zap className="h-3 w-3 mr-1" />
+                    LIVE
+                  </Badge>
+                )}
               </CardTitle>
               <CardDescription>
-                Latest participant to horse assignments
+                Latest participant to horse assignments • Updates automatically
               </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-3 max-h-80 overflow-y-auto">
-                {assignments.slice(0, 10).map((assignment) => (
+                {recentAssignments.slice(0, 10).map((assignment) => (
                   <div
                     key={assignment.id}
-                    className="flex justify-between items-center p-3 bg-white rounded-lg border"
+                    className={`
+                      flex justify-between items-center p-3 rounded-lg border transition-all duration-500
+                      ${
+                        assignment.isNew
+                          ? 'bg-gradient-to-r from-yellow-50 to-yellow-100 border-yellow-300 shadow-lg transform scale-105'
+                          : 'bg-white border-gray-200 hover:border-gray-300'
+                      }
+                    `}
                   >
                     <div>
-                      <div className="font-medium text-gray-900">
-                        {assignment.patron_entry.participant_name}
+                      <div className="font-medium text-gray-900 flex items-center space-x-2">
+                        <span>{assignment.participant_name}</span>
+                        {assignment.isNew && (
+                          <Badge className="bg-yellow-500 text-yellow-900 text-xs animate-pulse">
+                            NEW!
+                          </Badge>
+                        )}
                       </div>
                       <div className="text-sm text-gray-500">
                         {new Date(assignment.created_at).toLocaleTimeString('en-AU', {
@@ -492,12 +555,15 @@ export default function LiveViewPage() {
                       </div>
                     </div>
                     <div className="text-right">
-                      <div className="font-mono font-bold text-lg">
-                        #{assignment.event_horse.number} {assignment.event_horse.name}
+                      <div className={`
+                        font-mono font-bold text-lg transition-colors duration-300
+                        ${assignment.isNew ? 'text-yellow-700' : 'text-gray-900'}
+                      `}>
+                        #{assignment.horse_number} {assignment.horse_name}
                       </div>
-                      {assignment.event_horse.jockey && (
+                      {assignment.jockey && (
                         <div className="text-sm text-gray-500">
-                          {assignment.event_horse.jockey}
+                          {assignment.jockey}
                         </div>
                       )}
                     </div>
@@ -509,24 +575,66 @@ export default function LiveViewPage() {
         )}
 
         {/* No Assignments Message */}
-        {assignments.length === 0 && event.status === 'active' && (
+        {recentAssignments.length === 0 && event.status === 'active' && (
           <Card>
             <CardContent className="text-center py-12">
-              <Trophy className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+              <div className="flex justify-center mb-4">
+                <Trophy className="h-16 w-16 text-gray-400" />
+                {realtimeState.isConnected && (
+                  <Zap className="h-6 w-6 text-green-500 ml-2 animate-pulse" />
+                )}
+              </div>
               <h3 className="text-xl font-medium text-gray-900 mb-2">
                 No Horse Assignments Yet
               </h3>
-              <p className="text-gray-500">
+              <p className="text-gray-500 mb-2">
                 Assignments will appear here when the draw begins
               </p>
+              {realtimeState.isConnected ? (
+                <p className="text-green-600 text-sm flex items-center justify-center space-x-1">
+                  <Zap className="h-4 w-4" />
+                  <span>Live updates active - ready to show new assignments</span>
+                </p>
+              ) : (
+                <p className="text-red-500 text-sm">
+                  ⚠️ Connection lost - refresh to see latest assignments
+                </p>
+              )}
             </CardContent>
           </Card>
         )}
 
         {/* Footer */}
         <div className="text-center text-gray-500 text-sm py-4">
-          <p>Live updates • Refreshes automatically</p>
-          <p className="mt-1">Melbourne Cup Manager</p>
+          <div className="flex items-center justify-center space-x-4 mb-2">
+            <div className="flex items-center space-x-1">
+              {realtimeState.isConnected ? (
+                <>
+                  <Zap className="h-4 w-4 text-green-500" />
+                  <span className="text-green-600">Live updates active</span>
+                </>
+              ) : realtimeState.isReconnecting ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin text-yellow-500" />
+                  <span className="text-yellow-600">Reconnecting...</span>
+                </>
+              ) : (
+                <>
+                  <div className="h-4 w-4 rounded-full bg-red-500"></div>
+                  <span className="text-red-600">Connection lost</span>
+                </>
+              )}
+            </div>
+            <div className="text-gray-400">•</div>
+            <div>
+              Last update: {lastUpdate.toLocaleTimeString('en-AU', {
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit'
+              })}
+            </div>
+          </div>
+          <p>Melbourne Cup Manager</p>
         </div>
       </div>
     </div>
