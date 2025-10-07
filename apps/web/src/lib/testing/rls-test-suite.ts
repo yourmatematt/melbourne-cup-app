@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/client'
+import { createClient } from '@/lib/supabase/server'
 import { Database } from '@/lib/database.types'
 
 type SupabaseClient = ReturnType<typeof createClient>

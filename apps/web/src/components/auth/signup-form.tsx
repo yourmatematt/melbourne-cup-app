@@ -79,18 +79,43 @@ export function SignupForm() {
         confirmationSentAt: authData.user.confirmation_sent_at
       })
 
-      // Debug PKCE cookies after signup
+      // Debug PKCE cookies after signup with detailed analysis
       setTimeout(() => {
-        const allCookies = document.cookie.split(';').map(c => c.trim())
-        const pkceCookies = allCookies.filter(c =>
-          c.includes('pkce') || c.includes('code-verifier') || c.includes('sb-')
+        const allCookies = document.cookie.split(';').map(c => c.trim()).filter(c => c)
+        const supabaseCookies = allCookies.filter(c =>
+          c.includes('sb-') || c.includes('pkce') || c.includes('auth') || c.includes('session')
         )
-        console.log('🔐 PKCE cookies after signup:', {
+
+        console.log('🔐 PKCE cookies after signup - Detailed Analysis:', {
+          timestamp: new Date().toISOString(),
           totalCookies: allCookies.length,
-          pkceCookies,
-          allCookieNames: allCookies.map(c => c.split('=')[0])
+          allCookieNames: allCookies.map(c => c.split('=')[0]),
+          supabaseCookies: supabaseCookies.map(cookieStr => {
+            const [name, ...valueParts] = cookieStr.split('=')
+            const value = valueParts.join('=')
+            return {
+              name: name?.trim(),
+              hasValue: !!value,
+              valueLength: value?.length || 0,
+              valueStart: value?.substring(0, 30) + '...'
+            }
+          }),
+          currentDomain: window.location.hostname,
+          currentPath: window.location.pathname,
+          isSecure: window.location.protocol === 'https:'
         })
-      }, 100)
+
+        // Check for specific PKCE cookie
+        const pkceMatch = allCookies.find(c => c.includes('sb-pkce-code-verifier'))
+        if (pkceMatch) {
+          console.log('✅ PKCE Code Verifier cookie found:', {
+            cookieExists: true,
+            valueLength: pkceMatch.split('=')[1]?.length || 0
+          })
+        } else {
+          console.error('❌ PKCE Code Verifier cookie MISSING - this will cause callback failure!')
+        }
+      }, 500) // Increased delay to ensure cookies are set
 
       // Redirect to check email page (tenant creation happens during onboarding after email verification)
       router.push(`/auth/check-email?email=${encodeURIComponent(data.email)}`)

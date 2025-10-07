@@ -85,19 +85,27 @@
 ### 7. PKCE (Security) Issues
 
 **"both auth code and code verifier should be non-empty"**
+**"Invalid Refresh Token: Refresh Token Not Found"**
 
-This error means PKCE cookies are missing. Common causes:
+These errors mean PKCE cookies aren't persisting from signup to callback. Common causes:
 
-1. **Browser blocks cookies** (incognito mode, strict privacy settings)
-2. **Different browser/device** than signup
-3. **Cookies cleared** between signup and email click
-4. **Third-party cookie blocking**
+1. **sameSite: 'strict'** prevents cookies on email link clicks (cross-site navigation)
+2. **Browser blocks cookies** (incognito mode, strict privacy settings)
+3. **Different browser/device** than signup
+4. **Cookies cleared** between signup and email click
+5. **Third-party cookie blocking**
 
 **Debug steps:**
-1. Check console for "🔐 PKCE cookies after signup"
-2. Verify cookies persist when clicking email link
-3. Try in different browser or incognito mode
-4. Check browser cookie settings
+1. Check console for "🔐 PKCE cookies after signup - Detailed Analysis"
+2. Look for "✅ PKCE Code Verifier cookie found" or "❌ MISSING"
+3. In callback, check "🔐 PKCE Key Cookies" - should show "present"
+4. Verify sameSite: 'lax' in cookie configuration (not 'strict')
+5. Test in different browser with cookies enabled
+
+**Fixed in this update:**
+- ✅ Changed sameSite from 'strict' to 'lax'
+- ✅ Added comprehensive cookie debugging
+- ✅ Matched client/server cookie configurations
 
 ### 8. Environment Variables
 

@@ -65,47 +65,78 @@ export async function GET(request: NextRequest) {
   // Create a response to handle cookies properly for PKCE
   let response = NextResponse.next()
 
-  // Create Supabase client with proper cookie handling for PKCE
+  // Create Supabase client with matching cookie configuration for PKCE
   const supabase = createServerClient(
     supabaseUrl,
     supabaseAnonKey,
     {
       cookies: {
         get(name: string) {
-          return request.cookies.get(name)?.value
+          const cookieValue = request.cookies.get(name)?.value
+          console.log(`🍪 Getting cookie "${name}":`, cookieValue ? 'found' : 'missing')
+          return cookieValue
         },
         set(name: string, value: string, options: CookieOptions) {
+          // Use same cookie options as client
+          const cookieOptions = {
+            path: '/',
+            sameSite: 'lax' as const, // Match client configuration
+            secure: process.env.NODE_ENV === 'production',
+            httpOnly: true, // Can be true for server-side
+            maxAge: 60 * 60 * 24 * 7, // 7 days
+            ...options
+          }
+
+          console.log(`🍪 Setting server cookie "${name}":`, {
+            hasValue: !!value,
+            options: cookieOptions
+          })
+
           request.cookies.set({
             name,
             value,
-            ...options,
+            ...cookieOptions,
           })
+
           response = NextResponse.next({
             request: {
               headers: request.headers,
             },
           })
+
           response.cookies.set({
             name,
             value,
-            ...options,
+            ...cookieOptions,
           })
         },
         remove(name: string, options: CookieOptions) {
+          const cookieOptions = {
+            path: '/',
+            sameSite: 'lax' as const,
+            secure: process.env.NODE_ENV === 'production',
+            expires: new Date(0),
+            ...options
+          }
+
+          console.log(`🗑️ Removing server cookie "${name}"`)
+
           request.cookies.set({
             name,
             value: '',
-            ...options,
+            ...cookieOptions,
           })
+
           response = NextResponse.next({
             request: {
               headers: request.headers,
             },
           })
+
           response.cookies.set({
             name,
             value: '',
-            ...options,
+            ...cookieOptions,
           })
         },
       },
@@ -113,17 +144,38 @@ export async function GET(request: NextRequest) {
   )
 
   try {
-    // Debug PKCE-related cookies
-    const pkceCodeVerifier = request.cookies.get('pkce_code_verifier')?.value
-    const supabaseAuthToken = request.cookies.get('sb-auth-token')?.value
-    const supabasePkceCv = request.cookies.get('sb-pkce-code-verifier')?.value
+    // Debug PKCE-related cookies with detailed analysis
+    const allCookies = request.cookies.getAll()
+    const supabaseCookies = allCookies.filter(c =>
+      c.name.startsWith('sb-') ||
+      c.name.includes('pkce') ||
+      c.name.includes('auth') ||
+      c.name.includes('session')
+    )
 
-    console.log('🔄 PKCE Debug - Available cookies:', {
-      pkceCodeVerifier: pkceCodeVerifier ? 'present' : 'missing',
-      supabaseAuthToken: supabaseAuthToken ? 'present' : 'missing',
-      supabasePkceCv: supabasePkceCv ? 'present' : 'missing',
-      totalCookies: request.cookies.getAll().length,
-      allCookieNames: request.cookies.getAll().map(c => c.name)
+    console.log('🔄 PKCE Debug - Cookie Analysis:', {
+      totalCookies: allCookies.length,
+      allCookieNames: allCookies.map(c => c.name),
+      supabaseCookies: supabaseCookies.map(c => ({
+        name: c.name,
+        hasValue: !!c.value,
+        valueLength: c.value?.length || 0,
+        valueStart: c.value?.substring(0, 20) + '...'
+      })),
+      userAgent: request.headers.get('user-agent')?.substring(0, 100),
+      referer: request.headers.get('referer'),
+      origin: request.headers.get('origin')
+    })
+
+    // Specifically look for key PKCE cookies
+    const pkceCodeVerifier = request.cookies.get('sb-pkce-code-verifier')?.value
+    const authToken = request.cookies.get('sb-auth-token')?.value
+    const refreshToken = request.cookies.get('sb-refresh-token')?.value
+
+    console.log('🔐 PKCE Key Cookies:', {
+      pkceCodeVerifier: pkceCodeVerifier ? `present (${pkceCodeVerifier.length} chars)` : 'MISSING',
+      authToken: authToken ? `present (${authToken.length} chars)` : 'missing',
+      refreshToken: refreshToken ? `present (${refreshToken.length} chars)` : 'missing'
     })
 
     console.log('🔄 Attempting to exchange code for session with PKCE...')
