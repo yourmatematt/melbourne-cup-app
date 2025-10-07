@@ -121,7 +121,7 @@ export default function ExportControls({ eventId, event, stats }: ExportControls
   function getJoinUrl() {
     if (typeof window !== 'undefined') {
       const baseUrl = window.location.origin
-      return `${baseUrl}/events/${eventId}/join`
+      return `${baseUrl}/events/${eventId}/enter`
     }
     return ''
   }
