@@ -47,13 +47,21 @@ export function SignupForm() {
       .filter(c => c.includes('sb-') || c.includes('supabase'))
       .map(c => c.split('=')[0])
 
-    const flowStateCookieExists = allCookies.some(c =>
-      c.includes('flow') || c.includes('sb-') && c.includes('flow')
-    )
+    // More comprehensive flow state cookie detection
+    const flowStateCookieExists = allCookies.some(c => {
+      const cookieName = c.split('=')[0].toLowerCase()
+      return cookieName.includes('flow') ||
+             cookieName.includes('auth-token') ||
+             (cookieName.includes('sb-') && cookieName.includes('auth'))
+    })
 
-    const pkceCookieExists = allCookies.some(c =>
-      c.includes('pkce') || c.includes('verifier')
-    )
+    // More comprehensive PKCE cookie detection
+    const pkceCookieExists = allCookies.some(c => {
+      const cookieName = c.split('=')[0].toLowerCase()
+      return cookieName.includes('pkce') ||
+             cookieName.includes('verifier') ||
+             cookieName.includes('code-verifier')
+    })
 
     return {
       timestamp: new Date().toISOString(),
@@ -91,7 +99,10 @@ export function SignupForm() {
         supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL
       })
 
-      // Sign up the user with email confirmation
+      // Sign up the user with email confirmation using PKCE flow
+      const redirectUrl = `${window.location.origin}/auth/callback`
+      console.log('🔐 Configuring PKCE signup with redirect:', redirectUrl)
+
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: data.email,
         password: data.password,
@@ -99,8 +110,16 @@ export function SignupForm() {
           data: {
             name: data.venueName
           },
-          emailRedirectTo: `${window.location.origin}/auth/callback`
+          emailRedirectTo: redirectUrl,
+          // Explicitly enable PKCE flow for email verification
+          captchaToken: undefined // Ensure no captcha interference
         }
+      })
+
+      console.log('🔐 PKCE signup response:', {
+        user: authData.user ? 'created' : 'none',
+        session: authData.session ? 'active' : 'none',
+        error: authError?.message
       })
 
       console.log('Signup response:', { authData, authError })
@@ -123,12 +142,30 @@ export function SignupForm() {
         confirmationSentAt: authData.user.confirmation_sent_at
       })
 
-      // Create visible debug info after signup
+      // Check cookies immediately after signup
+      console.log('🍪 Checking cookies immediately after signUp call...')
+      const immediateDebug = createDebugInfo()
+      console.log('🍪 Immediate cookie check:', immediateDebug)
+
+      // Create visible debug info after signup with multiple checks
       setTimeout(() => {
         const debug = createDebugInfo()
         setDebugInfo(debug)
         setShowDebug(true)
-      }, 500) // Delay to ensure cookies are set
+
+        // Additional analysis for flow state cookie
+        if (!debug.flowStateCookieExists) {
+          console.error('❌ FLOW STATE COOKIE MISSING after signup!')
+          console.error('🔍 This indicates PKCE flow configuration issue')
+          console.error('🔍 Expected flow state cookie patterns:', [
+            'sb-*-auth-token-code-verifier',
+            'sb-*-auth-token',
+            'sb-*-pkce-code-verifier'
+          ])
+        } else {
+          console.log('✅ Flow state cookie found - PKCE should work')
+        }
+      }, 1000) // Increased delay to ensure all cookies are set
 
       // Redirect to check email page (tenant creation happens during onboarding after email verification)
       router.push(`/auth/check-email?email=${encodeURIComponent(data.email)}`)
@@ -171,16 +208,30 @@ export function SignupForm() {
 
             {debugInfo.allSbCookies.length > 0 ? (
               <div>
-                <strong>Supabase cookies found:</strong>
+                <strong>Supabase cookies found ({debugInfo.allSbCookies.length}):</strong>
                 <ul className="ml-4 mt-1">
-                  {debugInfo.allSbCookies.map((cookie, index) => (
-                    <li key={index} className="font-mono text-xs">{cookie}</li>
-                  ))}
+                  {debugInfo.allSbCookies.map((cookie, index) => {
+                    const isAuthToken = cookie.toLowerCase().includes('auth')
+                    const isVerifier = cookie.toLowerCase().includes('verifier') || cookie.toLowerCase().includes('pkce')
+                    return (
+                      <li key={index} className={`font-mono text-xs ${isAuthToken ? 'text-blue-600 font-bold' : isVerifier ? 'text-green-600 font-bold' : ''}`}>
+                        {cookie} {isAuthToken ? '(AUTH)' : isVerifier ? '(VERIFIER)' : ''}
+                      </li>
+                    )
+                  })}
                 </ul>
               </div>
             ) : (
               <div className="text-red-600 font-bold">⚠️ NO SUPABASE COOKIES FOUND!</div>
             )}
+
+            <div className="mt-4 p-2 bg-gray-100 border border-gray-300 rounded text-xs">
+              <strong>Expected cookies for PKCE flow:</strong>
+              <ul className="ml-2 mt-1">
+                <li>• <code>sb-*-auth-token</code> (flow state)</li>
+                <li>• <code>sb-*-pkce-code-verifier</code> (verification)</li>
+              </ul>
+            </div>
 
             <div className="mt-4 pt-2 border-t border-gray-300">
               <strong>Browser info:</strong>

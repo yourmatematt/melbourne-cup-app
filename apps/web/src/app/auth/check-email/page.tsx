@@ -39,13 +39,21 @@ function CheckEmailContent() {
       .filter(c => c.includes('sb-') || c.includes('supabase'))
       .map(c => c.split('=')[0])
 
-    const flowStateCookieExists = allCookies.some(c =>
-      c.includes('flow') || c.includes('sb-') && c.includes('flow')
-    )
+    // More comprehensive flow state cookie detection
+    const flowStateCookieExists = allCookies.some(c => {
+      const cookieName = c.split('=')[0].toLowerCase()
+      return cookieName.includes('flow') ||
+             cookieName.includes('auth-token') ||
+             (cookieName.includes('sb-') && cookieName.includes('auth'))
+    })
 
-    const pkceCookieExists = allCookies.some(c =>
-      c.includes('pkce') || c.includes('verifier')
-    )
+    // More comprehensive PKCE cookie detection
+    const pkceCookieExists = allCookies.some(c => {
+      const cookieName = c.split('=')[0].toLowerCase()
+      return cookieName.includes('pkce') ||
+             cookieName.includes('verifier') ||
+             cookieName.includes('code-verifier')
+    })
 
     return {
       pageLoadTime: new Date().toISOString(),
