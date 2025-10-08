@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { createClient } from '@/lib/supabase/client'
+import { createClient, debugAuthStorage, clearCorruptedSession } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Progress } from '@/components/ui/progress'
@@ -95,6 +95,9 @@ export function OnboardingWizard() {
 
         console.log(`🔐 Onboarding: Auth initialization attempt ${authAttempts + 1}/3`)
 
+        // Debug storage state before session check
+        debugAuthStorage()
+
         // Single auth check - no retries for password auth
         const { data: { session }, error: sessionError } = await supabase.auth.getSession()
 
@@ -105,6 +108,27 @@ export function OnboardingWizard() {
           attempt: authAttempts + 1,
           error: sessionError?.message
         })
+
+        // Handle session corruption errors
+        if (sessionError) {
+          console.error('🔐 Onboarding: Session error detected:', sessionError.message)
+
+          // If session appears corrupted, clear it and retry once
+          if (sessionError.message?.includes('property') ||
+              sessionError.message?.includes('string') ||
+              sessionError.message?.includes('JSON')) {
+            console.log('🔐 Onboarding: Detected session corruption, clearing storage')
+            clearCorruptedSession()
+
+            // Only retry once for corruption
+            if (authAttempts === 1) {
+              setAuthAttempts(0) // Reset to allow one more attempt
+              setIsInitialized(false)
+              setTimeout(() => initializeAuth(), 100) // Brief delay then retry
+              return
+            }
+          }
+        }
 
         if (session?.user) {
           console.log('🔐 Onboarding: Session found, checking tenant status')
