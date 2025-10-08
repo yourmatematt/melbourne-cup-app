@@ -15,7 +15,16 @@ export async function GET(request: NextRequest) {
   const type = searchParams.get('type')
   const next = searchParams.get('next') ?? '/onboard'
 
-  // Comprehensive logging of incoming parameters
+  // Log all incoming cookies for flow state debugging
+  const allCookies = request.cookies.getAll()
+  const authCookies = allCookies.filter(cookie =>
+    cookie.name.includes('sb-') ||
+    cookie.name.includes('flow') ||
+    cookie.name.includes('verifier') ||
+    cookie.name.includes('token')
+  )
+
+  // Comprehensive logging of incoming parameters and cookies
   console.log('🔍 Auth callback received:', {
     url: request.url,
     code: code ? `${code.substring(0, 10)}...` : null, // Log partial code for security
@@ -29,7 +38,21 @@ export async function GET(request: NextRequest) {
     next,
     origin,
     userAgent: request.headers.get('user-agent'),
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
+    totalCookies: allCookies.length,
+    authCookiesCount: authCookies.length,
+    authCookieNames: authCookies.map(c => c.name),
+    hasFlowState: authCookies.some(c => c.name.includes('flow')),
+    hasVerifier: authCookies.some(c => c.name.includes('verifier'))
+  })
+
+  // Critical flow state analysis
+  const flowStateCookies = authCookies.filter(c => c.name.includes('flow'))
+  const verifierCookies = authCookies.filter(c => c.name.includes('verifier'))
+
+  console.log('🌊 Flow state analysis in callback:', {
+    flowStateCookies: flowStateCookies.map(c => ({ name: c.name, hasValue: !!c.value })),
+    verifierCookies: verifierCookies.map(c => ({ name: c.name, hasValue: !!c.value }))
   })
 
   // Handle explicit error from Supabase

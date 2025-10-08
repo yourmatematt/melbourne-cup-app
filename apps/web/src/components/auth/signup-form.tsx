@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { createClient } from '@/lib/supabase/client'
+import { createClient, debugAuthCookies } from '@/lib/supabase/client'
 import { signupSchema, type SignupFormData } from '@/lib/auth-schemas'
 import { Button } from '@/components/ui/button'
 import {
@@ -79,42 +79,24 @@ export function SignupForm() {
         confirmationSentAt: authData.user.confirmation_sent_at
       })
 
-      // Debug PKCE cookies after signup with detailed analysis
+      // Enhanced debugging for auth flow state cookies
       setTimeout(() => {
-        const allCookies = document.cookie.split(';').map(c => c.trim()).filter(c => c)
-        const supabaseCookies = allCookies.filter(c =>
-          c.includes('sb-') || c.includes('pkce') || c.includes('auth') || c.includes('session')
-        )
+        console.log('🔐 Post-signup auth cookie analysis:')
+        const cookieDebug = debugAuthCookies()
 
-        console.log('🔐 PKCE cookies after signup - Detailed Analysis:', {
-          timestamp: new Date().toISOString(),
-          totalCookies: allCookies.length,
-          allCookieNames: allCookies.map(c => c.split('=')[0]),
-          supabaseCookies: supabaseCookies.map(cookieStr => {
-            const [name, ...valueParts] = cookieStr.split('=')
-            const value = valueParts.join('=')
-            return {
-              name: name?.trim(),
-              hasValue: !!value,
-              valueLength: value?.length || 0,
-              valueStart: value?.substring(0, 30) + '...'
-            }
-          }),
-          currentDomain: window.location.hostname,
-          currentPath: window.location.pathname,
+        if (cookieDebug && cookieDebug.flowStateCookies.length === 0) {
+          const warningMsg = '⚠️ WARNING: No flow state cookies found after signup! This may cause "invalid flow state" error.'
+          console.warn(warningMsg)
+          if (process.env.NODE_ENV === 'development') {
+            window.alert(warningMsg + ' Check browser console for details.')
+          }
+        }
+
+        console.log('🌐 Browser context:', {
+          domain: window.location.hostname,
+          path: window.location.pathname,
           isSecure: window.location.protocol === 'https:'
         })
-
-        // Check for specific PKCE cookie
-        const pkceMatch = allCookies.find(c => c.includes('sb-pkce-code-verifier'))
-        if (pkceMatch) {
-          console.log('✅ PKCE Code Verifier cookie found:', {
-            cookieExists: true,
-            valueLength: pkceMatch.split('=')[1]?.length || 0
-          })
-        } else {
-          console.error('❌ PKCE Code Verifier cookie MISSING - this will cause callback failure!')
-        }
       }, 500) // Increased delay to ensure cookies are set
 
       // Redirect to check email page (tenant creation happens during onboarding after email verification)
