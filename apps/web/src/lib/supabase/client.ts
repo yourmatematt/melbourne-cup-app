@@ -83,14 +83,14 @@ export function createClient() {
         },
         set(name: string, value: string, options: any) {
           try {
-            // Enhanced cookie options for auth flow
+            // Enhanced cookie options for auth flow - FORCE path to root for cross-route access
             const cookieOptions = {
-              path: '/',
+              ...options, // Apply incoming options first
+              path: '/', // ALWAYS override path to root - critical for callback access
               sameSite: 'lax' as const, // Critical for email verification links
               secure: process.env.NODE_ENV === 'production',
               httpOnly: false, // Must be false for browser client
-              maxAge: 60 * 60 * 24 * 7, // 7 days
-              ...options
+              maxAge: 60 * 60 * 24 * 7 // 7 days
             }
 
             let cookieString = `${name}=${encodeURIComponent(value)}`
@@ -115,6 +115,8 @@ export function createClient() {
               hasValue: !!value,
               isAuthFlow,
               verified: verification,
+              forcedPath: cookieOptions.path, // Show that path is forced to '/'
+              currentPath: window.location.pathname, // Show current page path
               options: cookieOptions,
               cookieString: cookieString.substring(0, 100) + (cookieString.length > 100 ? '...' : '')
             })
@@ -130,13 +132,13 @@ export function createClient() {
         },
         remove(name: string, options: any) {
           try {
-            // Remove cookie by setting expired date
+            // Remove cookie by setting expired date - FORCE path to root for proper removal
             const cookieOptions = {
-              path: '/',
+              ...options, // Apply incoming options first
+              path: '/', // ALWAYS override path to root - must match set path
               sameSite: 'lax' as const,
               secure: process.env.NODE_ENV === 'production',
-              expires: new Date(0),
-              ...options
+              expires: new Date(0)
             }
 
             let cookieString = `${name}=`

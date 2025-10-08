@@ -181,6 +181,10 @@ function CheckEmailContent() {
                 <strong>⚠️ WARNING:</strong> No flow state cookie found! This will cause "invalid flow state" error when clicking the verification email link.
               </div>
             )}
+
+            <div className="mt-4 p-2 bg-green-100 border border-green-300 rounded text-xs">
+              <strong>✅ Cookie Path Info:</strong> All cookies use <code>path: '/'</code> so they should be accessible from <code>/auth/callback</code> route when you click the email verification link.
+            </div>
           </div>
         </div>
       )}

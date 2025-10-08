@@ -237,9 +237,13 @@ export function SignupForm() {
               <strong>Browser info:</strong>
               <div className="ml-4 font-mono text-xs">
                 <div>Domain: {debugInfo.browserInfo.domain}</div>
-                <div>Path: {debugInfo.browserInfo.path}</div>
+                <div>Current Path: {debugInfo.browserInfo.path}</div>
                 <div>Secure: {debugInfo.browserInfo.isSecure ? 'Yes' : 'No'}</div>
               </div>
+            </div>
+
+            <div className="mt-2 p-2 bg-blue-100 border border-blue-300 rounded text-xs">
+              <strong>🔧 Cookie Path Fix:</strong> All cookies are set with <code>path: '/'</code> to ensure they're accessible from any route, including <code>/auth/callback</code>
             </div>
           </div>
         </div>
