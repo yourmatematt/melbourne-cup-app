@@ -447,15 +447,15 @@ export default function RegistrationSuccessPage() {
                 <>
                   <div className="flex items-start space-x-3">
                     <div className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center text-sm font-semibold text-blue-600">1</div>
-                    <p>Visit the bar and show your join code: <strong>{registrationData.joinCode}</strong></p>
+                    <p>Head to the bar and show your join code: <strong>{registrationData.joinCode}</strong></p>
                   </div>
                   <div className="flex items-start space-x-3">
                     <div className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center text-sm font-semibold text-blue-600">2</div>
-                    <p>Pay the entry fee of <strong>${registrationData.paymentAmount}</strong></p>
+                    <p>Pay your entry fee of <strong>${registrationData.paymentAmount}</strong></p>
                   </div>
                   <div className="flex items-start space-x-3">
                     <div className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center text-sm font-semibold text-blue-600">3</div>
-                    <p>Staff will confirm your payment and you'll be entered into the draw</p>
+                    <p>Staff will confirm your payment and you're all set! Keep your join code handy for the draw.</p>
                   </div>
                 </>
               )}
@@ -463,7 +463,7 @@ export default function RegistrationSuccessPage() {
               {isPaid && (
                 <div className="flex items-start space-x-3">
                   <CheckCircle className="w-6 h-6 text-green-600 mt-0.5" />
-                  <p>You're confirmed for the event! Watch for the draw results.</p>
+                  <p>You're all set! Watch for the draw results and good luck!</p>
                 </div>
               )}
             </div>

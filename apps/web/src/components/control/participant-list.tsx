@@ -29,6 +29,7 @@ import {
 } from '@/components/ui/alert-dialog'
 import { Label } from '@/components/ui/label'
 import { Checkbox } from '@/components/ui/checkbox'
+import { toast } from 'sonner'
 import {
   Search,
   Plus,
@@ -38,7 +39,9 @@ import {
   Phone,
   Clock,
   Filter,
-  UserPlus
+  UserPlus,
+  CreditCard,
+  CheckCircle
 } from 'lucide-react'
 
 interface ParticipantListProps {
@@ -61,6 +64,7 @@ export function ParticipantList({
   const [showUnassignedOnly, setShowUnassignedOnly] = useState(false)
   const [showManualAdd, setShowManualAdd] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
+  const [paymentLoading, setPaymentLoading] = useState<string | null>(null)
   const [newParticipant, setNewParticipant] = useState({
     displayName: '',
     email: '',
@@ -178,6 +182,31 @@ export function ParticipantList({
     }
   }
 
+  const handleMarkAsPaid = async (participantId: string) => {
+    setPaymentLoading(participantId)
+    try {
+      const supabase = createClient()
+      const { error } = await supabase
+        .from('patron_entries')
+        .update({
+          payment_status: 'paid',
+          paid_at: new Date().toISOString()
+        })
+        .eq('id', participantId)
+
+      if (error) throw error
+
+      const participantName = participants.find(p => p.id === participantId)?.participant_name || 'Participant'
+      toast.success(`${participantName} marked as paid!`)
+      onDataChange()
+    } catch (error) {
+      console.error('Error marking participant as paid:', error)
+      toast.error('Failed to mark participant as paid. Please try again.')
+    } finally {
+      setPaymentLoading(null)
+    }
+  }
+
   const formatTime = (dateString: string) => {
     return new Date(dateString).toLocaleString('en-AU', {
       month: 'short',
@@ -189,6 +218,38 @@ export function ParticipantList({
 
   const getAssignmentForParticipant = (participantId: string) => {
     return assignments.find(a => a.patron_entry_id === participantId)
+  }
+
+  const getPaymentStatusBadge = (paymentStatus: string) => {
+    switch (paymentStatus) {
+      case 'paid':
+        return (
+          <Badge className="bg-green-100 text-green-800 border-green-300">
+            <CheckCircle className="w-3 h-3 mr-1" />
+            Paid
+          </Badge>
+        )
+      case 'pending':
+        return (
+          <Badge variant="secondary" className="bg-gray-100 text-gray-700 border-gray-300">
+            <Clock className="w-3 h-3 mr-1" />
+            Pending
+          </Badge>
+        )
+      case 'expired':
+        return (
+          <Badge variant="destructive" className="bg-red-100 text-red-800 border-red-300">
+            <Clock className="w-3 h-3 mr-1" />
+            Expired
+          </Badge>
+        )
+      default:
+        return (
+          <Badge variant="outline">
+            Free
+          </Badge>
+        )
+    }
   }
 
   const isEventFull = participants.length >= event.capacity
@@ -346,6 +407,12 @@ export function ParticipantList({
                 {assignments.length} assigned
               </span>
               <span>
+                {participants.filter(p => p.payment_status === 'paid').length} paid
+              </span>
+              <span>
+                {participants.filter(p => p.payment_status === 'pending').length} pending
+              </span>
+              <span>
                 {participants.length - assignments.length} waiting
               </span>
             </div>
@@ -376,14 +443,17 @@ export function ParticipantList({
                     <div className="flex-1 space-y-2">
                       <div className="flex items-center space-x-3">
                         <div>
-                          <h3 className="font-medium text-lg">
-                            {participant.participant_name}
-                          </h3>
+                          <div className="flex items-center space-x-2 mb-1">
+                            <h3 className="font-medium text-lg">
+                              {participant.participant_name}
+                            </h3>
+                            {getPaymentStatusBadge(participant.payment_status)}
+                          </div>
                           <div className="flex items-center space-x-2 text-sm text-gray-500">
                             <Clock className="w-3 h-3" />
                             <span>Joined {formatTime(participant.created_at)}</span>
-                            <Badge variant="outline" className="text-xs">
-                              {participant.join_code}
+                            <Badge variant="outline" className="text-xs font-mono">
+                              Code: {participant.join_code}
                             </Badge>
                           </div>
                         </div>
@@ -431,6 +501,45 @@ export function ParticipantList({
                         <Badge variant="outline">
                           Waiting
                         </Badge>
+                      )}
+
+                      {participant.payment_status === 'pending' && (
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button
+                              size="sm"
+                              className="bg-green-600 hover:bg-green-700 text-white"
+                              disabled={paymentLoading === participant.id}
+                            >
+                              <CreditCard className="w-4 h-4 mr-1" />
+                              {paymentLoading === participant.id ? 'Processing...' : 'Mark as Paid'}
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Confirm Payment</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Mark <strong>{participant.participant_name}</strong> as paid?
+                                <br />
+                                <span className="font-mono text-sm mt-2 block bg-gray-100 p-2 rounded">
+                                  Join Code: {participant.join_code}
+                                </span>
+                                <br />
+                                Please verify the join code with the participant before confirming.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogAction
+                                onClick={() => handleMarkAsPaid(participant.id)}
+                                className="bg-green-600 hover:bg-green-700"
+                              >
+                                <CheckCircle className="w-4 h-4 mr-1" />
+                                Confirm Payment
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
                       )}
 
                       <AlertDialog>
