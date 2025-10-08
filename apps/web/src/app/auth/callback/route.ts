@@ -56,26 +56,117 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(`${origin}/auth/auth-code-error?error=configuration_error`)
   }
 
-  // Create Supabase client for magic link authentication
+  // Create response to handle cookies properly for magic link PKCE
+  let response = NextResponse.next()
+
+  // Debug incoming cookies for PKCE verification
+  const allCookies = request.cookies.getAll()
+  const pkceCookies = allCookies.filter(c =>
+    c.name.includes('pkce') ||
+    c.name.includes('verifier') ||
+    c.name.includes('code-verifier') ||
+    c.name.startsWith('sb-')
+  )
+
+  console.log('🔗 Magic link PKCE cookies on server:', {
+    totalCookies: allCookies.length,
+    pkceCookies: pkceCookies.map(c => ({
+      name: c.name,
+      hasValue: !!c.value,
+      valueLength: c.value?.length || 0
+    }))
+  })
+
+  // Create Supabase client with proper cookie handling for magic link PKCE
   const supabase = createServerClient(
     supabaseUrl,
     supabaseAnonKey,
     {
       cookies: {
         get(name: string) {
-          return request.cookies.get(name)?.value
+          const cookieValue = request.cookies.get(name)?.value
+          console.log(`🍪 Server reading cookie "${name}":`, {
+            found: !!cookieValue,
+            length: cookieValue?.length || 0
+          })
+          return cookieValue
         },
         set(name: string, value: string, options: CookieOptions) {
-          // No need to set cookies for magic link flow - the redirect handles this
+          console.log(`🍪 Server setting cookie "${name}"`)
+
+          const cookieOptions = {
+            ...options,
+            path: '/',
+            sameSite: 'lax' as const,
+            secure: process.env.NODE_ENV === 'production',
+            httpOnly: false // Important: magic link cookies need to be accessible to client
+          }
+
+          // Set on both request and response
+          request.cookies.set({
+            name,
+            value,
+            ...cookieOptions,
+          })
+
+          response = NextResponse.next({
+            request: {
+              headers: request.headers,
+            },
+          })
+
+          response.cookies.set({
+            name,
+            value,
+            ...cookieOptions,
+          })
         },
         remove(name: string, options: CookieOptions) {
-          // No need to remove cookies for magic link flow
+          console.log(`🗑️ Server removing cookie "${name}"`)
+
+          const cookieOptions = {
+            ...options,
+            path: '/',
+            sameSite: 'lax' as const,
+            secure: process.env.NODE_ENV === 'production',
+            expires: new Date(0)
+          }
+
+          // Remove from both request and response
+          request.cookies.set({
+            name,
+            value: '',
+            ...cookieOptions,
+          })
+
+          response = NextResponse.next({
+            request: {
+              headers: request.headers,
+            },
+          })
+
+          response.cookies.set({
+            name,
+            value: '',
+            ...cookieOptions,
+          })
         },
       },
     }
   )
 
   try {
+    // Check for specific PKCE cookies before exchange
+    const pkceCodeVerifier = request.cookies.get('sb-pkce-code-verifier')?.value
+    const codeVerifierCookies = allCookies.filter(c => c.name.includes('code-verifier'))
+
+    console.log('🔗 PKCE verification check:', {
+      hasPkceCodeVerifier: !!pkceCodeVerifier,
+      pkceCodeVerifierLength: pkceCodeVerifier?.length || 0,
+      codeVerifierCookies: codeVerifierCookies.map(c => c.name),
+      totalRelevantCookies: pkceCookies.length
+    })
+
     console.log('🔗 Attempting to exchange magic link code for session...')
 
     const { data, error: exchangeError } = await supabase.auth.exchangeCodeForSession(code)
@@ -117,7 +208,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.redirect(`${origin}/auth/check-email?email=${encodeURIComponent(data.user.email || '')}`)
     }
 
-    // Success - prepare redirect
+    // Success - prepare redirect with session cookies
     const redirectUrl = `${origin}${next}`
 
     console.log('✅ Magic link authentication successful, redirecting to:', {
@@ -126,7 +217,21 @@ export async function GET(request: NextRequest) {
       userId: data.user.id
     })
 
-    return NextResponse.redirect(redirectUrl)
+    // Create redirect response and copy any session cookies
+    const redirectResponse = NextResponse.redirect(redirectUrl)
+
+    // Copy cookies from our working response to the redirect response
+    response.cookies.getAll().forEach(cookie => {
+      redirectResponse.cookies.set(cookie.name, cookie.value, {
+        path: '/',
+        sameSite: 'lax',
+        secure: process.env.NODE_ENV === 'production',
+        httpOnly: false, // Important: keep accessible to client for magic link flow
+        maxAge: 60 * 60 * 24 * 7 // 1 week
+      })
+    })
+
+    return redirectResponse
 
   } catch (error) {
     console.error('💥 Unexpected error in auth callback:', {
