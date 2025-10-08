@@ -96,11 +96,21 @@ export default function ResultsPage() {
         return
       }
 
+      // Get user's tenant ID first
+      const { data: tenantUser, error: tenantError } = await supabase
+        .from('tenant_users')
+        .select('tenant_id')
+        .eq('user_id', user.id)
+        .single()
+
+      if (tenantError) throw tenantError
+
       // Fetch event details
       const { data: eventData, error: eventError } = await supabase
         .from('events')
         .select('id, name, starts_at, status')
         .eq('id', eventId)
+        .eq('tenant_id', tenantUser.tenant_id)
         .single()
 
       if (eventError) throw eventError

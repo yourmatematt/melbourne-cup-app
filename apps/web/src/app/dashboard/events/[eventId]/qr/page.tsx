@@ -43,8 +43,8 @@ export default function EventQRPage() {
   const [error, setError] = useState<string | null>(null)
 
   const publicUrl = typeof window !== 'undefined'
-    ? `${window.location.origin}/e/${eventId || ''}`
-    : `https://melcup.app/e/${eventId || ''}`
+    ? `${window.location.origin}/events/${eventId || ''}/enter`
+    : `https://melcup.app/events/${eventId || ''}/enter`
 
   useEffect(() => {
     if (eventId) {

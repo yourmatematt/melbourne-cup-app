@@ -340,21 +340,29 @@ export default function EventManagePage() {
               </p>
             </div>
 
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
+              <Link href={`/dashboard/events/${eventId}/control`}>
+                <Button size="sm" className="bg-blue-600 hover:bg-blue-700">
+                  <Play className="mr-2 h-4 w-4" />
+                  Event Control
+                </Button>
+              </Link>
               <Link href={`/dashboard/events/${eventId}/qr`}>
-                <Button variant="outline" size="sm">
+                <Button variant="outline" size="sm" className="bg-green-50 border-green-200 text-green-700 hover:bg-green-100">
                   <QrCode className="mr-2 h-4 w-4" />
                   QR Code
                 </Button>
               </Link>
-              <Button variant="outline" size="sm">
-                <Share2 className="mr-2 h-4 w-4" />
-                Share
-              </Button>
-              <Link href={`/dashboard/events/${eventId}/settings`}>
+              <Link href={`/dashboard/events/${eventId}/analytics`}>
                 <Button variant="outline" size="sm">
-                  <Settings className="mr-2 h-4 w-4" />
-                  Settings
+                  <Users className="mr-2 h-4 w-4" />
+                  Analytics
+                </Button>
+              </Link>
+              <Link href={`/dashboard/events/${eventId}/results`}>
+                <Button variant="outline" size="sm" className={`${event?.status === 'completed' ? 'bg-yellow-50 border-yellow-200 text-yellow-700 hover:bg-yellow-100' : ''}`}>
+                  <Award className="mr-2 h-4 w-4" />
+                  {event?.status === 'completed' ? 'Winners' : 'Results'}
                 </Button>
               </Link>
               <Button
@@ -365,6 +373,12 @@ export default function EventManagePage() {
                 <Eye className="mr-2 h-4 w-4" />
                 Live View
               </Button>
+              <Link href={`/dashboard/events/${eventId}/settings`}>
+                <Button variant="outline" size="sm">
+                  <Settings className="mr-2 h-4 w-4" />
+                  Settings
+                </Button>
+              </Link>
             </div>
           </div>
         </div>
@@ -539,37 +553,6 @@ export default function EventManagePage() {
           </Card>
         </div>
 
-        {/* Action Buttons */}
-        <div className="mt-8 flex flex-wrap gap-4">
-          <Link href={`/dashboard/events/${eventId}/control`}>
-            <Button className="bg-blue-600 hover:bg-blue-700">
-              <Play className="mr-2 h-4 w-4" />
-              Event Control
-            </Button>
-          </Link>
-          <Link href={`/dashboard/events/${eventId}/qr`}>
-            <Button variant="outline" className="bg-green-50 border-green-200 text-green-700 hover:bg-green-100">
-              <QrCode className="mr-2 h-4 w-4" />
-              QR Code Display
-            </Button>
-          </Link>
-          <Link href={`/dashboard/events/${eventId}/analytics`}>
-            <Button variant="outline">
-              <Users className="mr-2 h-4 w-4" />
-              Analytics
-            </Button>
-          </Link>
-          <Link href={`/dashboard/events/${eventId}/results`}>
-            <Button variant="outline" className={`${event?.status === 'completed' ? 'bg-yellow-50 border-yellow-200 text-yellow-700 hover:bg-yellow-100' : ''}`}>
-              <Award className="mr-2 h-4 w-4" />
-              {event?.status === 'completed' ? 'View Winners' : 'Enter Results'}
-            </Button>
-          </Link>
-          <Button variant="outline">
-            <Share2 className="mr-2 h-4 w-4" />
-            Export Data
-          </Button>
-        </div>
       </div>
 
       {selectedEvent && (

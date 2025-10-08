@@ -322,7 +322,7 @@ export default function EventSettingsPage() {
   function getJoinUrl() {
     if (typeof window !== 'undefined') {
       const baseUrl = window.location.origin
-      return `${baseUrl}/events/${eventId}/join`
+      return `${baseUrl}/events/${eventId}/enter`
     }
     return ''
   }
@@ -649,7 +649,8 @@ export default function EventSettingsPage() {
                         min="1"
                         max="500"
                         value={formData.capacity}
-                        onChange={(e) => updateFormData('capacity', parseInt(e.target.value) || 100)}
+                        onChange={(e) => updateFormData('capacity', e.target.value === '' ? 100 : parseInt(e.target.value) || 100)}
+                        placeholder="100"
                         className="w-24 text-center"
                       />
                     </div>
@@ -723,8 +724,9 @@ export default function EventSettingsPage() {
                           type="number"
                           min="0"
                           step="0.01"
-                          value={formData.entry_fee}
-                          onChange={(e) => updateFormData('entry_fee', parseFloat(e.target.value) || 0)}
+                          value={formData.entry_fee === 0 ? '' : formData.entry_fee}
+                          onChange={(e) => updateFormData('entry_fee', e.target.value === '' ? 0 : parseFloat(e.target.value) || 0)}
+                          placeholder="0.00"
                           className="mt-1"
                         />
                       </div>
@@ -736,8 +738,9 @@ export default function EventSettingsPage() {
                           type="number"
                           min="5"
                           max="120"
-                          value={formData.payment_timeout_minutes}
-                          onChange={(e) => updateFormData('payment_timeout_minutes', parseInt(e.target.value) || 30)}
+                          value={formData.payment_timeout_minutes === 30 && formData.payment_timeout_minutes === 0 ? '' : formData.payment_timeout_minutes}
+                          onChange={(e) => updateFormData('payment_timeout_minutes', e.target.value === '' ? 30 : parseInt(e.target.value) || 30)}
+                          placeholder="30"
                           className="mt-1"
                         />
                       </div>
@@ -796,8 +799,9 @@ export default function EventSettingsPage() {
                         type="number"
                         min="0"
                         max="300"
-                        value={formData.promo_duration}
-                        onChange={(e) => updateFormData('promo_duration', parseInt(e.target.value) || 0)}
+                        value={formData.promo_duration === 0 ? '' : formData.promo_duration}
+                        onChange={(e) => updateFormData('promo_duration', e.target.value === '' ? 0 : parseInt(e.target.value) || 0)}
+                        placeholder="0"
                         className="mt-1"
                       />
                       <p className="text-xs text-gray-500 mt-1">
@@ -953,13 +957,17 @@ export default function EventSettingsPage() {
                 <Separator />
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <Button variant="outline" className="justify-start">
-                    <QrCode className="h-4 w-4 mr-2" />
-                    Generate QR Code
+                  <Button variant="outline" className="justify-start" asChild>
+                    <Link href={`/dashboard/events/${eventId}/qr`}>
+                      <QrCode className="h-4 w-4 mr-2" />
+                      Generate QR Code
+                    </Link>
                   </Button>
-                  <Button variant="outline" className="justify-start">
-                    <Download className="h-4 w-4 mr-2" />
-                    Export Participants
+                  <Button variant="outline" className="justify-start" asChild>
+                    <Link href={`/dashboard/events/${eventId}/print/participants`}>
+                      <Download className="h-4 w-4 mr-2" />
+                      Export Participants
+                    </Link>
                   </Button>
                 </div>
               </CardContent>
