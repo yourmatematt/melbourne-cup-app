@@ -213,31 +213,6 @@ function DashboardContent() {
   return (
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {!tenant && (
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <div className="h-5 w-5 text-blue-400">
-                  <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
-                  </svg>
-                </div>
-              </div>
-              <div className="ml-3">
-                <h3 className="text-sm font-medium text-blue-800">
-                  Welcome! Set up your venue to start creating events.
-                </h3>
-                <div className="mt-2">
-                  <Link href="/onboarding">
-                    <Button className="bg-blue-600 text-white hover:bg-blue-700 text-sm">
-                      Get Started
-                    </Button>
-                  </Link>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
 
         <div className="flex justify-between items-center mb-8">
           <div>
@@ -248,14 +223,19 @@ function DashboardContent() {
               Welcome to your Melbourne Cup venue management
             </p>
           </div>
-          {tenant && (
+          <div className="flex items-center space-x-4">
+            <Link href="/dashboard/settings">
+              <Button variant="outline">
+                Edit Venue Settings
+              </Button>
+            </Link>
             <Link href="/dashboard/events/new">
               <Button className="bg-blue-600 text-white hover:bg-blue-700">
                 <Plus className="mr-2 h-4 w-4" />
                 New Event
               </Button>
             </Link>
-          )}
+          </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
@@ -407,30 +387,21 @@ function DashboardContent() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <Card>
             <CardHeader>
-              <CardTitle>{!tenant ? 'Get Started' : events.length === 0 ? 'Create Your First Event' : 'Create Another Event'}</CardTitle>
+              <CardTitle>{events.length === 0 ? 'Create Your First Event' : 'Create Another Event'}</CardTitle>
               <CardDescription>
-                {!tenant ? 'Set up your venue first to start creating events' : events.length === 0 ? 'Create your first Melbourne Cup event' : 'Add another event for your venue'}
+                {events.length === 0 ? 'Create your first Melbourne Cup event' : 'Add another event for your venue'}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <p className="text-sm text-gray-600">
-                {!tenant ? 'Complete your venue setup to unlock event creation and start running Melbourne Cup sweeps and calcuttas.' : 'Set up a sweep or calcutta for Melbourne Cup 2025. Our templates make it easy to get started with all the horse details pre-filled.'}
+                Set up a sweep or calcutta for Melbourne Cup 2025. Our templates make it easy to get started with all the horse details pre-filled.
               </p>
-              {tenant ? (
-                <Link href="/dashboard/events/new">
-                  <Button className="w-full bg-blue-600 text-white hover:bg-blue-700">
-                    <Plus className="mr-2 h-4 w-4" />
-                    Create Melbourne Cup Event
-                  </Button>
-                </Link>
-              ) : (
-                <Link href="/onboarding">
-                  <Button className="w-full bg-blue-600 text-white hover:bg-blue-700">
-                    <Plus className="mr-2 h-4 w-4" />
-                    Set Up Venue
-                  </Button>
-                </Link>
-              )}
+              <Link href="/dashboard/events/new">
+                <Button className="w-full bg-blue-600 text-white hover:bg-blue-700">
+                  <Plus className="mr-2 h-4 w-4" />
+                  Create Melbourne Cup Event
+                </Button>
+              </Link>
             </CardContent>
           </Card>
 

@@ -79,7 +79,52 @@ export function SignupForm() {
         hasSession: !!authData.session
       })
 
-      // Redirect directly to onboarding since user is already authenticated
+      // Auto-create default tenant for the user
+      console.log('🏢 Creating default tenant for user...')
+
+      // Generate slug from email (remove domain and special chars)
+      const emailUsername = data.email.split('@')[0]
+      const slug = emailUsername.toLowerCase().replace(/[^a-z0-9]/g, '-')
+
+      // Create tenant
+      const { data: tenantData, error: tenantError } = await supabase
+        .from('tenants')
+        .insert({
+          name: data.venueName,
+          slug: slug,
+          billing_status: 'trial'
+        })
+        .select()
+        .single()
+
+      if (tenantError) {
+        console.error('Failed to create tenant:', tenantError)
+        throw new Error('Failed to set up venue')
+      }
+
+      console.log('✅ Tenant created:', {
+        id: tenantData.id,
+        name: tenantData.name,
+        slug: tenantData.slug
+      })
+
+      // Link user to tenant
+      const { error: tenantUserError } = await supabase
+        .from('tenant_users')
+        .insert({
+          tenant_id: tenantData.id,
+          user_id: authData.user.id,
+          role: 'owner'
+        })
+
+      if (tenantUserError) {
+        console.error('Failed to link user to tenant:', tenantUserError)
+        throw new Error('Failed to set up venue access')
+      }
+
+      console.log('✅ User linked to tenant as owner')
+
+      // Redirect to dashboard
       router.push('/dashboard')
     } catch (err) {
       console.error('Signup error:', err)
