@@ -76,7 +76,7 @@ export function LoginForm() {
 
       if (!tenantUsers || tenantUsers.length === 0) {
         // User needs to complete onboarding
-        router.push('/onboard')
+        router.push('/dashboard')
       } else {
         // User has a tenant, redirect to dashboard
         router.push('/dashboard')

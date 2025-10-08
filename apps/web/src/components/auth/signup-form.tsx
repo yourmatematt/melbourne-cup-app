@@ -80,7 +80,7 @@ export function SignupForm() {
       })
 
       // Redirect directly to onboarding since user is already authenticated
-      router.push('/onboard')
+      router.push('/dashboard')
     } catch (err) {
       console.error('Signup error:', err)
       setError(err instanceof Error ? err.message : 'Failed to create account')
