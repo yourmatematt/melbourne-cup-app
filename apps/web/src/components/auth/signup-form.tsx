@@ -19,11 +19,55 @@ import {
 import { Input } from '@/components/ui/input'
 import { Checkbox } from '@/components/ui/checkbox'
 
+interface DebugInfo {
+  timestamp: string
+  cookiesCreated: number
+  flowStateCookieExists: boolean
+  pkceCookieExists: boolean
+  allSbCookies: string[]
+  browserInfo: {
+    domain: string
+    path: string
+    isSecure: boolean
+  }
+}
+
 export function SignupForm() {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [debugInfo, setDebugInfo] = useState<DebugInfo | null>(null)
+  const [showDebug, setShowDebug] = useState(false)
   const router = useRouter()
   const supabase = createClient()
+
+  // Function to parse cookies and create debug info
+  const createDebugInfo = (): DebugInfo => {
+    const allCookies = document.cookie.split(';').map(c => c.trim()).filter(c => c)
+    const sbCookies = allCookies
+      .filter(c => c.includes('sb-') || c.includes('supabase'))
+      .map(c => c.split('=')[0])
+
+    const flowStateCookieExists = allCookies.some(c =>
+      c.includes('flow') || c.includes('sb-') && c.includes('flow')
+    )
+
+    const pkceCookieExists = allCookies.some(c =>
+      c.includes('pkce') || c.includes('verifier')
+    )
+
+    return {
+      timestamp: new Date().toISOString(),
+      cookiesCreated: allCookies.length,
+      flowStateCookieExists,
+      pkceCookieExists,
+      allSbCookies: sbCookies,
+      browserInfo: {
+        domain: window.location.hostname,
+        path: window.location.pathname,
+        isSecure: window.location.protocol === 'https:'
+      }
+    }
+  }
 
   const form = useForm<SignupFormData>({
     resolver: zodResolver(signupSchema),
@@ -79,21 +123,12 @@ export function SignupForm() {
         confirmationSentAt: authData.user.confirmation_sent_at
       })
 
-      // Enhanced debugging for auth flow state cookies
+      // Create visible debug info after signup
       setTimeout(() => {
-        console.log('🔐 Post-signup auth cookie analysis:')
-        const cookieDebug = debugAuthCookies()
-
-        if (cookieDebug && cookieDebug.flowStateCookies.length === 0) {
-          console.warn('⚠️ WARNING: No flow state cookies found after signup! This may cause "invalid flow state" error.')
-        }
-
-        console.log('🌐 Browser context:', {
-          domain: window.location.hostname,
-          path: window.location.pathname,
-          isSecure: window.location.protocol === 'https:'
-        })
-      }, 500) // Increased delay to ensure cookies are set
+        const debug = createDebugInfo()
+        setDebugInfo(debug)
+        setShowDebug(true)
+      }, 500) // Delay to ensure cookies are set
 
       // Redirect to check email page (tenant creation happens during onboarding after email verification)
       router.push(`/auth/check-email?email=${encodeURIComponent(data.email)}`)
@@ -106,13 +141,66 @@ export function SignupForm() {
   }
 
   return (
-    <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-        {error && (
-          <div className="p-3 text-sm text-red-600 bg-red-50 border border-red-200 rounded-md">
-            {error}
+    <div>
+      {/* Visible Debug Panel */}
+      {showDebug && debugInfo && (
+        <div className="fixed top-4 left-4 right-4 z-50 p-4 bg-yellow-50 border-4 border-red-500 rounded-lg shadow-lg">
+          <div className="flex justify-between items-start mb-4">
+            <h3 className="text-lg font-bold text-red-700">🔍 AUTH DEBUG INFO</h3>
+            <button
+              onClick={() => setShowDebug(false)}
+              className="text-red-500 hover:text-red-700 font-bold text-xl"
+            >
+              ×
+            </button>
           </div>
-        )}
+
+          <div className="space-y-2 text-sm">
+            <div><strong>Signup attempted at:</strong> {debugInfo.timestamp}</div>
+            <div><strong>Total cookies created:</strong> {debugInfo.cookiesCreated}</div>
+            <div><strong>Flow state cookie exists:</strong>
+              <span className={debugInfo.flowStateCookieExists ? 'text-green-600 font-bold' : 'text-red-600 font-bold'}>
+                {debugInfo.flowStateCookieExists ? ' YES' : ' NO'}
+              </span>
+            </div>
+            <div><strong>PKCE cookie exists:</strong>
+              <span className={debugInfo.pkceCookieExists ? 'text-green-600 font-bold' : 'text-red-600 font-bold'}>
+                {debugInfo.pkceCookieExists ? ' YES' : ' NO'}
+              </span>
+            </div>
+
+            {debugInfo.allSbCookies.length > 0 ? (
+              <div>
+                <strong>Supabase cookies found:</strong>
+                <ul className="ml-4 mt-1">
+                  {debugInfo.allSbCookies.map((cookie, index) => (
+                    <li key={index} className="font-mono text-xs">{cookie}</li>
+                  ))}
+                </ul>
+              </div>
+            ) : (
+              <div className="text-red-600 font-bold">⚠️ NO SUPABASE COOKIES FOUND!</div>
+            )}
+
+            <div className="mt-4 pt-2 border-t border-gray-300">
+              <strong>Browser info:</strong>
+              <div className="ml-4 font-mono text-xs">
+                <div>Domain: {debugInfo.browserInfo.domain}</div>
+                <div>Path: {debugInfo.browserInfo.path}</div>
+                <div>Secure: {debugInfo.browserInfo.isSecure ? 'Yes' : 'No'}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+          {error && (
+            <div className="p-3 text-sm text-red-600 bg-red-50 border border-red-200 rounded-md">
+              {error}
+            </div>
+          )}
 
         <FormField
           control={form.control}
@@ -216,5 +304,6 @@ export function SignupForm() {
         </Button>
       </form>
     </Form>
+    </div>
   )
 }

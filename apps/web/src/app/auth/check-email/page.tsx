@@ -1,12 +1,25 @@
 'use client'
 
-import { Suspense, useState } from 'react'
+import { Suspense, useState, useEffect } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Mail, ArrowLeft, CheckCircle, AlertCircle } from 'lucide-react'
 import Link from 'next/link'
+
+interface CheckEmailDebugInfo {
+  pageLoadTime: string
+  cookiesFound: number
+  flowStateCookieExists: boolean
+  pkceCookieExists: boolean
+  allSbCookies: string[]
+  browserInfo: {
+    domain: string
+    path: string
+    isSecure: boolean
+  }
+}
 
 function CheckEmailContent() {
   const searchParams = useSearchParams()
@@ -16,6 +29,43 @@ function CheckEmailContent() {
   const [isResending, setIsResending] = useState(false)
   const [resendCooldown, setResendCooldown] = useState(0)
   const [message, setMessage] = useState<{ type: 'success' | 'error' | null, text: string }>({ type: null, text: '' })
+  const [debugInfo, setDebugInfo] = useState<CheckEmailDebugInfo | null>(null)
+  const [showDebug, setShowDebug] = useState(true) // Show by default on this page
+
+  // Function to parse cookies and create debug info
+  const createDebugInfo = (): CheckEmailDebugInfo => {
+    const allCookies = document.cookie.split(';').map(c => c.trim()).filter(c => c)
+    const sbCookies = allCookies
+      .filter(c => c.includes('sb-') || c.includes('supabase'))
+      .map(c => c.split('=')[0])
+
+    const flowStateCookieExists = allCookies.some(c =>
+      c.includes('flow') || c.includes('sb-') && c.includes('flow')
+    )
+
+    const pkceCookieExists = allCookies.some(c =>
+      c.includes('pkce') || c.includes('verifier')
+    )
+
+    return {
+      pageLoadTime: new Date().toISOString(),
+      cookiesFound: allCookies.length,
+      flowStateCookieExists,
+      pkceCookieExists,
+      allSbCookies: sbCookies,
+      browserInfo: {
+        domain: window.location.hostname,
+        path: window.location.pathname,
+        isSecure: window.location.protocol === 'https:'
+      }
+    }
+  }
+
+  // Create debug info on page load
+  useEffect(() => {
+    const debug = createDebugInfo()
+    setDebugInfo(debug)
+  }, [])
 
   const handleResendEmail = async () => {
     if (!email || isResending || resendCooldown > 0) return
@@ -69,6 +119,64 @@ function CheckEmailContent() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+      {/* Visible Debug Panel */}
+      {showDebug && debugInfo && (
+        <div className="fixed top-4 left-4 right-4 z-50 p-4 bg-blue-50 border-4 border-blue-500 rounded-lg shadow-lg">
+          <div className="flex justify-between items-start mb-4">
+            <h3 className="text-lg font-bold text-blue-700">🔍 CHECK-EMAIL DEBUG INFO</h3>
+            <button
+              onClick={() => setShowDebug(false)}
+              className="text-blue-500 hover:text-blue-700 font-bold text-xl"
+            >
+              ×
+            </button>
+          </div>
+
+          <div className="space-y-2 text-sm">
+            <div><strong>Page loaded at:</strong> {debugInfo.pageLoadTime}</div>
+            <div><strong>Total cookies found:</strong> {debugInfo.cookiesFound}</div>
+            <div><strong>Flow state cookie exists:</strong>
+              <span className={debugInfo.flowStateCookieExists ? 'text-green-600 font-bold' : 'text-red-600 font-bold'}>
+                {debugInfo.flowStateCookieExists ? ' YES' : ' NO'}
+              </span>
+            </div>
+            <div><strong>PKCE cookie exists:</strong>
+              <span className={debugInfo.pkceCookieExists ? 'text-green-600 font-bold' : 'text-red-600 font-bold'}>
+                {debugInfo.pkceCookieExists ? ' YES' : ' NO'}
+              </span>
+            </div>
+
+            {debugInfo.allSbCookies.length > 0 ? (
+              <div>
+                <strong>Supabase cookies found:</strong>
+                <ul className="ml-4 mt-1">
+                  {debugInfo.allSbCookies.map((cookie, index) => (
+                    <li key={index} className="font-mono text-xs">{cookie}</li>
+                  ))}
+                </ul>
+              </div>
+            ) : (
+              <div className="text-red-600 font-bold">⚠️ NO SUPABASE COOKIES FOUND!</div>
+            )}
+
+            <div className="mt-4 pt-2 border-t border-gray-300">
+              <strong>Browser info:</strong>
+              <div className="ml-4 font-mono text-xs">
+                <div>Domain: {debugInfo.browserInfo.domain}</div>
+                <div>Path: {debugInfo.browserInfo.path}</div>
+                <div>Secure: {debugInfo.browserInfo.isSecure ? 'Yes' : 'No'}</div>
+              </div>
+            </div>
+
+            {!debugInfo.flowStateCookieExists && (
+              <div className="mt-4 p-2 bg-red-100 border border-red-300 rounded text-red-700">
+                <strong>⚠️ WARNING:</strong> No flow state cookie found! This will cause "invalid flow state" error when clicking the verification email link.
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       <div className="max-w-md w-full space-y-8">
         <Card>
           <CardHeader className="text-center">
