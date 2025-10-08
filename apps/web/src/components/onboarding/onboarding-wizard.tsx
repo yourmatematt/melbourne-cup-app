@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { createClient } from '@/lib/supabase/client'
+import { createClient, debugAuthCookies } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Progress } from '@/components/ui/progress'
@@ -82,6 +82,10 @@ export function OnboardingWizard() {
 
         // Log current session state for debugging
         console.log('🔐 Onboarding: Starting auth initialization at', new Date().toISOString())
+
+        // Debug magic link cookies
+        console.log('🔗 Debugging magic link cookies before session check:')
+        debugAuthCookies()
 
         // Check for existing session first (more reliable than getUser for newly verified users)
         const { data: { session }, error: sessionError } = await supabase.auth.getSession()
