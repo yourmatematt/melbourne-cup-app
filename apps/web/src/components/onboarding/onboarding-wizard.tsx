@@ -24,39 +24,170 @@ export function OnboardingWizard() {
   const [currentStep, setCurrentStep] = useState<OnboardingStep>('venue')
   const [data, setData] = useState<OnboardingData>({})
   const [isLoading, setIsLoading] = useState(false)
+  const [isAuthLoading, setIsAuthLoading] = useState(true) // Add auth loading state
   const [user, setUser] = useState<any>(null)
   const [userVenueName, setUserVenueName] = useState<string>('')
   const router = useRouter()
   const supabase = createClient()
 
   useEffect(() => {
-    async function getUser() {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) {
-        router.push('/login')
-      } else if (!user.email_confirmed_at) {
-        // User hasn't confirmed their email yet
-        router.push(`/auth/check-email?email=${encodeURIComponent(user.email || '')}`)
-      } else {
-        setUser(user)
+    async function checkUserAndTenant(currentUser: any) {
+      try {
+        if (!currentUser) {
+          console.log('🔐 Onboarding: No user found, redirecting to login')
+          router.push('/login')
+          return
+        }
+
+        if (!currentUser.email_confirmed_at) {
+          console.log('🔐 Onboarding: User email not confirmed, redirecting to check-email')
+          router.push(`/auth/check-email?email=${encodeURIComponent(currentUser.email || '')}`)
+          return
+        }
+
+        console.log('🔐 Onboarding: User is authenticated and verified')
+        setUser(currentUser)
         // Get venue name from user metadata (set during signup)
-        setUserVenueName(user.user_metadata?.name || '')
+        setUserVenueName(currentUser.user_metadata?.name || '')
 
         // Check if user already has a tenant - if so, skip onboarding
-        const { data: existingTenant } = await supabase
+        console.log('🔐 Onboarding: Checking for existing tenant...')
+        const { data: existingTenant, error: tenantError } = await supabase
           .from('tenant_users')
           .select('tenant_id')
-          .eq('user_id', user.id)
+          .eq('user_id', currentUser.id)
           .single()
 
-        if (existingTenant) {
-          // User already has a tenant, redirect to dashboard
-          router.push('/dashboard')
+        if (tenantError && tenantError.code !== 'PGRST116') {
+          // PGRST116 = no rows found, which is expected for new users
+          console.error('🔐 Onboarding: Error checking tenant:', tenantError)
         }
+
+        if (existingTenant) {
+          console.log('🔐 Onboarding: User already has tenant, redirecting to dashboard')
+          router.push('/dashboard')
+        } else {
+          console.log('🔐 Onboarding: New user, proceeding with onboarding')
+          setIsAuthLoading(false)
+        }
+      } catch (err) {
+        console.error('🔐 Onboarding: Unexpected error:', err)
+        setIsAuthLoading(false)
       }
     }
-    getUser()
-  }, [router, supabase.auth])
+
+    async function initializeAuth() {
+      try {
+        setIsAuthLoading(true)
+
+        // Log current session state for debugging
+        console.log('🔐 Onboarding: Starting auth initialization at', new Date().toISOString())
+
+        // Check for existing session first (more reliable than getUser for newly verified users)
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+
+        console.log('🔐 Onboarding: Session check result:', {
+          hasSession: !!session,
+          hasUser: !!session?.user,
+          userEmail: session?.user?.email,
+          emailConfirmed: session?.user?.email_confirmed_at,
+          sessionExpiry: session?.expires_at,
+          error: sessionError?.message
+        })
+
+        if (session?.user) {
+          // Session exists, proceed with user validation
+          await checkUserAndTenant(session.user)
+          return
+        }
+
+        // No session found, try getUser as fallback
+        console.log('🔐 Onboarding: No session found, trying getUser...')
+        const { data: { user }, error } = await supabase.auth.getUser()
+
+        console.log('🔐 Onboarding: GetUser result:', {
+          hasUser: !!user,
+          userEmail: user?.email,
+          emailConfirmed: user?.email_confirmed_at,
+          error: error?.message
+        })
+
+        if (user) {
+          await checkUserAndTenant(user)
+        } else {
+          // No user found immediately after email verification - this is the critical timing issue
+          console.log('🔐 Onboarding: No user found initially, implementing delayed retry with multiple attempts...')
+
+          // Try multiple times with increasing delays to handle various email verification timing scenarios
+          const retryAttempts = [500, 1000, 2000] // 0.5s, 1s, 2s delays
+          let userFound = false
+
+          for (let i = 0; i < retryAttempts.length && !userFound; i++) {
+            console.log(`🔐 Onboarding: Retry attempt ${i + 1}/${retryAttempts.length} after ${retryAttempts[i]}ms...`)
+            await new Promise(resolve => setTimeout(resolve, retryAttempts[i]))
+
+            // Check both session and user on retry
+            const { data: { session: retrySession } } = await supabase.auth.getSession()
+            const { data: { user: retryUser } } = await supabase.auth.getUser()
+
+            console.log(`🔐 Onboarding: Retry ${i + 1} result:`, {
+              hasSession: !!retrySession,
+              hasUser: !!retryUser,
+              userEmail: retryUser?.email || retrySession?.user?.email,
+              source: retrySession?.user ? 'session' : retryUser ? 'getUser' : 'none'
+            })
+
+            const foundUser = retrySession?.user || retryUser
+            if (foundUser) {
+              console.log(`🔐 Onboarding: User found on retry ${i + 1}`)
+              await checkUserAndTenant(foundUser)
+              userFound = true
+            }
+          }
+
+          if (!userFound) {
+            console.log('🔐 Onboarding: No user found after all retry attempts, redirecting to login')
+            setIsAuthLoading(false)
+            router.push('/login')
+          }
+        }
+      } catch (err) {
+        console.error('🔐 Onboarding: Auth initialization error:', err)
+        setIsAuthLoading(false)
+      }
+    }
+
+    // Set up auth state change listener for real-time updates
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        console.log('🔐 Onboarding: Auth state change:', event, !!session?.user)
+
+        if (event === 'SIGNED_IN' && session?.user) {
+          // User just signed in - this handles the email verification callback case
+          console.log('🔐 Onboarding: SIGNED_IN event received, processing user...')
+          await checkUserAndTenant(session.user)
+        } else if (event === 'TOKEN_REFRESHED' && session?.user) {
+          // Token refreshed - update user if needed
+          console.log('🔐 Onboarding: TOKEN_REFRESHED event received')
+          if (!user) {
+            await checkUserAndTenant(session.user)
+          }
+        } else if (event === 'SIGNED_OUT') {
+          setUser(null)
+          setIsAuthLoading(false)
+          router.push('/login')
+        }
+      }
+    )
+
+    // Initialize auth check
+    initializeAuth()
+
+    // Cleanup subscription
+    return () => {
+      subscription.unsubscribe()
+    }
+  }, [router, supabase.auth, user])
 
   const steps = [
     { key: 'venue', title: 'Venue Details', description: 'Tell us about your venue' },
@@ -194,8 +325,41 @@ export function OnboardingWizard() {
     router.push('/dashboard')
   }
 
+  // Show loading state while checking authentication
+  if (isAuthLoading) {
+    return (
+      <div className="max-w-2xl mx-auto py-8 px-4">
+        <div className="flex flex-col items-center justify-center min-h-[400px]">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mb-4"></div>
+          <h2 className="text-xl font-semibold mb-2">Setting up your account...</h2>
+          <p className="text-gray-600 text-center">
+            Please wait while we verify your email confirmation and prepare your onboarding experience.
+          </p>
+        </div>
+      </div>
+    )
+  }
+
+  // Show error state if user is not found after loading
   if (!user) {
-    return null
+    return (
+      <div className="max-w-2xl mx-auto py-8 px-4">
+        <div className="flex flex-col items-center justify-center min-h-[400px]">
+          <div className="text-red-500 mb-4">
+            <svg className="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+            </svg>
+          </div>
+          <h2 className="text-xl font-semibold mb-2">Authentication Required</h2>
+          <p className="text-gray-600 text-center mb-4">
+            We couldn't verify your authentication. Please try logging in again.
+          </p>
+          <Button onClick={() => router.push('/login')}>
+            Go to Login
+          </Button>
+        </div>
+      </div>
+    )
   }
 
   return (
