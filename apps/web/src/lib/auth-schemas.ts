@@ -1,20 +1,14 @@
 import { z } from 'zod'
 
-// Authentication schemas
+// Authentication schemas - Magic Link (passwordless)
 export const signupSchema = z.object({
   email: z.string().email('Please enter a valid email address'),
-  password: z.string().min(6, 'Password must be at least 6 characters'),
-  confirmPassword: z.string(),
   venueName: z.string().min(1, 'Venue name is required').max(100, 'Venue name too long'),
   acceptTerms: z.boolean().refine(val => val, 'You must accept the terms and conditions')
-}).refine(data => data.password === data.confirmPassword, {
-  message: "Passwords don't match",
-  path: ["confirmPassword"]
 })
 
 export const loginSchema = z.object({
-  email: z.string().email('Please enter a valid email address'),
-  password: z.string().min(1, 'Password is required')
+  email: z.string().email('Please enter a valid email address')
 })
 
 // Onboarding schemas
