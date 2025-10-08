@@ -310,9 +310,10 @@ export async function POST(
       ?.filter(h => h.is_scratched)
       .map(h => h.number) || []
 
-    // Execute the draw algorithm
+    // Execute the draw algorithm - shuffle both participants AND horses for maximum randomness
     const { shuffled: shuffledParticipants, usedSeed } = secureShuffleArray(participants)
-    const assignmentPlan = assignToHorses(shuffledParticipants, availableHorses)
+    const { shuffled: shuffledHorses } = secureShuffleArray(availableHorses, usedSeed + '_horses')
+    const assignmentPlan = assignToHorses(shuffledParticipants, shuffledHorses)
 
     // If dry run, return the plan without committing
     if (dryRun) {
@@ -329,7 +330,7 @@ export async function POST(
           patron_entry_id: a.participantId,
           event_horse_id: a.horseId,
           patron_entry: shuffledParticipants.find(p => p.id === a.participantId),
-          event_horse: availableHorses.find(h => h.id === a.horseId)
+          event_horse: shuffledHorses.find(h => h.id === a.horseId)
         }))
       })
     }

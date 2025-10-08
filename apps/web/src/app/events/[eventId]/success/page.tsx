@@ -350,7 +350,7 @@ export default function RegistrationSuccessPage() {
             <CardHeader>
               <CardTitle className="flex items-center space-x-2 text-green-800">
                 <CheckCircle className="h-5 w-5" />
-                <span>Payment Confirmed</span>
+                <span>Registration Complete</span>
               </CardTitle>
               <CardDescription className="text-green-700">
                 You're all set for the event!
