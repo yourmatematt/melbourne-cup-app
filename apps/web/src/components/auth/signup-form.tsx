@@ -79,50 +79,33 @@ export function SignupForm() {
         hasSession: !!authData.session
       })
 
-      // Auto-create default tenant for the user
-      console.log('🏢 Creating default tenant for user...')
+      // Auto-create default tenant for the user via API
+      console.log('🏢 Creating default tenant for user via API...')
 
-      // Generate slug from email (remove domain and special chars)
-      const emailUsername = data.email.split('@')[0]
-      const slug = emailUsername.toLowerCase().replace(/[^a-z0-9]/g, '-')
-
-      // Create tenant
-      const { data: tenantData, error: tenantError } = await supabase
-        .from('tenants')
-        .insert({
-          name: data.venueName,
-          slug: slug,
-          billing_status: 'trial'
+      const tenantResponse = await fetch('/api/tenants/create', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userId: authData.user.id,
+          venueName: data.venueName,
+          email: data.email
         })
-        .select()
-        .single()
-
-      if (tenantError) {
-        console.error('Failed to create tenant:', tenantError)
-        throw new Error('Failed to set up venue')
-      }
-
-      console.log('✅ Tenant created:', {
-        id: tenantData.id,
-        name: tenantData.name,
-        slug: tenantData.slug
       })
 
-      // Link user to tenant
-      const { error: tenantUserError } = await supabase
-        .from('tenant_users')
-        .insert({
-          tenant_id: tenantData.id,
-          user_id: authData.user.id,
-          role: 'owner'
-        })
+      const tenantResult = await tenantResponse.json()
 
-      if (tenantUserError) {
-        console.error('Failed to link user to tenant:', tenantUserError)
-        throw new Error('Failed to set up venue access')
+      if (!tenantResponse.ok) {
+        console.error('Failed to create tenant:', tenantResult.error)
+        throw new Error(tenantResult.error || 'Failed to set up venue')
       }
 
-      console.log('✅ User linked to tenant as owner')
+      console.log('✅ Tenant created successfully:', {
+        id: tenantResult.data.tenant.id,
+        name: tenantResult.data.tenant.name,
+        slug: tenantResult.data.tenant.slug
+      })
 
       // Redirect to dashboard
       router.push('/dashboard')
