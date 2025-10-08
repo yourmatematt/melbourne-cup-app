@@ -26,7 +26,8 @@ export function LoginForm() {
   const form = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
-      email: ''
+      email: '',
+      password: ''
     }
   })
 
@@ -35,45 +36,61 @@ export function LoginForm() {
     setError(null)
 
     try {
-      console.log('🔗 Attempting magic link login with:', {
+      console.log('🔐 Attempting password login with:', {
+        email: data.email
+      })
+
+      // Sign in with email and password
+      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
         email: data.email,
-        redirectTo: `${window.location.origin}/auth/callback`
+        password: data.password
       })
 
-      // Send magic link using signInWithOtp
-      const redirectUrl = `${window.location.origin}/auth/callback`
-
-      const { error: otpError } = await supabase.auth.signInWithOtp({
-        email: data.email,
-        options: {
-          emailRedirectTo: redirectUrl
-        }
+      console.log('🔐 Password login response:', {
+        user: authData.user ? 'found' : 'none',
+        session: authData.session ? 'active' : 'none',
+        error: authError?.message
       })
 
-      console.log('🔗 Magic link response:', {
-        success: !otpError,
-        error: otpError?.message
-      })
-
-      if (otpError) {
-        console.error('Magic link error:', otpError)
-        throw otpError
+      if (authError) {
+        throw authError
       }
 
-      console.log('✅ Magic link sent successfully to:', data.email)
+      if (!authData.user) {
+        throw new Error('Login failed')
+      }
 
-      // Redirect to check email page
-      router.push(`/auth/check-email?email=${encodeURIComponent(data.email)}`)
+      console.log('✅ User signed in successfully:', {
+        id: authData.user.id,
+        email: authData.user.email
+      })
+
+      // Check if user has completed onboarding
+      const { data: tenantUsers } = await supabase
+        .from('tenant_users')
+        .select(`
+          tenants!tenant_id(*)
+        `)
+        .eq('user_id', authData.user.id)
+        .limit(1)
+
+      if (!tenantUsers || tenantUsers.length === 0) {
+        // User needs to complete onboarding
+        router.push('/onboard')
+      } else {
+        // User has a tenant, redirect to dashboard
+        router.push('/dashboard')
+      }
     } catch (err) {
       console.error('Login error:', err)
       if (err instanceof Error) {
-        if (err.message.includes('Email not confirmed')) {
-          setError('Please check your email and click the verification link first')
+        if (err.message === 'Invalid login credentials') {
+          setError('Invalid email or password')
         } else {
           setError(err.message)
         }
       } else {
-        setError('Failed to send magic link')
+        setError('Failed to sign in')
       }
     } finally {
       setIsLoading(false)
@@ -107,8 +124,31 @@ export function LoginForm() {
           )}
         />
 
+        <FormField
+          control={form.control}
+          name="password"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Password</FormLabel>
+              <FormControl>
+                <Input type="password" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <div className="flex items-center justify-between">
+          <a
+            href="/forgot-password"
+            className="text-sm text-blue-600 hover:text-blue-500"
+          >
+            Forgot your password?
+          </a>
+        </div>
+
         <Button type="submit" className="w-full" disabled={isLoading}>
-          {isLoading ? 'Sending Magic Link...' : 'Send Login Link'}
+          {isLoading ? 'Signing In...' : 'Sign In'}
         </Button>
       </form>
     </Form>

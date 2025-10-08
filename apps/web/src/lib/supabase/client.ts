@@ -29,20 +29,17 @@ export function debugAuthCookies() {
 }
 
 export function createClient() {
-  // createBrowserClient with simplified configuration for magic link authentication
+  // createBrowserClient with minimal configuration for simple password authentication
   return createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       auth: {
         autoRefreshToken: true,
-        detectSessionInUrl: true,
-        persistSession: true,
-        storageKey: 'sb-auth-token' // Ensure consistent storage key for magic link tokens
-        // No flowType specified - let Supabase handle magic link flow automatically
+        persistSession: true
+        // Minimal configuration - let Supabase handle everything with defaults
       }
-      // No custom cookie configuration - let Supabase use default document.cookie handling
-      // This ensures compatibility with magic link session tokens created by auth callback
+      // No custom cookie configuration - use Supabase defaults for password auth
     }
   )
 }

@@ -29,6 +29,8 @@ export function SignupForm() {
     resolver: zodResolver(signupSchema),
     defaultValues: {
       email: '',
+      password: '',
+      confirmPassword: '',
       venueName: '',
       acceptTerms: false
     }
@@ -39,42 +41,49 @@ export function SignupForm() {
     setError(null)
 
     try {
-      console.log('🔗 Attempting magic link signup with:', {
+      console.log('🔐 Attempting password signup with:', {
         email: data.email,
-        redirectTo: `${window.location.origin}/auth/callback`
+        venueName: data.venueName
       })
 
-      // Send magic link using signInWithOtp for new users
-      const redirectUrl = `${window.location.origin}/auth/callback`
-
-      const { error: otpError } = await supabase.auth.signInWithOtp({
+      // Sign up the user with email and password (no email confirmation)
+      const { data: authData, error: authError } = await supabase.auth.signUp({
         email: data.email,
+        password: data.password,
         options: {
           data: {
-            name: data.venueName,
-            is_new_user: true // Flag to indicate this is a signup flow
-          },
-          emailRedirectTo: redirectUrl
+            name: data.venueName
+          }
         }
       })
 
-      console.log('🔗 Magic link response:', {
-        success: !otpError,
-        error: otpError?.message
+      console.log('🔐 Password signup response:', {
+        user: authData.user ? 'created' : 'none',
+        session: authData.session ? 'active' : 'none',
+        error: authError?.message
       })
 
-      if (otpError) {
-        console.error('Magic link error:', otpError)
-        throw otpError
+      if (authError) {
+        console.error('Signup auth error:', authError)
+        throw authError
       }
 
-      console.log('✅ Magic link sent successfully to:', data.email)
+      if (!authData.user) {
+        throw new Error('Failed to create user account')
+      }
 
-      // Redirect to check email page
-      router.push(`/auth/check-email?email=${encodeURIComponent(data.email)}`)
+      // User is immediately signed in (no email confirmation required)
+      console.log('✅ User created and signed in:', {
+        id: authData.user.id,
+        email: authData.user.email,
+        hasSession: !!authData.session
+      })
+
+      // Redirect directly to onboarding since user is already authenticated
+      router.push('/onboard')
     } catch (err) {
       console.error('Signup error:', err)
-      setError(err instanceof Error ? err.message : 'Failed to send magic link')
+      setError(err instanceof Error ? err.message : 'Failed to create account')
     } finally {
       setIsLoading(false)
     }
@@ -120,8 +129,39 @@ export function SignupForm() {
                 />
               </FormControl>
               <FormDescription>
-                We'll send you a secure login link
+                This will be your login email address
               </FormDescription>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="password"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Password</FormLabel>
+              <FormControl>
+                <Input type="password" {...field} />
+              </FormControl>
+              <FormDescription>
+                Must be at least 6 characters long
+              </FormDescription>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="confirmPassword"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Confirm Password</FormLabel>
+              <FormControl>
+                <Input type="password" {...field} />
+              </FormControl>
               <FormMessage />
             </FormItem>
           )}
@@ -156,7 +196,7 @@ export function SignupForm() {
         />
 
         <Button type="submit" className="w-full" disabled={isLoading}>
-          {isLoading ? 'Sending Magic Link...' : 'Send Login Link'}
+          {isLoading ? 'Creating Account...' : 'Create Account'}
         </Button>
       </form>
     </Form>

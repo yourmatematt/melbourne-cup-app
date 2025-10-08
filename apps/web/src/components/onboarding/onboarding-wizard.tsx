@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { createClient, debugAuthCookies } from '@/lib/supabase/client'
+import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Progress } from '@/components/ui/progress'
@@ -39,11 +39,7 @@ export function OnboardingWizard() {
           return
         }
 
-        if (!currentUser.email_confirmed_at) {
-          console.log('🔐 Onboarding: User email not confirmed, redirecting to check-email')
-          router.push(`/auth/check-email?email=${encodeURIComponent(currentUser.email || '')}`)
-          return
-        }
+        // No email confirmation required for password auth
 
         console.log('🔐 Onboarding: User is authenticated and verified')
         setUser(currentUser)
@@ -83,18 +79,15 @@ export function OnboardingWizard() {
         // Log current session state for debugging
         console.log('🔐 Onboarding: Starting auth initialization at', new Date().toISOString())
 
-        // Debug magic link cookies
-        console.log('🔗 Debugging magic link cookies before session check:')
-        debugAuthCookies()
+        // Simple auth check for password authentication
 
-        // Check for existing session first (more reliable than getUser for newly verified users)
+        // Check for existing session (password auth creates immediate session)
         const { data: { session }, error: sessionError } = await supabase.auth.getSession()
 
         console.log('🔐 Onboarding: Session check result:', {
           hasSession: !!session,
           hasUser: !!session?.user,
           userEmail: session?.user?.email,
-          emailConfirmed: session?.user?.email_confirmed_at,
           sessionExpiry: session?.expires_at,
           error: sessionError?.message
         })
