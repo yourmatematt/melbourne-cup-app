@@ -51,7 +51,6 @@ export function AddParticipantModal({
     marketingConsent: false
   })
 
-  const supabase = createClient()
   const isEventFull = participants.length >= event.capacity
 
   const resetForm = () => {
@@ -76,6 +75,7 @@ export function AddParticipantModal({
 
     setIsLoading(true)
     try {
+      const supabase = createClient()
       // Check if event is full
       if (participants.length >= event.capacity) {
         toast.error(`Event is full! Maximum capacity is ${event.capacity} participants.`)
