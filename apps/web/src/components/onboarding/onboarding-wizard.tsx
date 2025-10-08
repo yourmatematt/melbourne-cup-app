@@ -24,9 +24,11 @@ export function OnboardingWizard() {
   const [currentStep, setCurrentStep] = useState<OnboardingStep>('venue')
   const [data, setData] = useState<OnboardingData>({})
   const [isLoading, setIsLoading] = useState(false)
-  const [isAuthLoading, setIsAuthLoading] = useState(true) // Add auth loading state
+  const [isAuthLoading, setIsAuthLoading] = useState(true)
   const [user, setUser] = useState<any>(null)
   const [userVenueName, setUserVenueName] = useState<string>('')
+  const [authAttempts, setAuthAttempts] = useState(0) // Track auth attempts to prevent infinite loops
+  const [isInitialized, setIsInitialized] = useState(false) // Prevent multiple initializations
   const router = useRouter()
   const supabase = createClient()
 
@@ -35,156 +37,139 @@ export function OnboardingWizard() {
       try {
         if (!currentUser) {
           console.log('🔐 Onboarding: No user found, redirecting to login')
+          setIsAuthLoading(false)
           router.push('/login')
           return
         }
 
-        // No email confirmation required for password auth
-
-        console.log('🔐 Onboarding: User is authenticated and verified')
+        console.log('🔐 Onboarding: User is authenticated, checking tenant status')
         setUser(currentUser)
-        // Get venue name from user metadata (set during signup)
         setUserVenueName(currentUser.user_metadata?.name || '')
 
-        // Check if user already has a tenant - if so, skip onboarding
-        console.log('🔐 Onboarding: Checking for existing tenant...')
-        const { data: existingTenant, error: tenantError } = await supabase
-          .from('tenant_users')
-          .select('tenant_id')
-          .eq('user_id', currentUser.id)
-          .single()
+        // Check if user already has a tenant - SINGLE ATTEMPT ONLY
+        try {
+          console.log('🔐 Onboarding: Checking for existing tenant...')
+          const { data: existingTenant, error: tenantError } = await supabase
+            .from('tenant_users')
+            .select('tenant_id, tenants!tenant_id(id, name)')
+            .eq('user_id', currentUser.id)
+            .maybeSingle() // Use maybeSingle() instead of single() to avoid errors when no rows found
 
-        if (tenantError && tenantError.code !== 'PGRST116') {
-          // PGRST116 = no rows found, which is expected for new users
-          console.error('🔐 Onboarding: Error checking tenant:', tenantError)
-        }
+          if (tenantError) {
+            console.warn('🔐 Onboarding: Tenant check error (treating as new user):', tenantError.message)
+            // Treat any error as "new user" - don't retry
+            setIsAuthLoading(false)
+            return
+          }
 
-        if (existingTenant) {
-          console.log('🔐 Onboarding: User already has tenant, redirecting to dashboard')
-          router.push('/dashboard')
-        } else {
+          if (existingTenant?.tenant_id) {
+            console.log('🔐 Onboarding: User already has tenant, redirecting to dashboard')
+            router.push('/dashboard')
+            return
+          }
+
           console.log('🔐 Onboarding: New user, proceeding with onboarding')
+          setIsAuthLoading(false)
+
+        } catch (tenantErr) {
+          console.warn('🔐 Onboarding: Tenant check failed (treating as new user):', tenantErr)
+          // Treat any tenant check error as "new user" - don't retry
           setIsAuthLoading(false)
         }
       } catch (err) {
-        console.error('🔐 Onboarding: Unexpected error:', err)
+        console.error('🔐 Onboarding: Unexpected error in checkUserAndTenant:', err)
         setIsAuthLoading(false)
       }
     }
 
     async function initializeAuth() {
+      // Prevent multiple initializations
+      if (isInitialized || authAttempts >= 3) {
+        console.log('🔐 Onboarding: Skipping initialization - already initialized or max attempts reached')
+        return
+      }
+
       try {
         setIsAuthLoading(true)
+        setAuthAttempts(prev => prev + 1)
 
-        // Log current session state for debugging
-        console.log('🔐 Onboarding: Starting auth initialization at', new Date().toISOString())
+        console.log(`🔐 Onboarding: Auth initialization attempt ${authAttempts + 1}/3`)
 
-        // Simple auth check for password authentication
-
-        // Check for existing session (password auth creates immediate session)
+        // Single auth check - no retries for password auth
         const { data: { session }, error: sessionError } = await supabase.auth.getSession()
 
         console.log('🔐 Onboarding: Session check result:', {
           hasSession: !!session,
           hasUser: !!session?.user,
           userEmail: session?.user?.email,
-          sessionExpiry: session?.expires_at,
+          attempt: authAttempts + 1,
           error: sessionError?.message
         })
 
         if (session?.user) {
-          // Session exists, proceed with user validation
+          console.log('🔐 Onboarding: Session found, checking tenant status')
+          setIsInitialized(true)
           await checkUserAndTenant(session.user)
           return
         }
 
-        // No session found, try getUser as fallback
-        console.log('🔐 Onboarding: No session found, trying getUser...')
-        const { data: { user }, error } = await supabase.auth.getUser()
-
-        console.log('🔐 Onboarding: GetUser result:', {
-          hasUser: !!user,
-          userEmail: user?.email,
-          emailConfirmed: user?.email_confirmed_at,
-          error: error?.message
-        })
+        // Fallback: check getUser() once
+        const { data: { user }, error: userError } = await supabase.auth.getUser()
 
         if (user) {
+          console.log('🔐 Onboarding: User found via getUser(), checking tenant status')
+          setIsInitialized(true)
           await checkUserAndTenant(user)
-        } else {
-          // No user found immediately after email verification - this is the critical timing issue
-          console.log('🔐 Onboarding: No user found initially, implementing delayed retry with multiple attempts...')
-
-          // Try multiple times with increasing delays to handle various email verification timing scenarios
-          const retryAttempts = [500, 1000, 2000] // 0.5s, 1s, 2s delays
-          let userFound = false
-
-          for (let i = 0; i < retryAttempts.length && !userFound; i++) {
-            console.log(`🔐 Onboarding: Retry attempt ${i + 1}/${retryAttempts.length} after ${retryAttempts[i]}ms...`)
-            await new Promise(resolve => setTimeout(resolve, retryAttempts[i]))
-
-            // Check both session and user on retry
-            const { data: { session: retrySession } } = await supabase.auth.getSession()
-            const { data: { user: retryUser } } = await supabase.auth.getUser()
-
-            console.log(`🔐 Onboarding: Retry ${i + 1} result:`, {
-              hasSession: !!retrySession,
-              hasUser: !!retryUser,
-              userEmail: retryUser?.email || retrySession?.user?.email,
-              source: retrySession?.user ? 'session' : retryUser ? 'getUser' : 'none'
-            })
-
-            const foundUser = retrySession?.user || retryUser
-            if (foundUser) {
-              console.log(`🔐 Onboarding: User found on retry ${i + 1}`)
-              await checkUserAndTenant(foundUser)
-              userFound = true
-            }
-          }
-
-          if (!userFound) {
-            console.log('🔐 Onboarding: No user found after all retry attempts, redirecting to login')
-            setIsAuthLoading(false)
-            router.push('/login')
-          }
+          return
         }
+
+        // No user found - redirect to login (no retries for password auth)
+        console.log('🔐 Onboarding: No authenticated user found, redirecting to login')
+        setIsInitialized(true)
+        setIsAuthLoading(false)
+        router.push('/login')
+
       } catch (err) {
         console.error('🔐 Onboarding: Auth initialization error:', err)
+        setIsInitialized(true)
         setIsAuthLoading(false)
+
+        // Only redirect to login if we've tried multiple times
+        if (authAttempts >= 2) {
+          router.push('/login')
+        }
       }
     }
 
-    // Set up auth state change listener for real-time updates
+    // Set up auth state change listener (simplified to prevent loops)
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         console.log('🔐 Onboarding: Auth state change:', event, !!session?.user)
 
-        if (event === 'SIGNED_IN' && session?.user) {
-          // User just signed in - this handles the email verification callback case
-          console.log('🔐 Onboarding: SIGNED_IN event received, processing user...')
-          await checkUserAndTenant(session.user)
-        } else if (event === 'TOKEN_REFRESHED' && session?.user) {
-          // Token refreshed - update user if needed
-          console.log('🔐 Onboarding: TOKEN_REFRESHED event received')
-          if (!user) {
-            await checkUserAndTenant(session.user)
-          }
-        } else if (event === 'SIGNED_OUT') {
+        // Only handle SIGNED_OUT events to avoid infinite loops
+        if (event === 'SIGNED_OUT') {
+          console.log('🔐 Onboarding: User signed out, resetting state')
           setUser(null)
           setIsAuthLoading(false)
+          setIsInitialized(false)
+          setAuthAttempts(0)
           router.push('/login')
         }
+        // Don't handle SIGNED_IN or TOKEN_REFRESHED to prevent loops
+        // Initial auth check handles the authentication
       }
     )
 
-    // Initialize auth check
-    initializeAuth()
+    // Initialize auth check only once
+    if (!isInitialized && authAttempts === 0) {
+      initializeAuth()
+    }
 
     // Cleanup subscription
     return () => {
       subscription.unsubscribe()
     }
-  }, [router, supabase.auth, user])
+  }, [router, supabase.auth]) // Removed user dependency to prevent loops
 
   const steps = [
     { key: 'venue', title: 'Venue Details', description: 'Tell us about your venue' },
@@ -322,15 +307,32 @@ export function OnboardingWizard() {
     router.push('/dashboard')
   }
 
-  // Show loading state while checking authentication
-  if (isAuthLoading) {
+  // Show loading state while checking authentication (with debounce to prevent flickering)
+  const [showLoading, setShowLoading] = useState(false)
+
+  // Debounce loading state to prevent flickering
+  useEffect(() => {
+    let timer: NodeJS.Timeout
+    if (isAuthLoading) {
+      // Show loading after 200ms to prevent flicker
+      timer = setTimeout(() => setShowLoading(true), 200)
+    } else {
+      setShowLoading(false)
+    }
+
+    return () => {
+      if (timer) clearTimeout(timer)
+    }
+  }, [isAuthLoading])
+
+  if (showLoading) {
     return (
       <div className="max-w-2xl mx-auto py-8 px-4">
         <div className="flex flex-col items-center justify-center min-h-[400px]">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mb-4"></div>
           <h2 className="text-xl font-semibold mb-2">Setting up your account...</h2>
           <p className="text-gray-600 text-center">
-            Please wait while we verify your email confirmation and prepare your onboarding experience.
+            Preparing your onboarding experience...
           </p>
         </div>
       </div>
