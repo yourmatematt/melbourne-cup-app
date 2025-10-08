@@ -85,11 +85,7 @@ export function SignupForm() {
         const cookieDebug = debugAuthCookies()
 
         if (cookieDebug && cookieDebug.flowStateCookies.length === 0) {
-          const warningMsg = '⚠️ WARNING: No flow state cookies found after signup! This may cause "invalid flow state" error.'
-          console.warn(warningMsg)
-          if (process.env.NODE_ENV === 'development') {
-            window.alert(warningMsg + ' Check browser console for details.')
-          }
+          console.warn('⚠️ WARNING: No flow state cookies found after signup! This may cause "invalid flow state" error.')
         }
 
         console.log('🌐 Browser context:', {

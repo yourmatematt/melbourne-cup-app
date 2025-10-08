@@ -2,11 +2,7 @@ import { createBrowserClient } from '@supabase/ssr'
 
 // Debug helper to log all auth-related cookies
 export function debugAuthCookies() {
-  if (typeof window === 'undefined' || typeof document === 'undefined') {
-    console.log('🔄 debugAuthCookies: Not in browser environment')
-    return
-  }
-
+  // This function is only called from client components, so safe to access document
   const allCookies = document.cookie.split(';').reduce((acc, cookie) => {
     const [name, value] = cookie.trim().split('=')
     if (name) acc[name] = value
@@ -52,22 +48,13 @@ export function debugAuthCookies() {
 }
 
 export function createClient() {
-  // Check if we're in a browser environment (not during SSR/build)
-  const isBrowser = typeof window !== 'undefined' && typeof document !== 'undefined'
-
-  // Create browser client with proper cookie configuration for auth flow
+  // createBrowserClient is only used on the client side, so we can safely access document
   return createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
         get(name: string) {
-          // Only access document.cookie in browser environment
-          if (!isBrowser) {
-            console.log('🔄 SSR/Build: Skipping cookie get for:', name)
-            return undefined
-          }
-
           try {
             // Get cookie from document.cookie
             const value = `; ${document.cookie}`
@@ -89,12 +76,6 @@ export function createClient() {
           }
         },
         set(name: string, value: string, options: any) {
-          // Only set cookies in browser environment
-          if (!isBrowser) {
-            console.log('🔄 SSR/Build: Skipping cookie set for:', name)
-            return
-          }
-
           try {
             // Enhanced cookie options for auth flow
             const cookieOptions = {
@@ -132,34 +113,16 @@ export function createClient() {
               cookieString: cookieString.substring(0, 100) + (cookieString.length > 100 ? '...' : '')
             })
 
-            // Critical error alert for auth flow cookies
+            // Critical error logging for auth flow cookies
             if (isAuthFlow && !verification) {
-              const errorMsg = `🚨 CRITICAL: Auth flow cookie "${name}" failed to set! This will break authentication.`
-              console.error(errorMsg)
-              // Temporary debugging alert
-              if (process.env.NODE_ENV === 'development') {
-                window.alert(errorMsg)
-              }
+              console.error(`🚨 CRITICAL: Auth flow cookie "${name}" failed to set! This will break authentication.`)
             }
           } catch (error) {
             const errorMsg = `❌ Cookie set error for "${name}": ${error.message}`
             console.error(errorMsg, { name, hasValue: !!value, error })
-
-            // Critical error alert for auth flow cookies
-            if (name.includes('flow') || name.includes('verifier')) {
-              if (process.env.NODE_ENV === 'development') {
-                window.alert(`🚨 CRITICAL AUTH ERROR: ${errorMsg}`)
-              }
-            }
           }
         },
         remove(name: string, options: any) {
-          // Only remove cookies in browser environment
-          if (!isBrowser) {
-            console.log('🔄 SSR/Build: Skipping cookie remove for:', name)
-            return
-          }
-
           try {
             // Remove cookie by setting expired date
             const cookieOptions = {
