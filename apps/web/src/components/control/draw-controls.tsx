@@ -311,36 +311,60 @@ export function DrawControls({
           </CardDescription>
         </CardHeader>
 
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-6">
           {/* Random Draw Buttons */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Button
-              onClick={handleRandomDraw}
-              disabled={!canDraw || isDrawing}
-              className="h-16 flex flex-col space-y-1"
-            >
-              <Zap className="w-5 h-5" />
-              <span>{isDrawing ? 'Drawing...' : 'Draw Next'}</span>
-              <span className="text-xs opacity-75">Random single assignment</span>
-            </Button>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Draw Next - Primary Action */}
+            <div className="group">
+              <Button
+                onClick={handleRandomDraw}
+                disabled={!canDraw || isDrawing}
+                size="lg"
+                className="w-full h-20 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 disabled:from-gray-300 disabled:to-gray-400 shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-[1.02] disabled:transform-none disabled:hover:scale-100"
+              >
+                <div className="flex flex-col items-center space-y-2">
+                  <div className="flex items-center space-x-2">
+                    <Zap className="w-6 h-6" />
+                    <span className="text-lg font-semibold">
+                      {isDrawing ? 'Drawing...' : 'Draw Next'}
+                    </span>
+                  </div>
+                  <span className="text-sm text-blue-100 font-medium">
+                    Random single assignment
+                  </span>
+                </div>
+              </Button>
+            </div>
 
-            <Button
-              onClick={handleDrawAll}
-              disabled={!canDraw || isDrawing}
-              variant="secondary"
-              className="h-16 flex flex-col space-y-1"
-            >
-              <Shuffle className="w-5 h-5" />
-              <span>{isDrawing ? 'Drawing...' : 'Draw All'}</span>
-              <span className="text-xs opacity-75">Assign all remaining</span>
-            </Button>
+            {/* Draw All - Secondary Action */}
+            <div className="group">
+              <Button
+                onClick={handleDrawAll}
+                disabled={!canDraw || isDrawing}
+                variant="outline"
+                size="lg"
+                className="w-full h-20 border-2 border-purple-200 bg-gradient-to-r from-purple-50 to-purple-100 hover:from-purple-100 hover:to-purple-200 text-purple-700 hover:text-purple-800 disabled:from-gray-50 disabled:to-gray-100 disabled:text-gray-400 disabled:border-gray-200 shadow-md hover:shadow-lg transition-all duration-200 transform hover:scale-[1.02] disabled:transform-none disabled:hover:scale-100"
+              >
+                <div className="flex flex-col items-center space-y-2">
+                  <div className="flex items-center space-x-2">
+                    <Shuffle className="w-6 h-6" />
+                    <span className="text-lg font-semibold">
+                      {isDrawing ? 'Drawing...' : 'Draw All'}
+                    </span>
+                  </div>
+                  <span className="text-sm text-purple-600 font-medium">
+                    Assign all remaining
+                  </span>
+                </div>
+              </Button>
+            </div>
           </div>
 
           {!canDraw && (
-            <div className="space-y-2">
-              <div className="flex items-center space-x-2 p-3 bg-gray-50 rounded-lg">
-                <AlertCircle className="w-4 h-4 text-gray-500" />
-                <span className="text-sm text-gray-600">
+            <div className="space-y-3">
+              <div className="flex items-center space-x-3 p-4 bg-gradient-to-r from-gray-50 to-gray-100 rounded-lg border border-gray-200">
+                <AlertCircle className="w-5 h-5 text-gray-500 flex-shrink-0" />
+                <span className="text-sm font-medium text-gray-700">
                   {unassignedParticipants.length === 0
                     ? 'All participants have been assigned horses'
                     : 'No horses available for assignment'
@@ -348,9 +372,9 @@ export function DrawControls({
                 </span>
               </div>
               {assignments.length > 0 && (
-                <div className="flex items-center space-x-2 p-3 bg-blue-50 rounded-lg">
-                  <Trophy className="w-4 h-4 text-blue-600" />
-                  <span className="text-sm text-blue-600">
+                <div className="flex items-center space-x-3 p-4 bg-gradient-to-r from-blue-50 to-blue-100 rounded-lg border border-blue-200">
+                  <Trophy className="w-5 h-5 text-blue-600 flex-shrink-0" />
+                  <span className="text-sm font-medium text-blue-700">
                     Draw complete! You can clear all assignments to run a new draw.
                   </span>
                 </div>
@@ -358,17 +382,19 @@ export function DrawControls({
             </div>
           )}
 
-          <Separator />
+          <Separator className="my-6" />
 
           {/* Management Controls */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+          <div>
+            <h4 className="text-sm font-medium text-gray-700 mb-4">Management Actions</h4>
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             {/* Undo Last Assignment */}
             <AlertDialog>
               <AlertDialogTrigger asChild>
                 <Button
                   variant="outline"
                   disabled={!lastAssignment || isUndoing}
-                  className="flex items-center space-x-2"
+                  className="flex items-center space-x-2 h-12 hover:border-blue-300 hover:bg-blue-50 transition-all duration-200"
                 >
                   <Undo2 className="w-4 h-4" />
                   <span>Undo Last</span>
@@ -396,7 +422,7 @@ export function DrawControls({
                 <Button
                   variant="outline"
                   disabled={unassignedParticipants.length === 0 || availableHorses.length === 0}
-                  className="flex items-center space-x-2"
+                  className="flex items-center space-x-2 h-12 hover:border-green-300 hover:bg-green-50 transition-all duration-200"
                 >
                   <Target className="w-4 h-4" />
                   <span>Manual Assign</span>
@@ -465,7 +491,7 @@ export function DrawControls({
                 <Button
                   variant="outline"
                   disabled={assignments.length === 0 || isDrawing}
-                  className="flex items-center space-x-2 text-red-600 hover:text-red-700"
+                  className="flex items-center space-x-2 h-12 text-red-600 hover:text-red-700 border-red-200 hover:border-red-300 hover:bg-red-50 transition-all duration-200"
                 >
                   <UserX className="w-4 h-4" />
                   <span>Clear All</span>
@@ -496,7 +522,7 @@ export function DrawControls({
                 <Button
                   variant="outline"
                   disabled={assignments.length === 0}
-                  className="flex items-center space-x-2"
+                  className="flex items-center space-x-2 h-12 hover:border-yellow-300 hover:bg-yellow-50 transition-all duration-200"
                 >
                   <Crown className="w-4 h-4" />
                   <span>Mark Winner</span>
@@ -546,6 +572,7 @@ export function DrawControls({
                 </DialogFooter>
               </DialogContent>
             </Dialog>
+            </div>
           </div>
         </CardContent>
       </Card>
