@@ -16,7 +16,10 @@ import {
   RefreshCw,
   Medal,
   Award,
-  Zap
+  Zap,
+  Radio,
+  Wifi,
+  Activity
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useRealtimeAssignments } from '@/hooks/use-realtime-assignments'
@@ -88,6 +91,8 @@ export default function LiveViewPage() {
   const [lastUpdate, setLastUpdate] = useState(new Date())
   const [recentAssignments, setRecentAssignments] = useState<RecentAssignment[]>([])
   const [newAssignmentId, setNewAssignmentId] = useState<string | null>(null)
+  const [pollingActive, setPollingActive] = useState(false)
+  const [pollingInterval, setPollingInterval] = useState<NodeJS.Timeout | null>(null)
 
   // Use the real-time assignments hook with relations
   const {
@@ -145,12 +150,14 @@ export default function LiveViewPage() {
     }
   })
 
-  // Combined realtime state
+  // Combined realtime state with polling fallback
+  const realtimeConnected = assignmentsRealtimeState.isConnected && participantsRealtimeState.isConnected
   const realtimeState = {
-    isConnected: assignmentsRealtimeState.isConnected && participantsRealtimeState.isConnected,
+    isConnected: realtimeConnected || pollingActive,
     isReconnecting: assignmentsRealtimeState.isReconnecting || participantsRealtimeState.isReconnecting,
     error: assignmentsRealtimeState.error || participantsRealtimeState.error,
-    lastUpdated: assignmentsRealtimeState.lastUpdated || participantsRealtimeState.lastUpdated
+    lastUpdated: assignmentsRealtimeState.lastUpdated || participantsRealtimeState.lastUpdated,
+    connectionType: realtimeConnected ? 'realtime' : pollingActive ? 'polling' : 'disconnected'
   }
 
   // Convert assignments to recent assignments format
@@ -214,6 +221,203 @@ export default function LiveViewPage() {
       }
     }
   }, [eventId, supabase])
+
+  // Polling functions for demo/fallback mode
+  const startPolling = () => {
+    if (pollingInterval) {
+      clearInterval(pollingInterval)
+    }
+
+    console.log('🔄 Starting polling mode for live updates...')
+    setPollingActive(true)
+
+    const interval = setInterval(async () => {
+      try {
+        // Only poll if real-time isn't working
+        if (!realtimeConnected) {
+          await Promise.all([
+            pollAssignments(),
+            pollParticipants(),
+            pollEventStatus(),
+            pollResults()
+          ])
+          setLastUpdate(new Date())
+        }
+      } catch (error) {
+        console.error('Polling error:', error)
+      }
+    }, 2000) // Poll every 2 seconds
+
+    setPollingInterval(interval)
+  }
+
+  const stopPolling = () => {
+    if (pollingInterval) {
+      clearInterval(pollingInterval)
+      setPollingInterval(null)
+    }
+    setPollingActive(false)
+    console.log('⏹️ Stopped polling mode')
+  }
+
+  const pollAssignments = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('assignments')
+        .select(`
+          *,
+          event_horses!event_horse_id(*),
+          patron_entries!patron_entry_id(*)
+        `)
+        .eq('event_id', eventId)
+        .order('created_at', { ascending: true })
+
+      if (error) throw error
+
+      // Check for new assignments since last update
+      const currentAssignmentIds = assignments.map(a => a.id)
+      const newAssignments = (data || []).filter(a => !currentAssignmentIds.includes(a.id))
+
+      if (newAssignments.length > 0) {
+        console.log('🎯 Polling: Found new assignments:', newAssignments.length)
+        // Trigger assignment added callbacks for new ones
+        newAssignments.forEach(assignment => {
+          setNewAssignmentId(assignment.id)
+          setTimeout(() => setNewAssignmentId(null), 3000)
+        })
+      }
+
+      // Update assignments if different
+      if (JSON.stringify(data) !== JSON.stringify(assignments)) {
+        // This would need to update the assignments state - but since we're using hooks,
+        // we'll trigger a manual refresh instead
+        loadEventData()
+      }
+    } catch (error) {
+      console.error('Error polling assignments:', error)
+    }
+  }
+
+  const pollParticipants = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('patron_entries')
+        .select('*')
+        .eq('event_id', eventId)
+        .order('created_at', { ascending: true })
+
+      if (error) throw error
+
+      // Check for participant count changes
+      const currentCount = participants.length
+      const newCount = (data || []).length
+
+      if (newCount !== currentCount) {
+        console.log(`👥 Polling: Participant count changed: ${currentCount} → ${newCount}`)
+        // Update event participant count
+        setEvent(prev => prev ? {
+          ...prev,
+          participant_count: newCount
+        } : null)
+      }
+    } catch (error) {
+      console.error('Error polling participants:', error)
+    }
+  }
+
+  const pollEventStatus = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('events')
+        .select('status')
+        .eq('id', eventId)
+        .single()
+
+      if (error) throw error
+
+      if (data && event && data.status !== event.status) {
+        console.log(`📅 Polling: Event status changed: ${event.status} → ${data.status}`)
+        setEvent(prev => prev ? {
+          ...prev,
+          status: data.status
+        } : null)
+
+        // If event becomes completed, reload to get results
+        if (data.status === 'completed') {
+          loadEventData()
+        }
+      }
+    } catch (error) {
+      console.error('Error polling event status:', error)
+    }
+  }
+
+  const pollResults = async () => {
+    try {
+      if (!event || event.status !== 'completed') return
+
+      const { data, error } = await supabase
+        .from('event_results')
+        .select(`
+          id,
+          place,
+          event_horse_id,
+          patron_entry_id,
+          prize_amount,
+          collected,
+          collected_at,
+          patron_entries!patron_entry_id (
+            participant_name
+          ),
+          event_horses!event_horse_id (
+            number,
+            name
+          )
+        `)
+        .eq('event_id', eventId)
+        .order('place')
+
+      if (error) throw error
+
+      // Check if results have changed
+      if (JSON.stringify(data) !== JSON.stringify(results)) {
+        console.log('🏆 Polling: Results updated')
+        setResults(data || [])
+      }
+    } catch (error) {
+      console.error('Error polling results:', error)
+    }
+  }
+
+  // Auto-start polling if real-time isn't connected after initial load
+  useEffect(() => {
+    if (!loading && !realtimeConnected && !pollingActive) {
+      // Start polling after a short delay to give real-time a chance
+      const timer = setTimeout(() => {
+        if (!realtimeConnected) {
+          startPolling()
+        }
+      }, 5000) // Wait 5 seconds before falling back to polling
+
+      return () => clearTimeout(timer)
+    }
+  }, [loading, realtimeConnected, pollingActive])
+
+  // Stop polling when real-time connects
+  useEffect(() => {
+    if (realtimeConnected && pollingActive) {
+      stopPolling()
+    }
+  }, [realtimeConnected, pollingActive])
+
+  // Cleanup polling on unmount
+  useEffect(() => {
+    return () => {
+      if (pollingInterval) {
+        clearInterval(pollingInterval)
+      }
+    }
+  }, [pollingInterval])
 
   async function loadEventData() {
     try {
@@ -414,14 +618,28 @@ export default function LiveViewPage() {
               <div className="text-4xl font-bold text-yellow-600 mb-2 flex items-center justify-center space-x-2">
                 <span>{assignments.length}</span>
                 {realtimeState.isConnected && (
-                  <Zap className="h-5 w-5 text-green-500" title="Live updates active" />
+                  <div className="flex items-center space-x-1">
+                    {realtimeState.connectionType === 'realtime' ? (
+                      <Zap className="h-5 w-5 text-green-500 animate-pulse" title="Real-time updates active" />
+                    ) : (
+                      <Radio className="h-5 w-5 text-blue-500 animate-pulse" title="Polling updates active" />
+                    )}
+                  </div>
                 )}
               </div>
               <div className="text-sm text-gray-500">
                 horses assigned
               </div>
-              {!realtimeState.isConnected && realtimeState.error && (
-                <div className="text-xs text-red-500 mt-1">
+              {realtimeState.isConnected ? (
+                <div className="text-xs text-center mt-1">
+                  {realtimeState.connectionType === 'realtime' ? (
+                    <span className="text-green-600 font-medium">⚡ Real-time Active</span>
+                  ) : (
+                    <span className="text-blue-600 font-medium">📡 Live Updates Active</span>
+                  )}
+                </div>
+              ) : (
+                <div className="text-xs text-red-500 mt-1 text-center">
                   Connection lost
                 </div>
               )}
@@ -443,15 +661,28 @@ export default function LiveViewPage() {
                   second: '2-digit'
                 })}
               </div>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={loadEventData}
-                className="text-xs"
-              >
-                <RefreshCw className="h-3 w-3 mr-1" />
-                Refresh
-              </Button>
+              <div className="flex space-x-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={loadEventData}
+                  className="text-xs"
+                >
+                  <RefreshCw className="h-3 w-3 mr-1" />
+                  Refresh
+                </Button>
+                {!realtimeConnected && (
+                  <Button
+                    size="sm"
+                    variant={pollingActive ? "default" : "outline"}
+                    onClick={pollingActive ? stopPolling : startPolling}
+                    className="text-xs"
+                  >
+                    <Radio className="h-3 w-3 mr-1" />
+                    {pollingActive ? 'Stop Polling' : 'Start Polling'}
+                  </Button>
+                )}
+              </div>
             </CardContent>
           </Card>
         </div>
@@ -570,14 +801,34 @@ export default function LiveViewPage() {
                 <Crown className="h-5 w-5" />
                 <span>Recent Horse Assignments</span>
                 {realtimeState.isConnected && (
-                  <Badge variant="outline" className="text-green-600 border-green-600">
-                    <Zap className="h-3 w-3 mr-1" />
-                    LIVE
+                  <Badge
+                    variant="outline"
+                    className={`${
+                      realtimeState.connectionType === 'realtime'
+                        ? 'text-green-600 border-green-600 bg-green-50'
+                        : 'text-blue-600 border-blue-600 bg-blue-50'
+                    }`}
+                  >
+                    {realtimeState.connectionType === 'realtime' ? (
+                      <>
+                        <Zap className="h-3 w-3 mr-1" />
+                        REAL-TIME
+                      </>
+                    ) : (
+                      <>
+                        <Radio className="h-3 w-3 mr-1" />
+                        LIVE UPDATES
+                      </>
+                    )}
                   </Badge>
                 )}
               </CardTitle>
               <CardDescription>
-                Latest participant to horse assignments • Updates automatically
+                Latest participant to horse assignments •
+                {realtimeState.connectionType === 'realtime'
+                  ? ' Real-time streaming'
+                  : ' Updates every 2 seconds'
+                }
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -664,11 +915,20 @@ export default function LiveViewPage() {
         <div className="text-center text-gray-500 text-sm py-4">
           <div className="flex flex-col items-center space-y-2 mb-4">
             {/* Overall Connection Status */}
-            <div className="flex items-center space-x-1">
+            <div className="flex items-center space-x-2">
               {realtimeState.isConnected ? (
                 <>
-                  <Zap className="h-4 w-4 text-green-500" />
-                  <span className="text-green-600 font-medium">All live updates active</span>
+                  {realtimeState.connectionType === 'realtime' ? (
+                    <>
+                      <Zap className="h-4 w-4 text-green-500 animate-pulse" />
+                      <span className="text-green-600 font-medium">Real-time streaming active</span>
+                    </>
+                  ) : (
+                    <>
+                      <Radio className="h-4 w-4 text-blue-500 animate-pulse" />
+                      <span className="text-blue-600 font-medium">Live updates active (polling)</span>
+                    </>
+                  )}
                 </>
               ) : realtimeState.isReconnecting ? (
                 <>
@@ -686,26 +946,40 @@ export default function LiveViewPage() {
             {/* Detailed Connection Status */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
               <div className="flex items-center justify-center space-x-1">
-                {assignmentsRealtimeState.isConnected ? (
-                  <div className="w-2 h-2 rounded-full bg-green-500"></div>
+                {realtimeState.isConnected ? (
+                  <div className={`w-2 h-2 rounded-full ${realtimeState.connectionType === 'realtime' ? 'bg-green-500' : 'bg-blue-500'}`}></div>
                 ) : (
                   <div className="w-2 h-2 rounded-full bg-red-500"></div>
                 )}
                 <span>Assignments</span>
               </div>
               <div className="flex items-center justify-center space-x-1">
-                {participantsRealtimeState.isConnected ? (
-                  <div className="w-2 h-2 rounded-full bg-green-500"></div>
+                {realtimeState.isConnected ? (
+                  <div className={`w-2 h-2 rounded-full ${realtimeState.connectionType === 'realtime' ? 'bg-green-500' : 'bg-blue-500'}`}></div>
                 ) : (
                   <div className="w-2 h-2 rounded-full bg-red-500"></div>
                 )}
                 <span>Participants</span>
               </div>
               <div className="flex items-center justify-center space-x-1">
-                <div className="w-2 h-2 rounded-full bg-green-500"></div>
+                {realtimeState.isConnected ? (
+                  <div className={`w-2 h-2 rounded-full ${realtimeState.connectionType === 'realtime' ? 'bg-green-500' : 'bg-blue-500'}`}></div>
+                ) : (
+                  <div className="w-2 h-2 rounded-full bg-red-500"></div>
+                )}
                 <span>Results & Status</span>
               </div>
             </div>
+
+            {/* Connection Type Info */}
+            {realtimeState.isConnected && (
+              <div className="text-xs text-gray-400">
+                {realtimeState.connectionType === 'realtime'
+                  ? 'Using Supabase real-time subscriptions'
+                  : 'Using efficient polling every 2 seconds'
+                }
+              </div>
+            )}
 
             {/* Last Update Time */}
             <div className="text-gray-400">
