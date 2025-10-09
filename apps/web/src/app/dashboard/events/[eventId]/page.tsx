@@ -328,58 +328,67 @@ export default function EventManagePage() {
             </Button>
           </Link>
 
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <div>
-              <div className="flex items-center gap-3 mb-2">
-                <h1 className="text-3xl font-bold text-gray-900">{event.name}</h1>
-                {getStatusBadge(event.status)}
-              </div>
-              <p className="text-gray-600">
-                <Calendar className="inline mr-1 h-4 w-4" />
-                {formatDateTime(event.starts_at)}
-              </p>
+          <div>
+            <div className="flex items-center gap-3 mb-2">
+              <h1 className="text-3xl font-bold text-gray-900">{event.name}</h1>
+              {getStatusBadge(event.status)}
             </div>
+            <p className="text-gray-600">
+              <Calendar className="inline mr-1 h-4 w-4" />
+              {formatDateTime(event.starts_at)}
+            </p>
+          </div>
+        </div>
 
-            <div className="flex flex-wrap gap-2">
-              <Link href={`/dashboard/events/${eventId}/control`}>
-                <Button size="sm" className="bg-blue-600 hover:bg-blue-700">
-                  <Play className="mr-2 h-4 w-4" />
-                  Event Control
-                </Button>
-              </Link>
-              <Link href={`/dashboard/events/${eventId}/qr`}>
-                <Button variant="outline" size="sm" className="bg-green-50 border-green-200 text-green-700 hover:bg-green-100">
-                  <QrCode className="mr-2 h-4 w-4" />
-                  QR Code
-                </Button>
-              </Link>
-              <Link href={`/dashboard/events/${eventId}/analytics`}>
-                <Button variant="outline" size="sm">
-                  <Users className="mr-2 h-4 w-4" />
-                  Analytics
-                </Button>
-              </Link>
-              <Link href={`/dashboard/events/${eventId}/results`}>
-                <Button variant="outline" size="sm" className={`${event?.status === 'completed' ? 'bg-yellow-50 border-yellow-200 text-yellow-700 hover:bg-yellow-100' : ''}`}>
-                  <Award className="mr-2 h-4 w-4" />
-                  {event?.status === 'completed' ? 'Winners' : 'Results'}
-                </Button>
-              </Link>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => window.open(`/events/${eventId}/live`, '_blank')}
-              >
-                <Eye className="mr-2 h-4 w-4" />
-                Live View
+        {/* Control Buttons */}
+        <div className="mb-8">
+          <div className="flex flex-wrap gap-2 justify-center sm:justify-start">
+            <Link href={`/dashboard/events/${eventId}/control`}>
+              <Button size="sm" className="bg-blue-600 hover:bg-blue-700">
+                <Play className="mr-2 h-4 w-4" />
+                Event Control
               </Button>
-              <Link href={`/dashboard/events/${eventId}/settings`}>
-                <Button variant="outline" size="sm">
-                  <Settings className="mr-2 h-4 w-4" />
-                  Settings
-                </Button>
-              </Link>
-            </div>
+            </Link>
+            <Link href={`/dashboard/events/${eventId}/qr`}>
+              <Button variant="outline" size="sm" className="bg-green-50 border-green-200 text-green-700 hover:bg-green-100">
+                <QrCode className="mr-2 h-4 w-4" />
+                QR Code Display
+              </Button>
+            </Link>
+            <Link href={`/dashboard/events/${eventId}/analytics`}>
+              <Button variant="outline" size="sm">
+                <Users className="mr-2 h-4 w-4" />
+                Analytics
+              </Button>
+            </Link>
+            <Link href={`/dashboard/events/${eventId}/results`}>
+              <Button variant="outline" size="sm" className={`${event?.status === 'completed' ? 'bg-yellow-50 border-yellow-200 text-yellow-700 hover:bg-yellow-100' : ''}`}>
+                <Award className="mr-2 h-4 w-4" />
+                {event?.status === 'completed' ? 'Winners' : 'Enter Results'}
+              </Button>
+            </Link>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => window.open(`/events/${eventId}/live`, '_blank')}
+            >
+              <Eye className="mr-2 h-4 w-4" />
+              Live View
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => alert('Export functionality coming soon')}
+            >
+              <Share2 className="mr-2 h-4 w-4" />
+              Export Data
+            </Button>
+            <Link href={`/dashboard/events/${eventId}/settings`}>
+              <Button variant="outline" size="sm">
+                <Settings className="mr-2 h-4 w-4" />
+                Settings
+              </Button>
+            </Link>
           </div>
         </div>
 
