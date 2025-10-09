@@ -20,6 +20,7 @@ import {
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useRealtimeAssignments } from '@/hooks/use-realtime-assignments'
+import { useRealtimeParticipants } from '@/hooks/use-realtime-participants'
 
 interface Event {
   id: string
@@ -92,7 +93,7 @@ export default function LiveViewPage() {
   const {
     assignments,
     loading: assignmentsLoading,
-    realtimeState
+    realtimeState: assignmentsRealtimeState
   } = useRealtimeAssignments(eventId, {
     includeRelations: true,
     onAssignmentAdded: (assignment) => {
@@ -112,6 +113,45 @@ export default function LiveViewPage() {
       console.error('Assignment subscription error:', error)
     }
   })
+
+  // Use the real-time participants hook
+  const {
+    participants,
+    loading: participantsLoading,
+    realtimeState: participantsRealtimeState
+  } = useRealtimeParticipants(eventId, {
+    onParticipantAdded: (participant) => {
+      console.log('🆕 New participant:', participant)
+      setLastUpdate(new Date())
+
+      // Update event participant count in real-time
+      setEvent(prev => prev ? {
+        ...prev,
+        participant_count: (prev.participant_count || 0) + 1
+      } : null)
+    },
+    onParticipantRemoved: (participantId) => {
+      console.log('🗑️ Participant removed:', participantId)
+      setLastUpdate(new Date())
+
+      // Update event participant count in real-time
+      setEvent(prev => prev ? {
+        ...prev,
+        participant_count: Math.max((prev.participant_count || 1) - 1, 0)
+      } : null)
+    },
+    onError: (error) => {
+      console.error('Participants subscription error:', error)
+    }
+  })
+
+  // Combined realtime state
+  const realtimeState = {
+    isConnected: assignmentsRealtimeState.isConnected && participantsRealtimeState.isConnected,
+    isReconnecting: assignmentsRealtimeState.isReconnecting || participantsRealtimeState.isReconnecting,
+    error: assignmentsRealtimeState.error || participantsRealtimeState.error,
+    lastUpdated: assignmentsRealtimeState.lastUpdated || participantsRealtimeState.lastUpdated
+  }
 
   // Convert assignments to recent assignments format
   useEffect(() => {
@@ -135,37 +175,45 @@ export default function LiveViewPage() {
     if (eventId) {
       loadEventData()
 
-      // Set up real-time updates for other tables (events, results)
+      // Set up real-time updates for results and event status
       const channel = supabase
         .channel(`event_status_${eventId}`)
         .on('postgres_changes',
-          { event: '*', schema: 'public', table: 'patron_entries', filter: `event_id=eq.${eventId}` },
-          () => {
-            loadEventData()
-            setLastUpdate(new Date())
-          }
-        )
-        .on('postgres_changes',
           { event: '*', schema: 'public', table: 'event_results', filter: `event_id=eq.${eventId}` },
-          () => {
-            loadEventData()
+          (payload) => {
+            console.log('🏆 Results updated:', payload)
+            loadEventData() // Reload results when they change
             setLastUpdate(new Date())
           }
         )
         .on('postgres_changes',
-          { event: '*', schema: 'public', table: 'events', filter: `id=eq.${eventId}` },
-          () => {
-            loadEventData()
+          { event: 'UPDATE', schema: 'public', table: 'events', filter: `id=eq.${eventId}` },
+          (payload) => {
+            console.log('📅 Event status updated:', payload)
+            // Update event data in real-time
+            const updatedEvent = payload.new as Event
+            setEvent(prev => prev ? {
+              ...prev,
+              status: updatedEvent.status
+            } : null)
+
+            // If event becomes completed, reload to get results
+            if (updatedEvent.status === 'completed') {
+              loadEventData()
+            }
+
             setLastUpdate(new Date())
           }
         )
-        .subscribe()
+        .subscribe((status) => {
+          console.log(`Event status subscription: ${status}`)
+        })
 
       return () => {
         supabase.removeChannel(channel)
       }
     }
-  }, [eventId])
+  }, [eventId, supabase])
 
   async function loadEventData() {
     try {
@@ -276,7 +324,7 @@ export default function LiveViewPage() {
     )
   }
 
-  if (loading || assignmentsLoading) {
+  if (loading || assignmentsLoading || participantsLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
         <div className="text-center">
@@ -330,8 +378,11 @@ export default function LiveViewPage() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-4xl font-bold text-blue-600 mb-2">
-                {event.participant_count || 0}
+              <div className="text-4xl font-bold text-blue-600 mb-2 flex items-center justify-center space-x-2">
+                <span>{participants.length}</span>
+                {participantsRealtimeState.isConnected && (
+                  <Zap className="h-5 w-5 text-green-500" title="Live participant updates active" />
+                )}
               </div>
               <div className="text-sm text-gray-500">
                 of {event.capacity} spots
@@ -340,10 +391,15 @@ export default function LiveViewPage() {
                 <div
                   className="bg-blue-600 h-2 rounded-full transition-all duration-300"
                   style={{
-                    width: `${Math.min(((event.participant_count || 0) / event.capacity) * 100, 100)}%`
+                    width: `${Math.min((participants.length / event.capacity) * 100, 100)}%`
                   }}
                 />
               </div>
+              {!participantsRealtimeState.isConnected && participantsRealtimeState.error && (
+                <div className="text-xs text-red-500 mt-1">
+                  Participant updates offline
+                </div>
+              )}
             </CardContent>
           </Card>
 
@@ -606,27 +662,53 @@ export default function LiveViewPage() {
 
         {/* Footer */}
         <div className="text-center text-gray-500 text-sm py-4">
-          <div className="flex items-center justify-center space-x-4 mb-2">
+          <div className="flex flex-col items-center space-y-2 mb-4">
+            {/* Overall Connection Status */}
             <div className="flex items-center space-x-1">
               {realtimeState.isConnected ? (
                 <>
                   <Zap className="h-4 w-4 text-green-500" />
-                  <span className="text-green-600">Live updates active</span>
+                  <span className="text-green-600 font-medium">All live updates active</span>
                 </>
               ) : realtimeState.isReconnecting ? (
                 <>
                   <Loader2 className="h-4 w-4 animate-spin text-yellow-500" />
-                  <span className="text-yellow-600">Reconnecting...</span>
+                  <span className="text-yellow-600 font-medium">Reconnecting...</span>
                 </>
               ) : (
                 <>
                   <div className="h-4 w-4 rounded-full bg-red-500"></div>
-                  <span className="text-red-600">Connection lost</span>
+                  <span className="text-red-600 font-medium">Connection issues</span>
                 </>
               )}
             </div>
-            <div className="text-gray-400">•</div>
-            <div>
+
+            {/* Detailed Connection Status */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
+              <div className="flex items-center justify-center space-x-1">
+                {assignmentsRealtimeState.isConnected ? (
+                  <div className="w-2 h-2 rounded-full bg-green-500"></div>
+                ) : (
+                  <div className="w-2 h-2 rounded-full bg-red-500"></div>
+                )}
+                <span>Assignments</span>
+              </div>
+              <div className="flex items-center justify-center space-x-1">
+                {participantsRealtimeState.isConnected ? (
+                  <div className="w-2 h-2 rounded-full bg-green-500"></div>
+                ) : (
+                  <div className="w-2 h-2 rounded-full bg-red-500"></div>
+                )}
+                <span>Participants</span>
+              </div>
+              <div className="flex items-center justify-center space-x-1">
+                <div className="w-2 h-2 rounded-full bg-green-500"></div>
+                <span>Results & Status</span>
+              </div>
+            </div>
+
+            {/* Last Update Time */}
+            <div className="text-gray-400">
               Last update: {lastUpdate.toLocaleTimeString('en-AU', {
                 hour: '2-digit',
                 minute: '2-digit',
