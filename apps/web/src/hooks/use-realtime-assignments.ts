@@ -55,6 +55,9 @@ export function useRealtimeAssignments(
 
   // Load initial data
   const loadAssignments = useCallback(async () => {
+    console.log('🔄 [HOOK] Loading assignments for eventId:', eventId)
+    console.log('🔄 [HOOK] Include relations:', optionsRef.current.includeRelations)
+
     try {
       let query = supabase
         .from('assignments')
@@ -70,9 +73,23 @@ export function useRealtimeAssignments(
         .eq('event_id', eventId)
         .order('created_at', { ascending: true })
 
+      console.log('🔄 [HOOK] Executing assignments query...')
       const { data, error } = await query
 
-      if (error) throw error
+      if (error) {
+        console.error('❌ [HOOK] Query error:', error)
+        throw error
+      }
+
+      console.log('✅ [HOOK] Assignments loaded:', {
+        count: data?.length || 0,
+        assignments: data?.map(a => ({
+          id: a.id,
+          event_id: a.event_id,
+          patron_entry_id: a.patron_entry_id,
+          event_horse_id: a.event_horse_id
+        }))
+      })
 
       setAssignments(data || [])
       setRealtimeState(prev => ({
@@ -81,7 +98,7 @@ export function useRealtimeAssignments(
         lastUpdated: new Date()
       }))
     } catch (error) {
-      console.error('Error loading assignments:', error)
+      console.error('❌ [HOOK] Error loading assignments:', error)
       setRealtimeState(prev => ({
         ...prev,
         error: error instanceof Error ? error.message : 'Failed to load assignments'
@@ -119,13 +136,18 @@ export function useRealtimeAssignments(
 
   // Setup realtime subscription
   const setupRealtimeSubscription = useCallback(() => {
+    console.log('🔌 [HOOK] Setting up realtime subscription for eventId:', eventId)
+
     if (channelRef.current) {
+      console.log('🔌 [HOOK] Unsubscribing from existing channel')
       channelRef.current.unsubscribe()
     }
 
     setRealtimeState(prev => ({ ...prev, isReconnecting: true }))
 
-    const channel = supabase.channel(`assignments_${eventId}`)
+    const channelName = `assignments_${eventId}`
+    console.log('🔌 [HOOK] Creating channel:', channelName)
+    const channel = supabase.channel(channelName)
       .on(
         'postgres_changes',
         {
@@ -135,10 +157,19 @@ export function useRealtimeAssignments(
           filter: `event_id=eq.${eventId}`
         },
         async (payload) => {
+          console.log('🔥 [REALTIME] Assignment INSERT event received:', {
+            eventId,
+            payload,
+            assignmentId: payload.new?.id,
+            assignmentEventId: payload.new?.event_id,
+            timestamp: new Date().toISOString()
+          })
+
           let newAssignment = payload.new as Assignment
 
           // If we need relations, fetch them
           if (optionsRef.current.includeRelations) {
+            console.log('🔗 [REALTIME] Fetching assignment relations for:', newAssignment.id)
             try {
               const { data, error } = await supabase
                 .from('assignments')
@@ -151,22 +182,32 @@ export function useRealtimeAssignments(
                 .single()
 
               if (!error && data) {
+                console.log('✅ [REALTIME] Assignment relations fetched:', data)
                 newAssignment = data
+              } else {
+                console.error('❌ [REALTIME] Error fetching assignment relations:', error)
               }
             } catch (error) {
-              console.error('Error fetching assignment relations:', error)
+              console.error('❌ [REALTIME] Exception fetching assignment relations:', error)
             }
           }
 
           setAssignments(prev => {
             // Check if we already have this assignment (avoid duplicates)
             if (prev.some(a => a.id === newAssignment.id)) {
+              console.log('⚠️ [REALTIME] Assignment already exists, skipping:', newAssignment.id)
               return prev
             }
+            console.log('✅ [REALTIME] Adding new assignment to state:', {
+              id: newAssignment.id,
+              previousCount: prev.length,
+              newCount: prev.length + 1
+            })
             return [...prev, newAssignment]
           })
 
           setRealtimeState(prev => ({ ...prev, lastUpdated: new Date() }))
+          console.log('📞 [REALTIME] Calling onAssignmentAdded callback')
           optionsRef.current.onAssignmentAdded?.(newAssignment)
         }
       )
@@ -227,7 +268,10 @@ export function useRealtimeAssignments(
         }
       )
       .subscribe((status) => {
-        console.log(`Assignments subscription status: ${status}`)
+        console.log(`🔌 [REALTIME] Assignments subscription status: ${status} for eventId: ${eventId}`)
+        console.log(`🔌 [REALTIME] Channel name: assignments_${eventId}`)
+        console.log(`🔌 [REALTIME] Filter: event_id=eq.${eventId}`)
+        console.log(`🔌 [REALTIME] Timestamp: ${new Date().toISOString()}`)
 
         setRealtimeState(prev => ({
           ...prev,
@@ -238,14 +282,19 @@ export function useRealtimeAssignments(
 
         // Handle reconnection
         if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+          console.log(`❌ [REALTIME] Connection issue detected: ${status}`)
           if (reconnectTimeoutRef.current) {
             clearTimeout(reconnectTimeoutRef.current)
           }
 
           reconnectTimeoutRef.current = setTimeout(() => {
-            console.log('Attempting to reconnect assignments subscription...')
+            console.log('🔄 [REALTIME] Attempting to reconnect assignments subscription...')
             setupRealtimeSubscription()
           }, 3000)
+        }
+
+        if (status === 'SUBSCRIBED') {
+          console.log('✅ [REALTIME] Successfully subscribed to assignments updates!')
         }
       })
 
@@ -254,12 +303,17 @@ export function useRealtimeAssignments(
 
   // Initial load and subscription setup
   useEffect(() => {
-    if (!eventId) return
+    if (!eventId) {
+      console.log('⚠️ [HOOK] No eventId provided, skipping setup')
+      return
+    }
 
+    console.log('🚀 [HOOK] Setting up assignments hook for eventId:', eventId)
     loadAssignments()
     setupRealtimeSubscription()
 
     return () => {
+      console.log('🧹 [HOOK] Cleaning up assignments hook for eventId:', eventId)
       if (channelRef.current) {
         channelRef.current.unsubscribe()
       }

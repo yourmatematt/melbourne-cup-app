@@ -116,6 +116,7 @@ function LiveViewPage() {
   const [newAssignmentId, setNewAssignmentId] = useState<string | null>(null)
   const [pollingActive, setPollingActive] = useState(false)
   const [pollingInterval, setPollingInterval] = useState<NodeJS.Timeout | null>(null)
+  const [realtimeFlash, setRealtimeFlash] = useState(false)
 
   // Use the real-time assignments hook with relations
   const {
@@ -126,11 +127,26 @@ function LiveViewPage() {
   } = useRealtimeAssignments(eventId, {
     includeRelations: true,
     onAssignmentAdded: (assignment) => {
+      console.log('🎉 [LIVE VIEW] New assignment added callback triggered:', {
+        assignmentId: assignment.id,
+        eventId: assignment.event_id,
+        participantName: assignment.patron_entries?.participant_name,
+        horseName: assignment.event_horses?.name,
+        horseNumber: assignment.event_horses?.number,
+        timestamp: new Date().toISOString()
+      })
+
       setNewAssignmentId(assignment.id)
       setLastUpdate(new Date())
-      console.log('🎉 New assignment added')
+
+      // Trigger visual flash indicator
+      setRealtimeFlash(true)
+      setTimeout(() => {
+        setRealtimeFlash(false)
+      }, 1000)
 
       setTimeout(() => {
+        console.log('🎉 [LIVE VIEW] Clearing new assignment highlight for:', assignment.id)
         setNewAssignmentId(null)
       }, 3000)
     },
@@ -259,24 +275,30 @@ function LiveViewPage() {
     setPollingActive(true)
 
     const interval = setInterval(async () => {
-      console.log('⏰ [DEBUG] Polling interval triggered at:', new Date().toISOString())
+      console.log('⏰ [POLLING] Polling interval triggered at:', new Date().toISOString())
+      console.log('⏰ [POLLING] Real-time connected status:', realtimeConnected)
+      console.log('⏰ [POLLING] Assignment realtime state:', assignmentsRealtimeState)
+      console.log('⏰ [POLLING] Participant realtime state:', participantsRealtimeState)
+
       try {
         // Only poll if real-time isn't working
         if (!realtimeConnected) {
-          console.log('🔄 [DEBUG] Real-time not connected, starting polling queries...')
+          console.log('🔄 [POLLING] Real-time not connected, starting polling queries...')
+          const startTime = Date.now()
           await Promise.all([
             pollAssignments(),
             pollParticipants(),
             pollEventStatus(),
             pollResults()
           ])
-          console.log('✅ [DEBUG] All polling queries completed')
+          const endTime = Date.now()
+          console.log(`✅ [POLLING] All polling queries completed in ${endTime - startTime}ms`)
           setLastUpdate(new Date())
         } else {
-          console.log('⚡ [DEBUG] Real-time is connected, skipping polling')
+          console.log('⚡ [POLLING] Real-time is connected, skipping polling')
         }
       } catch (error) {
-        console.error('❌ [DEBUG] Polling error:', error)
+        console.error('❌ [POLLING] Polling error:', error)
       }
     }, 2000) // Poll every 2 seconds
 
@@ -294,16 +316,20 @@ function LiveViewPage() {
   }
 
   const pollAssignments = async () => {
-    console.log('🔍 [DEBUG] pollAssignments started - calling refreshAssignments hook')
+    console.log('🔍 [POLLING] pollAssignments started - calling refreshAssignments hook')
+    console.log('🔍 [POLLING] Current assignments count:', assignments.length)
+    console.log('🔍 [POLLING] refreshAssignments function available:', !!refreshAssignments)
+
     try {
       if (refreshAssignments) {
+        const beforeCount = assignments.length
         await refreshAssignments()
-        console.log('✅ [DEBUG] Assignments refreshed via hook')
+        console.log(`✅ [POLLING] Assignments refreshed via hook - before: ${beforeCount}, after: ${assignments.length}`)
       } else {
-        console.warn('⚠️ [DEBUG] refreshAssignments function not available')
+        console.warn('⚠️ [POLLING] refreshAssignments function not available')
       }
     } catch (error) {
-      console.error('❌ [DEBUG] Error refreshing assignments:', error)
+      console.error('❌ [POLLING] Error refreshing assignments:', error)
     }
   }
 
@@ -637,7 +663,14 @@ function LiveViewPage() {
 
       <div className="max-w-6xl mx-auto space-y-6" style={{ marginTop: debugMode && mounted ? '200px' : '0' }}>
         {/* Header */}
-        <div className="text-center py-8">
+        <div className="text-center py-8 relative">
+          {/* Real-time flash indicator */}
+          {realtimeFlash && (
+            <div className="absolute top-0 left-0 right-0 bg-green-500 text-white text-center py-2 rounded-lg animate-pulse z-10">
+              ⚡ REAL-TIME UPDATE RECEIVED!
+            </div>
+          )}
+
           <h1 className="text-4xl md:text-6xl font-bold text-gray-900 mb-4">
             {event.name}
           </h1>
