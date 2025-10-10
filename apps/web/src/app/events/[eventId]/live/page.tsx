@@ -24,14 +24,8 @@ import {
 import { Button } from '@/components/ui/button'
 import { useRealtimeAssignments } from '@/hooks/use-realtime-assignments'
 import { useRealtimeParticipants } from '@/hooks/use-realtime-participants'
-import dynamic from 'next/dynamic'
 import ErrorBoundary from '@/components/error-boundary'
-
-// Import debug banner as client-only component
-const ClientDebugBanner = dynamic(
-  () => import('@/components/debug/client-debug-banner').then(mod => ({ default: mod.ClientDebugBanner })),
-  { ssr: false }
-)
+import { ClientDebugBanner } from '@/components/debug/client-debug-banner'
 
 interface Event {
   id: string
@@ -88,21 +82,10 @@ interface Result {
 }
 
 function LiveViewPage() {
-  // Debug state - only set on client side
+  // Simple debug state
   const [debugMode, setDebugMode] = useState(false)
   const [componentError, setComponentError] = useState<string | null>(null)
-  const [debugLogs, setDebugLogs] = useState<string[]>([])
   const [mounted, setMounted] = useState(false)
-
-  // Function to add debug logs - only works client-side
-  const addDebugLog = (message: string) => {
-    if (typeof window === 'undefined') return // Skip on server
-
-    const timestamp = new Date().toISOString()
-    const logEntry = `[${timestamp}] ${message}`
-    console.log('📝 [DEBUG LOG]', logEntry)
-    setDebugLogs(prev => [...prev.slice(-9), logEntry]) // Keep last 10 logs
-  }
 
   // Get params safely
   const params = useParams()
@@ -111,24 +94,18 @@ function LiveViewPage() {
 
   // Client-side only initialization
   useEffect(() => {
-    if (typeof window === 'undefined') return // Skip on server
+    if (typeof window === 'undefined') return
 
     console.log('🚨 [CLIENT] LiveViewPage mounted on client')
     setMounted(true)
     setDebugMode(true)
-    addDebugLog('🚀 Component mounted successfully')
-    addDebugLog(`📍 Event ID: ${eventId || 'MISSING'}`)
-    addDebugLog(`🌐 Supabase client: ${!!supabase ? 'CREATED' : 'FAILED'}`)
-  }, [eventId, supabase])
+  }, [])
 
-  // Log when hooks are ready
   useEffect(() => {
     if (mounted) {
-      addDebugLog('✅ Assignments hook initialized')
-      addDebugLog('✅ Participants hook initialized')
-      addDebugLog(`📊 Current state: ${assignments.length} assignments, ${participants.length} participants`)
+      console.log('✅ Component fully mounted', { eventId, supabaseReady: !!supabase })
     }
-  }, [mounted, assignments.length, participants.length])
+  }, [mounted, eventId, supabase])
 
   const [event, setEvent] = useState<Event | null>(null)
   const [results, setResults] = useState<Result[]>([])
@@ -149,19 +126,16 @@ function LiveViewPage() {
   } = useRealtimeAssignments(eventId, {
     includeRelations: true,
     onAssignmentAdded: (assignment) => {
-      // Handle new assignment with animation
       setNewAssignmentId(assignment.id)
       setLastUpdate(new Date())
-      addDebugLog(`🎉 New assignment: ${assignment.patron_entries?.participant_name} → Horse #${assignment.event_horses?.number}`)
+      console.log('🎉 New assignment added')
 
-      // Clear the "new" indicator after animation
       setTimeout(() => {
         setNewAssignmentId(null)
       }, 3000)
     },
     onError: (error) => {
       console.error('Assignment subscription error:', error)
-      addDebugLog(`❌ Assignment subscription error: ${error?.toString()}`)
       setComponentError(`Assignment hook error: ${error?.toString()}`)
     }
   })
@@ -174,20 +148,18 @@ function LiveViewPage() {
     refresh: refreshParticipants
   } = useRealtimeParticipants(eventId, {
     onParticipantAdded: (participant) => {
-      addDebugLog(`🆕 New participant: ${participant.participant_name}`)
+      console.log('🆕 New participant added')
       setLastUpdate(new Date())
 
-      // Update event participant count in real-time
       setEvent(prev => prev ? {
         ...prev,
         participant_count: (prev.participant_count || 0) + 1
       } : null)
     },
     onParticipantRemoved: (participantId) => {
-      addDebugLog(`🗑️ Participant removed: ${participantId}`)
+      console.log('🗑️ Participant removed')
       setLastUpdate(new Date())
 
-      // Update event participant count in real-time
       setEvent(prev => prev ? {
         ...prev,
         participant_count: Math.max((prev.participant_count || 1) - 1, 0)
@@ -195,7 +167,6 @@ function LiveViewPage() {
     },
     onError: (error) => {
       console.error('Participants subscription error:', error)
-      addDebugLog(`❌ Participants subscription error: ${error?.toString()}`)
       setComponentError(`Participants hook error: ${error?.toString()}`)
     }
   })
@@ -229,9 +200,8 @@ function LiveViewPage() {
   }, [assignments, newAssignmentId])
 
   useEffect(() => {
-    addDebugLog('🔄 useEffect triggered for event data loading')
     if (eventId) {
-      addDebugLog(`📊 Loading event data for eventId: ${eventId}`)
+      console.log('📊 Loading event data for eventId:', eventId)
       loadEventData()
 
       // Set up real-time updates for results and event status
@@ -240,25 +210,23 @@ function LiveViewPage() {
         .on('postgres_changes',
           { event: '*', schema: 'public', table: 'event_results', filter: `event_id=eq.${eventId}` },
           (payload) => {
-            addDebugLog('🏆 Results updated via real-time')
-            loadEventData() // Reload results when they change
+            console.log('🏆 Results updated via real-time')
+            loadEventData()
             setLastUpdate(new Date())
           }
         )
         .on('postgres_changes',
           { event: 'UPDATE', schema: 'public', table: 'events', filter: `id=eq.${eventId}` },
           (payload) => {
-            addDebugLog(`📅 Event status updated: ${payload.new?.status}`)
-            // Update event data in real-time
+            console.log('📅 Event status updated:', payload.new?.status)
             const updatedEvent = payload.new as Event
             setEvent(prev => prev ? {
               ...prev,
               status: updatedEvent.status
             } : null)
 
-            // If event becomes completed, reload to get results
             if (updatedEvent.status === 'completed') {
-              addDebugLog('🏁 Event completed, reloading data for results')
+              console.log('🏁 Event completed, reloading data for results')
               loadEventData()
             }
 
@@ -266,7 +234,7 @@ function LiveViewPage() {
           }
         )
         .subscribe((status) => {
-          addDebugLog(`📡 Real-time subscription status: ${status}`)
+          console.log('📡 Real-time subscription status:', status)
         })
 
       return () => {
@@ -626,7 +594,6 @@ function LiveViewPage() {
           <ClientDebugBanner
             eventId={eventId}
             componentError={componentError}
-            debugLogs={debugLogs}
           />
         )}
         <div className="text-center" style={{ marginTop: debugMode && mounted ? '200px' : '0' }}>
@@ -646,7 +613,6 @@ function LiveViewPage() {
           <ClientDebugBanner
             eventId={eventId}
             componentError={componentError}
-            debugLogs={debugLogs}
           />
         )}
         <Card className="w-full max-w-md" style={{ marginTop: debugMode && mounted ? '200px' : '0' }}>
