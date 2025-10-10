@@ -632,7 +632,6 @@ function LiveViewPage() {
         <ClientDebugBanner
           eventId={eventId}
           componentError={componentError}
-          debugLogs={debugLogs}
         />
       )}
 
