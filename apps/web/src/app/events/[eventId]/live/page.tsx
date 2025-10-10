@@ -1,9 +1,5 @@
 'use client'
 
-// IMMEDIATE DEBUG - This should be the FIRST thing that executes
-console.log('🚨 [IMMEDIATE] Live view page module loading...')
-console.log('🚨 [IMMEDIATE] Timestamp:', new Date().toISOString())
-
 import React, { useState, useEffect } from 'react'
 import { useParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
@@ -28,6 +24,14 @@ import {
 import { Button } from '@/components/ui/button'
 import { useRealtimeAssignments } from '@/hooks/use-realtime-assignments'
 import { useRealtimeParticipants } from '@/hooks/use-realtime-participants'
+import dynamic from 'next/dynamic'
+import ErrorBoundary from '@/components/error-boundary'
+
+// Import debug banner as client-only component
+const ClientDebugBanner = dynamic(
+  () => import('@/components/debug/client-debug-banner').then(mod => ({ default: mod.ClientDebugBanner })),
+  { ssr: false }
+)
 
 interface Event {
   id: string
@@ -83,58 +87,48 @@ interface Result {
   } | null
 }
 
-export default function LiveViewPage() {
-  // IMMEDIATE DEBUG - Before ANY hooks or logic
-  console.log('🚨 [IMMEDIATE] LiveViewPage function called')
-  console.log('🚨 [IMMEDIATE] Function execution timestamp:', new Date().toISOString())
-
-  // Visual debugging banner and error tracking
-  const [debugMode] = useState(true)
+function LiveViewPage() {
+  // Debug state - only set on client side
+  const [debugMode, setDebugMode] = useState(false)
   const [componentError, setComponentError] = useState<string | null>(null)
   const [debugLogs, setDebugLogs] = useState<string[]>([])
+  const [mounted, setMounted] = useState(false)
 
-  // Function to add debug logs
+  // Function to add debug logs - only works client-side
   const addDebugLog = (message: string) => {
+    if (typeof window === 'undefined') return // Skip on server
+
     const timestamp = new Date().toISOString()
     const logEntry = `[${timestamp}] ${message}`
     console.log('📝 [DEBUG LOG]', logEntry)
     setDebugLogs(prev => [...prev.slice(-9), logEntry]) // Keep last 10 logs
   }
 
-  let params, eventId, supabase
+  // Get params safely
+  const params = useParams()
+  const eventId = params.eventId as string
+  const supabase = createClient()
 
-  // Add initial debug logs
-  React.useEffect(() => {
+  // Client-side only initialization
+  useEffect(() => {
+    if (typeof window === 'undefined') return // Skip on server
+
+    console.log('🚨 [CLIENT] LiveViewPage mounted on client')
+    setMounted(true)
+    setDebugMode(true)
     addDebugLog('🚀 Component mounted successfully')
     addDebugLog(`📍 Event ID: ${eventId || 'MISSING'}`)
     addDebugLog(`🌐 Supabase client: ${!!supabase ? 'CREATED' : 'FAILED'}`)
   }, [eventId, supabase])
 
-  try {
-    console.log('🚨 [IMMEDIATE] Getting params...')
-    params = useParams()
-    console.log('🚨 [IMMEDIATE] Params received:', params)
-
-    console.log('🚨 [IMMEDIATE] Extracting eventId...')
-    eventId = params.eventId as string
-    console.log('🚨 [IMMEDIATE] EventId extracted:', eventId)
-
-    console.log('🚨 [IMMEDIATE] Creating Supabase client...')
-    supabase = createClient()
-    console.log('🚨 [IMMEDIATE] Supabase client created:', !!supabase)
-
-  } catch (error) {
-    console.error('🚨 [IMMEDIATE] Error in basic setup:', error)
-    const errorMessage = error?.toString() || 'Unknown error'
-    setComponentError(`FATAL ERROR IN LIVE VIEW SETUP: ${errorMessage}`)
-
-    // Return early error component
-    return (
-      <div style={{ background: 'red', color: 'white', padding: '20px', fontSize: '20px' }}>
-        FATAL ERROR IN LIVE VIEW SETUP: {errorMessage}
-      </div>
-    )
-  }
+  // Log when hooks are ready
+  useEffect(() => {
+    if (mounted) {
+      addDebugLog('✅ Assignments hook initialized')
+      addDebugLog('✅ Participants hook initialized')
+      addDebugLog(`📊 Current state: ${assignments.length} assignments, ${participants.length} participants`)
+    }
+  }, [mounted, assignments.length, participants.length])
 
   const [event, setEvent] = useState<Event | null>(null)
   const [results, setResults] = useState<Result[]>([])
@@ -147,7 +141,6 @@ export default function LiveViewPage() {
   const [pollingInterval, setPollingInterval] = useState<NodeJS.Timeout | null>(null)
 
   // Use the real-time assignments hook with relations
-  console.log('🔍 [DEBUG] Starting assignments hook initialization...')
   const {
     assignments,
     loading: assignmentsLoading,
@@ -172,11 +165,8 @@ export default function LiveViewPage() {
       setComponentError(`Assignment hook error: ${error?.toString()}`)
     }
   })
-  console.log('✅ [DEBUG] Assignments hook initialized successfully')
-  addDebugLog('✅ Assignments hook initialized')
 
   // Use the real-time participants hook
-  console.log('🔍 [DEBUG] Starting participants hook initialization...')
   const {
     participants,
     loading: participantsLoading,
@@ -209,8 +199,6 @@ export default function LiveViewPage() {
       setComponentError(`Participants hook error: ${error?.toString()}`)
     }
   })
-  console.log('✅ [DEBUG] Participants hook initialized successfully')
-  addDebugLog('✅ Participants hook initialized')
 
   // Combined realtime state with polling fallback
   const realtimeConnected = assignmentsRealtimeState.isConnected && participantsRealtimeState.isConnected
@@ -629,10 +617,19 @@ export default function LiveViewPage() {
     )
   }
 
+  // Show loading state with debug banner if available
   if (loading || assignmentsLoading || participantsLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
-        <div className="text-center">
+        {/* Client-only debug banner */}
+        {debugMode && mounted && (
+          <ClientDebugBanner
+            eventId={eventId}
+            componentError={componentError}
+            debugLogs={debugLogs}
+          />
+        )}
+        <div className="text-center" style={{ marginTop: debugMode && mounted ? '200px' : '0' }}>
           <Loader2 className="h-12 w-12 animate-spin text-blue-600 mx-auto mb-4" />
           <p className="text-xl text-gray-600">Loading live event...</p>
         </div>
@@ -640,10 +637,19 @@ export default function LiveViewPage() {
     )
   }
 
+  // Show error state with debug banner if available
   if (error || !event) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-red-50 to-pink-100 flex items-center justify-center p-4">
-        <Card className="w-full max-w-md">
+        {/* Client-only debug banner */}
+        {debugMode && mounted && (
+          <ClientDebugBanner
+            eventId={eventId}
+            componentError={componentError}
+            debugLogs={debugLogs}
+          />
+        )}
+        <Card className="w-full max-w-md" style={{ marginTop: debugMode && mounted ? '200px' : '0' }}>
           <CardHeader className="text-center">
             <CardTitle className="text-red-600">Event Unavailable</CardTitle>
             <CardDescription>{error || 'Event not found'}</CardDescription>
@@ -655,64 +661,16 @@ export default function LiveViewPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
-      {/* DEBUG MODE BANNER */}
-      {debugMode && (
-        <div style={{
-          background: 'linear-gradient(90deg, #ff0000, #ff6600)',
-          color: 'white',
-          padding: '15px 20px',
-          fontSize: '18px',
-          fontWeight: 'bold',
-          textAlign: 'center',
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          zIndex: 9999,
-          boxShadow: '0 4px 12px rgba(255, 0, 0, 0.3)',
-          border: '3px solid #ffffff'
-        }}>
-          🚨 DEBUG MODE ACTIVE - LIVE VIEW COMPONENT IS RENDERING 🚨
-          <div style={{ fontSize: '14px', marginTop: '5px' }}>
-            Timestamp: {new Date().toISOString()} | Event ID: {eventId || 'MISSING'}
-          </div>
-          {componentError && (
-            <div style={{
-              background: '#fff',
-              color: '#ff0000',
-              padding: '10px',
-              margin: '10px 0',
-              borderRadius: '5px',
-              fontSize: '14px',
-              fontWeight: 'bold'
-            }}>
-              ❌ COMPONENT ERROR: {componentError}
-            </div>
-          )}
-          <div style={{
-            background: 'rgba(0,0,0,0.3)',
-            padding: '10px',
-            margin: '10px 0',
-            borderRadius: '5px',
-            fontSize: '12px',
-            maxHeight: '100px',
-            overflow: 'auto'
-          }}>
-            <div style={{ fontWeight: 'bold', marginBottom: '5px' }}>📝 RECENT DEBUG LOGS:</div>
-            {debugLogs.length === 0 ? (
-              <div>No logs yet...</div>
-            ) : (
-              debugLogs.map((log, index) => (
-                <div key={index} style={{ marginBottom: '2px' }}>
-                  {log}
-                </div>
-              ))
-            )}
-          </div>
-        </div>
+      {/* Client-only debug banner */}
+      {debugMode && mounted && (
+        <ClientDebugBanner
+          eventId={eventId}
+          componentError={componentError}
+          debugLogs={debugLogs}
+        />
       )}
 
-      <div className="max-w-6xl mx-auto space-y-6" style={{ marginTop: debugMode ? '100px' : '0' }}>
+      <div className="max-w-6xl mx-auto space-y-6" style={{ marginTop: debugMode && mounted ? '200px' : '0' }}>
         {/* Header */}
         <div className="text-center py-8">
           <h1 className="text-4xl md:text-6xl font-bold text-gray-900 mb-4">
@@ -1185,5 +1143,14 @@ export default function LiveViewPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+// Export the component wrapped in an error boundary
+export default function LiveViewPageWithErrorBoundary() {
+  return (
+    <ErrorBoundary>
+      <LiveViewPage />
+    </ErrorBoundary>
   )
 }
