@@ -84,6 +84,12 @@ export default function LiveViewPage() {
   const eventId = params.eventId as string
   const supabase = createClient()
 
+  // Debug logging for initialization
+  console.log('🚀 [DEBUG] LiveViewPage component initialized')
+  console.log('🔍 [DEBUG] Params:', params)
+  console.log('🔍 [DEBUG] EventId:', eventId)
+  console.log('🔍 [DEBUG] Supabase client:', !!supabase)
+
   const [event, setEvent] = useState<Event | null>(null)
   const [results, setResults] = useState<Result[]>([])
   const [loading, setLoading] = useState(true)
@@ -98,7 +104,8 @@ export default function LiveViewPage() {
   const {
     assignments,
     loading: assignmentsLoading,
-    realtimeState: assignmentsRealtimeState
+    realtimeState: assignmentsRealtimeState,
+    refresh: refreshAssignments
   } = useRealtimeAssignments(eventId, {
     includeRelations: true,
     onAssignmentAdded: (assignment) => {
@@ -123,7 +130,8 @@ export default function LiveViewPage() {
   const {
     participants,
     loading: participantsLoading,
-    realtimeState: participantsRealtimeState
+    realtimeState: participantsRealtimeState,
+    refresh: refreshParticipants
   } = useRealtimeParticipants(eventId, {
     onParticipantAdded: (participant) => {
       console.log('🆕 New participant:', participant)
@@ -224,7 +232,13 @@ export default function LiveViewPage() {
 
   // Polling functions for demo/fallback mode
   const startPolling = () => {
+    console.log('🔄 [DEBUG] startPolling called')
+    console.log('🔍 [DEBUG] Current polling interval:', pollingInterval)
+    console.log('🔍 [DEBUG] Current pollingActive:', pollingActive)
+    console.log('🔍 [DEBUG] realtimeConnected:', realtimeConnected)
+
     if (pollingInterval) {
+      console.log('🔄 [DEBUG] Clearing existing polling interval')
       clearInterval(pollingInterval)
     }
 
@@ -232,22 +246,28 @@ export default function LiveViewPage() {
     setPollingActive(true)
 
     const interval = setInterval(async () => {
+      console.log('⏰ [DEBUG] Polling interval triggered at:', new Date().toISOString())
       try {
         // Only poll if real-time isn't working
         if (!realtimeConnected) {
+          console.log('🔄 [DEBUG] Real-time not connected, starting polling queries...')
           await Promise.all([
             pollAssignments(),
             pollParticipants(),
             pollEventStatus(),
             pollResults()
           ])
+          console.log('✅ [DEBUG] All polling queries completed')
           setLastUpdate(new Date())
+        } else {
+          console.log('⚡ [DEBUG] Real-time is connected, skipping polling')
         }
       } catch (error) {
-        console.error('Polling error:', error)
+        console.error('❌ [DEBUG] Polling error:', error)
       }
     }, 2000) // Poll every 2 seconds
 
+    console.log('🔄 [DEBUG] Polling interval created:', interval)
     setPollingInterval(interval)
   }
 
@@ -261,67 +281,30 @@ export default function LiveViewPage() {
   }
 
   const pollAssignments = async () => {
+    console.log('🔍 [DEBUG] pollAssignments started - calling refreshAssignments hook')
     try {
-      const { data, error } = await supabase
-        .from('assignments')
-        .select(`
-          *,
-          event_horses!event_horse_id(*),
-          patron_entries!patron_entry_id(*)
-        `)
-        .eq('event_id', eventId)
-        .order('created_at', { ascending: true })
-
-      if (error) throw error
-
-      // Check for new assignments since last update
-      const currentAssignmentIds = assignments.map(a => a.id)
-      const newAssignments = (data || []).filter(a => !currentAssignmentIds.includes(a.id))
-
-      if (newAssignments.length > 0) {
-        console.log('🎯 Polling: Found new assignments:', newAssignments.length)
-        // Trigger assignment added callbacks for new ones
-        newAssignments.forEach(assignment => {
-          setNewAssignmentId(assignment.id)
-          setTimeout(() => setNewAssignmentId(null), 3000)
-        })
-      }
-
-      // Update assignments if different
-      if (JSON.stringify(data) !== JSON.stringify(assignments)) {
-        // This would need to update the assignments state - but since we're using hooks,
-        // we'll trigger a manual refresh instead
-        loadEventData()
+      if (refreshAssignments) {
+        await refreshAssignments()
+        console.log('✅ [DEBUG] Assignments refreshed via hook')
+      } else {
+        console.warn('⚠️ [DEBUG] refreshAssignments function not available')
       }
     } catch (error) {
-      console.error('Error polling assignments:', error)
+      console.error('❌ [DEBUG] Error refreshing assignments:', error)
     }
   }
 
   const pollParticipants = async () => {
+    console.log('🔍 [DEBUG] pollParticipants started - calling refreshParticipants hook')
     try {
-      const { data, error } = await supabase
-        .from('patron_entries')
-        .select('*')
-        .eq('event_id', eventId)
-        .order('created_at', { ascending: true })
-
-      if (error) throw error
-
-      // Check for participant count changes
-      const currentCount = participants.length
-      const newCount = (data || []).length
-
-      if (newCount !== currentCount) {
-        console.log(`👥 Polling: Participant count changed: ${currentCount} → ${newCount}`)
-        // Update event participant count
-        setEvent(prev => prev ? {
-          ...prev,
-          participant_count: newCount
-        } : null)
+      if (refreshParticipants) {
+        await refreshParticipants()
+        console.log('✅ [DEBUG] Participants refreshed via hook')
+      } else {
+        console.warn('⚠️ [DEBUG] refreshParticipants function not available')
       }
     } catch (error) {
-      console.error('Error polling participants:', error)
+      console.error('❌ [DEBUG] Error refreshing participants:', error)
     }
   }
 
@@ -391,15 +374,36 @@ export default function LiveViewPage() {
 
   // Auto-start polling if real-time isn't connected after initial load
   useEffect(() => {
+    console.log('🔍 [DEBUG] Auto-polling effect triggered:', {
+      loading,
+      realtimeConnected,
+      pollingActive,
+      eventId
+    })
+
     if (!loading && !realtimeConnected && !pollingActive) {
+      console.log('🔄 [DEBUG] Setting up auto-polling timer (5 seconds)')
       // Start polling after a short delay to give real-time a chance
       const timer = setTimeout(() => {
+        console.log('⏰ [DEBUG] Auto-polling timer triggered, checking real-time status...')
         if (!realtimeConnected) {
+          console.log('🔄 [DEBUG] Real-time still not connected, starting polling')
           startPolling()
+        } else {
+          console.log('⚡ [DEBUG] Real-time connected, skipping auto-polling')
         }
       }, 5000) // Wait 5 seconds before falling back to polling
 
-      return () => clearTimeout(timer)
+      return () => {
+        console.log('🧹 [DEBUG] Cleaning up auto-polling timer')
+        clearTimeout(timer)
+      }
+    } else {
+      console.log('⏭️ [DEBUG] Skipping auto-polling setup:', {
+        loading: loading ? 'still loading' : 'loaded',
+        realtimeConnected: realtimeConnected ? 'connected' : 'not connected',
+        pollingActive: pollingActive ? 'already active' : 'not active'
+      })
     }
   }, [loading, realtimeConnected, pollingActive])
 
@@ -420,35 +424,72 @@ export default function LiveViewPage() {
   }, [pollingInterval])
 
   async function loadEventData() {
+    console.log('🔄 [DEBUG] loadEventData started for eventId:', eventId)
     try {
       setError(null)
 
       // Get event details (public access, bypasses RLS)
+      console.log('🔍 [DEBUG] Fetching event data from API...')
       const response = await fetch(`/api/events/${eventId}/register`, {
         method: 'GET'
       })
 
+      console.log('🔍 [DEBUG] API response status:', response.status, response.ok)
+
       if (!response.ok) {
+        console.error('❌ [DEBUG] API response not ok:', response.status)
         setError('Event not found')
         return
       }
 
       const data = await response.json()
+      console.log('🔍 [DEBUG] API response data:', data)
 
       if (!data.success) {
+        console.error('❌ [DEBUG] API response not successful:', data.error)
         setError(data.error || 'Failed to load event')
         return
       }
 
+      console.log('✅ [DEBUG] Setting event data:', data.data.event)
       setEvent({
         ...data.data.event,
         participant_count: data.data.participantCount
       })
 
-      // Assignments are now handled by the useRealtimeAssignments hook
+      // Force refresh assignments from Supabase directly
+      console.log('🔍 [DEBUG] Refreshing assignments data...')
+      try {
+        const { data: assignmentsData, error: assignmentsError } = await supabase
+          .from('assignments')
+          .select(`
+            *,
+            event_horses!event_horse_id(*),
+            patron_entries!patron_entry_id(*)
+          `)
+          .eq('event_id', eventId)
+          .order('created_at', { ascending: true })
+
+        console.log('🔍 [DEBUG] Direct assignments query result:', {
+          data: assignmentsData,
+          error: assignmentsError,
+          count: assignmentsData?.length
+        })
+
+        if (assignmentsError) {
+          console.error('❌ [DEBUG] Assignments query error:', assignmentsError)
+        } else {
+          console.log('✅ [DEBUG] Successfully fetched assignments:', assignmentsData?.length || 0)
+          // Note: We can't directly update the assignment state from hooks
+          // This will help us see if the query is working
+        }
+      } catch (assignmentErr) {
+        console.error('❌ [DEBUG] Error fetching assignments:', assignmentErr)
+      }
 
       // Get results (if event is completed)
       if (data.data.event.status === 'completed') {
+        console.log('🔍 [DEBUG] Event completed, fetching results...')
         const { data: resultsData, error: resultsError } = await supabase
           .from('event_results')
           .select(`
@@ -470,14 +511,17 @@ export default function LiveViewPage() {
           .eq('event_id', eventId)
           .order('place')
 
+        console.log('🔍 [DEBUG] Results query result:', { data: resultsData, error: resultsError })
+
         if (!resultsError && resultsData) {
           setResults(resultsData)
         }
       }
 
+      console.log('✅ [DEBUG] loadEventData completed successfully')
       setLastUpdate(new Date())
     } catch (err) {
-      console.error('Error loading live data:', err)
+      console.error('❌ [DEBUG] Error loading live data:', err)
       setError('Failed to load event data')
     } finally {
       setLoading(false)
@@ -665,7 +709,20 @@ export default function LiveViewPage() {
                 <Button
                   size="sm"
                   variant="outline"
-                  onClick={loadEventData}
+                  onClick={async () => {
+                    console.log('🔄 [DEBUG] Manual refresh button clicked')
+                    try {
+                      // Refresh all data sources
+                      await Promise.all([
+                        loadEventData(),
+                        refreshAssignments?.(),
+                        refreshParticipants?.()
+                      ])
+                      console.log('✅ [DEBUG] Manual refresh completed')
+                    } catch (error) {
+                      console.error('❌ [DEBUG] Manual refresh error:', error)
+                    }
+                  }}
                   className="text-xs"
                 >
                   <RefreshCw className="h-3 w-3 mr-1" />
@@ -680,6 +737,26 @@ export default function LiveViewPage() {
                   >
                     <Radio className="h-3 w-3 mr-1" />
                     {pollingActive ? 'Stop Polling' : 'Start Polling'}
+                  </Button>
+                )}
+                {process.env.NODE_ENV === 'development' && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      console.log('🔍 [DEBUG] Current state snapshot:', {
+                        eventId,
+                        assignmentsCount: assignments.length,
+                        participantsCount: participants.length,
+                        realtimeConnected,
+                        pollingActive,
+                        assignmentsRealtimeState,
+                        participantsRealtimeState
+                      })
+                    }}
+                    className="text-xs"
+                  >
+                    Debug Log
                   </Button>
                 )}
               </div>
