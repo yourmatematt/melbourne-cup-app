@@ -34,6 +34,7 @@ export function useRealtimeAssignments(
   eventId: string,
   options: UseRealtimeAssignmentsOptions = {}
 ) {
+  console.log('🚨 HOOK STARTING - useRealtimeAssignments called with eventId:', eventId)
   const [assignments, setAssignments] = useState<Assignment[]>([])
   const [loading, setLoading] = useState(true)
   const [realtimeState, setRealtimeState] = useState<RealtimeState>({

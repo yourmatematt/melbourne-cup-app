@@ -82,6 +82,8 @@ interface Result {
 }
 
 function LiveViewPage() {
+  console.log('🚨 LIVE PAGE COMPONENT MOUNTING - LiveViewPage function called')
+
   // Simple debug state
   const [debugMode, setDebugMode] = useState(false)
   const [componentError, setComponentError] = useState<string | null>(null)
@@ -90,6 +92,7 @@ function LiveViewPage() {
   // Get params safely
   const params = useParams()
   const eventId = params.eventId as string
+  console.log('🚨 LIVE PAGE - eventId from params:', eventId, 'params:', params)
   const supabase = createClient()
 
   // Client-side only initialization
@@ -119,42 +122,57 @@ function LiveViewPage() {
   const [realtimeFlash, setRealtimeFlash] = useState(false)
 
   // Use the real-time assignments hook with relations
-  const {
-    assignments,
-    loading: assignmentsLoading,
-    realtimeState: assignmentsRealtimeState,
-    refresh: refreshAssignments
-  } = useRealtimeAssignments(eventId, {
-    includeRelations: true,
-    onAssignmentAdded: (assignment) => {
-      console.log('🎉 [LIVE VIEW] New assignment added callback triggered:', {
-        assignmentId: assignment.id,
-        eventId: assignment.event_id,
-        participantName: assignment.patron_entries?.participant_name,
-        horseName: assignment.event_horses?.name,
-        horseNumber: assignment.event_horses?.number,
-        timestamp: new Date().toISOString()
-      })
+  console.log('🚨 LIVE PAGE - About to call useRealtimeAssignments hook with eventId:', eventId)
 
-      setNewAssignmentId(assignment.id)
-      setLastUpdate(new Date())
+  let assignments, assignmentsLoading, assignmentsRealtimeState, refreshAssignments
+  try {
+    const hookResult = useRealtimeAssignments(eventId, {
+      includeRelations: true,
+      onAssignmentAdded: (assignment) => {
+        console.log('🎉 [LIVE VIEW] New assignment added callback triggered:', {
+          assignmentId: assignment.id,
+          eventId: assignment.event_id,
+          participantName: assignment.patron_entries?.participant_name,
+          horseName: assignment.event_horses?.name,
+          horseNumber: assignment.event_horses?.number,
+          timestamp: new Date().toISOString()
+        })
 
-      // Trigger visual flash indicator
-      setRealtimeFlash(true)
-      setTimeout(() => {
-        setRealtimeFlash(false)
-      }, 1000)
+        setNewAssignmentId(assignment.id)
+        setLastUpdate(new Date())
 
-      setTimeout(() => {
-        console.log('🎉 [LIVE VIEW] Clearing new assignment highlight for:', assignment.id)
-        setNewAssignmentId(null)
-      }, 3000)
-    },
-    onError: (error) => {
-      console.error('Assignment subscription error:', error)
-      setComponentError(`Assignment hook error: ${error?.toString()}`)
-    }
-  })
+        // Trigger visual flash indicator
+        setRealtimeFlash(true)
+        setTimeout(() => {
+          setRealtimeFlash(false)
+        }, 1000)
+
+        setTimeout(() => {
+          console.log('🎉 [LIVE VIEW] Clearing new assignment highlight for:', assignment.id)
+          setNewAssignmentId(null)
+        }, 3000)
+      },
+      onError: (error) => {
+        console.error('Assignment subscription error:', error)
+        setComponentError(`Assignment hook error: ${error?.toString()}`)
+      }
+    })
+
+    console.log('🚨 LIVE PAGE - useRealtimeAssignments hook returned successfully:', hookResult)
+
+    assignments = hookResult.assignments
+    assignmentsLoading = hookResult.loading
+    assignmentsRealtimeState = hookResult.realtimeState
+    refreshAssignments = hookResult.refresh
+
+  } catch (error) {
+    console.error('🚨 LIVE PAGE - ERROR calling useRealtimeAssignments hook:', error)
+    // Provide fallback values
+    assignments = []
+    assignmentsLoading = false
+    assignmentsRealtimeState = { isConnected: false, isReconnecting: false, error: null, lastUpdated: null }
+    refreshAssignments = () => Promise.resolve()
+  }
 
   // Use the real-time participants hook
   const {
@@ -1146,6 +1164,7 @@ function LiveViewPage() {
 
 // Export the component wrapped in an error boundary
 export default function LiveViewPageWithErrorBoundary() {
+  console.log('🚨 WRAPPER COMPONENT - LiveViewPageWithErrorBoundary executing')
   return (
     <ErrorBoundary>
       <LiveViewPage />
