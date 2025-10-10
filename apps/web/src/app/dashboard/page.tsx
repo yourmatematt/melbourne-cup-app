@@ -4,7 +4,9 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Plus, Calendar, Users, TrendingUp, Clock, Play, Trophy, QrCode, ExternalLink, UserPlus } from 'lucide-react'
+import { StatCard } from '@/components/ui/stat-card'
+import { StatusPill } from '@/components/ui/status-pill'
+import { Plus, Calendar, Users, TrendingUp, Clock, Play, Trophy, QrCode, ExternalLink, UserPlus, PlusCircle, Settings, Eye } from 'lucide-react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { QRCodeShare } from '@/components/ui/qr-code'
@@ -167,6 +169,17 @@ function DashboardContent() {
     }
   }
 
+  function getStatusIconComponent(status: string) {
+    switch (status) {
+      case 'draft': return Clock
+      case 'active': return Play
+      case 'drawing': return Clock
+      case 'completed': return Trophy
+      case 'cancelled': return Clock
+      default: return Calendar
+    }
+  }
+
   function getStatusText(status: string) {
     switch (status) {
       case 'draft': return 'Draft'
@@ -211,27 +224,26 @@ function DashboardContent() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
+    <div className="min-h-screen bg-[#f8f7f4] py-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 
         <div className="flex justify-between items-center mb-8">
-          <div>
-            <div className="flex items-center space-x-4 mb-2">
-              <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
-            </div>
-            <p className="mt-2 text-gray-600">
+          <div className="space-y-2">
+            <h1 className="text-3xl font-bold text-slate-900">Dashboard</h1>
+            <p className="text-slate-600">
               Welcome to your Melbourne Cup venue management
             </p>
           </div>
           <div className="flex items-center space-x-4">
             <Link href="/dashboard/settings">
-              <Button variant="outline">
+              <Button variant="outline" className="flex items-center gap-2">
+                <Settings className="h-4 w-4" />
                 Edit Venue Settings
               </Button>
             </Link>
             <Link href="/dashboard/events/new">
-              <Button className="bg-blue-600 text-white hover:bg-blue-700">
-                <Plus className="mr-2 h-4 w-4" />
+              <Button className="bg-slate-900 text-white hover:bg-slate-800 flex items-center gap-2">
+                <Plus className="h-4 w-4" />
                 New Event
               </Button>
             </Link>
@@ -239,67 +251,52 @@ function DashboardContent() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Events</CardTitle>
-              <Calendar className="h-4 w-4 text-gray-900" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-gray-900">{stats.totalEvents}</div>
-              <p className="text-xs text-muted-foreground">
-                {stats.totalEvents === 0 ? 'No events created yet' : `${events.filter(e => e.status === 'active').length} active`}
-              </p>
-            </CardContent>
-          </Card>
+          <StatCard
+            title="Total Events"
+            value={stats.totalEvents}
+            subtitle={stats.totalEvents === 0 ? 'No events created yet' : `${events.filter(e => e.status === 'active').length} active`}
+            icon={Calendar}
+          />
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Active Participants</CardTitle>
-              <Users className="h-4 w-4 text-gray-700" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-gray-700">{stats.activeParticipants}</div>
-              <p className="text-xs text-muted-foreground">
-                Across {stats.totalEvents} events
-              </p>
-            </CardContent>
-          </Card>
+          <StatCard
+            title="Active Participants"
+            value={stats.activeParticipants}
+            subtitle={`Across ${stats.totalEvents} events`}
+            icon={Users}
+          />
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Revenue</CardTitle>
-              <TrendingUp className="h-4 w-4 text-blue-600" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-blue-600">$0</div>
-              <p className="text-xs text-muted-foreground">
-                Coming soon
-              </p>
-            </CardContent>
-          </Card>
+          <StatCard
+            title="Revenue"
+            value="$0"
+            subtitle="Coming soon"
+            icon={TrendingUp}
+          />
         </div>
 
         {events.length > 0 ? (
           <>
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-xl font-semibold text-gray-900">Your Events</h2>
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-bold text-slate-900">Your Events</h2>
               <Link href="/dashboard/events">
-                <Button variant="outline">View All</Button>
+                <Button variant="ghost" className="text-slate-600 hover:text-slate-900">
+                  View All
+                </Button>
               </Link>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-              {events.slice(0, 4).map((event) => (
-                <Card key={event.id} className="hover:shadow-md transition-shadow">
-                  <CardHeader className="pb-3">
-                    <div className="flex items-center justify-between">
-                      <CardTitle className="text-lg">{event.name}</CardTitle>
-                      <div className="flex items-center space-x-1">
-                        {getStatusIcon(event.status)}
-                        <span className="text-sm text-gray-600">{getStatusText(event.status)}</span>
-                      </div>
+            <Card className="bg-white border border-gray-200 rounded-[20px] p-6 shadow-sm">
+              {events.slice(0, 1).map((event) => (
+                <div key={event.id} className="space-y-4">
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-3">
+                      <h3 className="text-lg font-bold text-slate-900">{event.name}</h3>
+                      <StatusPill
+                        label={getStatusText(event.status)}
+                        variant={event.status as any}
+                        icon={getStatusIconComponent(event.status)}
+                      />
                     </div>
-                    <CardDescription>
+                    <p className="text-sm text-slate-600">
                       {new Date(event.starts_at).toLocaleDateString('en-AU', {
                         weekday: 'long',
                         year: 'numeric',
@@ -308,117 +305,69 @@ function DashboardContent() {
                         hour: '2-digit',
                         minute: '2-digit'
                       })}
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-3">
-                      <div className="flex justify-between items-center">
-                        <div className="text-sm text-gray-600">
-                          <span className="font-medium">{event.participant_count || 0}</span> / {event.capacity} participants
-                        </div>
-                        <div className="flex space-x-2">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handleAddParticipant(event)}
-                            disabled={(event.participant_count ?? 0) >= (event.capacity ?? 0)}
-                            title={(event.participant_count ?? 0) >= (event.capacity ?? 0) ? 'Event is full' : 'Add participant manually'}
-                          >
-                            <UserPlus className="h-4 w-4 mr-1" />
-                            {(event.participant_count ?? 0) >= (event.capacity ?? 0) ? 'Full' : 'Add'}
-                          </Button>
-                          <Link href={`/dashboard/events/${event.id}`}>
-                            <Button size="sm">Manage</Button>
-                          </Link>
-                        </div>
-                      </div>
+                    </p>
+                  </div>
 
-                      {event.status === 'active' && (
-                        <div className="border-t pt-3">
-                          <div className="flex items-center justify-between">
-                            <div className="text-xs text-gray-500">
-                              Share for patron signups:
-                            </div>
-                            <div className="flex space-x-2">
-                              <QRCodeShare
-                                eventId={event.id}
-                                eventName={event.name}
-                                isActive={event.status === 'active'}
-                                size="md"
-                              />
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => {
-                                  const url = `${window.location.origin}/e/${event.id}`
-                                  window.open(url, '_blank')
-                                }}
-                              >
-                                <ExternalLink className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          </div>
-                        </div>
-                      )}
-
-                      {event.status === 'draft' && (
-                        <div className="border-t pt-3">
-                          <div className="flex items-center justify-between">
-                            <div className="text-xs text-gray-400">
-                              QR code available when event is active
-                            </div>
-                            <QRCodeShare
-                              eventId={event.id}
-                              eventName={event.name}
-                              isActive={false}
-                              size="md"
-                            />
-                          </div>
-                        </div>
-                      )}
+                  <div className="flex justify-between items-center">
+                    <div className="flex items-center gap-2 text-sm text-slate-900">
+                      <Users className="h-4 w-4" />
+                      <span>{event.participant_count || 0} / {event.capacity} participants</span>
                     </div>
-                  </CardContent>
-                </Card>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleAddParticipant(event)}
+                        disabled={(event.participant_count ?? 0) >= (event.capacity ?? 0)}
+                        className="flex items-center gap-2"
+                      >
+                        <UserPlus className="h-4 w-4" />
+                        Add
+                      </Button>
+                      <Link href={`/dashboard/events/${event.id}`}>
+                        <Button size="sm" className="bg-slate-900 text-white hover:bg-slate-800 flex items-center gap-2">
+                          <Settings className="h-4 w-4" />
+                          Manage
+                        </Button>
+                      </Link>
+                    </div>
+                  </div>
+                </div>
               ))}
-            </div>
+            </Card>
           </>
         ) : null}
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>{events.length === 0 ? 'Create Your First Event' : 'Create Another Event'}</CardTitle>
-              <CardDescription>
-                {events.length === 0 ? 'Create your first Melbourne Cup event' : 'Add another event for your venue'}
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <p className="text-sm text-gray-600">
-                Set up a sweep or calcutta for Melbourne Cup 2025. Our templates make it easy to get started with all the horse details pre-filled.
-              </p>
+          <Card className="bg-white border border-gray-200 rounded-[20px] p-8 shadow-sm">
+            <div className="space-y-6">
+              <div className="space-y-2">
+                <h3 className="text-lg font-bold text-slate-900">{events.length === 0 ? 'Create Your First Event' : 'Create Another Event'}</h3>
+                <p className="text-sm text-slate-600">
+                  Set up a sweep or calcutta for Melbourne Cup 2025. Our templates make it easy to get started with all the horse details pre-filled.
+                </p>
+              </div>
               <Link href="/dashboard/events/new">
-                <Button className="w-full bg-blue-600 text-white hover:bg-blue-700">
-                  <Plus className="mr-2 h-4 w-4" />
+                <Button className="w-full bg-gradient-to-r from-orange-500 via-pink-500 to-purple-600 text-white hover:opacity-90 transition-opacity">
+                  <PlusCircle className="mr-2 h-4 w-4" />
                   Create Melbourne Cup Event
                 </Button>
               </Link>
-            </CardContent>
+            </div>
           </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Recent Activity</CardTitle>
-              <CardDescription>
-                Your latest venue activities
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="text-center py-8">
-                <p className="text-sm text-gray-600">
+          <Card className="bg-white border border-gray-200 rounded-[20px] p-8 shadow-sm">
+            <div className="space-y-6">
+              <div className="space-y-2">
+                <h3 className="text-lg font-bold text-slate-900">Recent Activity</h3>
+                <p className="text-sm text-slate-600">Your latest venue activities</p>
+              </div>
+              <div className="text-center py-4">
+                <p className="text-sm text-slate-600">
                   {events.length === 0 ? 'No activity yet. Create your first event to get started!' : 'Activity tracking coming soon...'}
                 </p>
               </div>
-            </CardContent>
+            </div>
           </Card>
         </div>
       </div>
