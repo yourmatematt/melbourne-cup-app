@@ -2,13 +2,22 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter, useParams } from 'next/navigation'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
-import { ArrowLeft, Calendar, Users, Clock, Play, Trophy, Share2, Settings, Plus, Eye, QrCode, Award } from 'lucide-react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
+import { DashboardLayout } from '@/components/layout/dashboard-layout'
+import { StatCard } from '@/components/ui/stat-card'
+import { StatusPill } from '@/components/ui/status-pill'
 import { AddParticipantModal } from '@/components/shared/add-participant-modal'
+import {
+  ChevronRight,
+  Settings,
+  Users,
+  Trophy,
+  Calendar,
+  UserPlus,
+  Clock,
+  Play
+} from 'lucide-react'
 
 type Event = {
   id: string
@@ -16,62 +25,143 @@ type Event = {
   starts_at: string
   status: 'draft' | 'active' | 'drawing' | 'completed' | 'cancelled'
   capacity: number
-  mode: string
-  lead_capture: boolean
+  mode: 'sweep' | 'calcutta'
   created_at: string
 }
 
 type Participant = {
   id: string
   participant_name: string
-  email?: string
+  email: string
   phone?: string
-  marketing_consent: boolean
+  horse_number?: number
+  horse_name?: string
   created_at: string
-  assignments?: {
-    event_horse: {
-      number: number
-      name: string
-      jockey?: string
-    }
-  }[]
 }
 
-type Horse = {
-  id: string
+const SEGMENTED_TABS = [
+  { id: 'control', label: 'Event Control', href: '' },
+  { id: 'qr', label: 'QR Code Display', href: '/qr' },
+  { id: 'analytics', label: 'Analytics', href: '/analytics' },
+  { id: 'results', label: 'Enter Results', href: '/results' },
+  { id: 'live', label: 'Live View', href: '/live' },
+  { id: 'export', label: 'Export Data', href: '/export' },
+  { id: 'settings', label: 'Settings', href: '/settings' }
+]
+
+function getInitials(name: string): string {
+  return name
+    .split(' ')
+    .map(word => word[0])
+    .join('')
+    .toUpperCase()
+    .slice(0, 2)
+}
+
+function getStatusIcon(status: string) {
+  switch (status) {
+    case 'draft': return Clock
+    case 'active': return Play
+    case 'drawing': return Clock
+    case 'completed': return Trophy
+    default: return Calendar
+  }
+}
+
+function SegmentedControl({ eventId, activeTab }: { eventId: string, activeTab: string }) {
+  return (
+    <div className="bg-[#f8f7f4] border border-gray-200/50 rounded-2xl p-1.5 inline-flex">
+      {SEGMENTED_TABS.map((tab) => (
+        <Link
+          key={tab.id}
+          href={`/dashboard/events/${eventId}${tab.href}`}
+          className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${
+            activeTab === tab.id
+              ? 'bg-gradient-to-b from-orange-500 via-pink-500 to-purple-600 text-white shadow-lg'
+              : 'text-slate-600 hover:text-slate-900'
+          }`}
+        >
+          {tab.label}
+        </Link>
+      ))}
+    </div>
+  )
+}
+
+function ParticipantRow({ participant }: { participant: Participant }) {
+  const initials = getInitials(participant.participant_name)
+
+  return (
+    <div className="flex items-center gap-3 p-3 rounded-xl hover:bg-gray-50/50 transition-colors">
+      <div className="bg-gradient-to-b from-orange-500 via-pink-500 to-purple-600 rounded-full size-10 flex items-center justify-center">
+        <span className="text-white text-sm font-medium">{initials}</span>
+      </div>
+
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-medium text-slate-900 truncate">
+          {participant.participant_name}
+        </p>
+        <p className="text-xs text-slate-600 truncate">
+          {participant.email}
+        </p>
+      </div>
+
+      <div>
+        {participant.horse_number ? (
+          <div className="bg-violet-100 border border-violet-200/60 rounded-full px-2.5 py-1">
+            <span className="text-xs font-medium text-violet-700">
+              Horse #{participant.horse_number} - {participant.horse_name || 'TBD'}
+            </span>
+          </div>
+        ) : (
+          <div className="bg-gray-100 border border-gray-200/60 rounded-full px-2.5 py-1">
+            <span className="text-xs font-medium text-slate-600">
+              Not assigned
+            </span>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function HorseButton({ number, isAssigned, onClick }: {
   number: number
-  name: string
-  jockey?: string
-  is_scratched: boolean
-  position?: number
-  assigned?: boolean
+  isAssigned: boolean
+  onClick: () => void
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={`w-full aspect-square rounded-xl border-2 flex items-center justify-center text-sm font-bold transition-colors ${
+        isAssigned
+          ? 'bg-violet-100 border-violet-200/60 text-violet-700'
+          : 'bg-[#f8f7f4] border-gray-200/60 text-slate-600 hover:bg-gray-100'
+      }`}
+    >
+      #{number}
+    </button>
+  )
 }
 
-export default function EventManagePage() {
+function EventOverviewContent() {
+  const params = useParams()
+  const router = useRouter()
+  const eventId = params.eventId as string
+  const supabase = createClient()
+
   const [event, setEvent] = useState<Event | null>(null)
   const [participants, setParticipants] = useState<Participant[]>([])
-  const [horses, setHorses] = useState<Horse[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [user, setUser] = useState<any>(null)
   const [showAddParticipantModal, setShowAddParticipantModal] = useState(false)
-  const [selectedEvent, setSelectedEvent] = useState<Event | null>(null)
-  const [eventParticipants, setEventParticipants] = useState<any[]>([])
-
-  const router = useRouter()
-  const params = useParams()
-  const supabase = createClient()
-  const eventId = params.eventId as string
 
   useEffect(() => {
-    if (eventId) {
-      fetchEventData()
-    }
+    fetchEventData()
   }, [eventId])
 
   async function fetchEventData() {
     try {
-      console.log('🔍 Fetching event data for:', eventId)
       setLoading(true)
 
       // Get current user
@@ -79,12 +169,9 @@ export default function EventManagePage() {
       if (userError) throw userError
 
       if (!user) {
-        console.log('❌ No user found, redirecting to login')
         router.push('/login')
         return
       }
-
-      setUser(user)
 
       // Get user's tenant ID
       const { data: tenantUser, error: tenantError } = await supabase
@@ -94,55 +181,21 @@ export default function EventManagePage() {
         .single()
 
       if (tenantError) throw tenantError
-      if (!tenantUser) throw new Error('No tenant found for user')
-
-      console.log('✅ User tenant:', tenantUser.tenant_id)
 
       // Fetch event details
       const { data: eventData, error: eventError } = await supabase
         .from('events')
-        .select(`
-          id,
-          name,
-          starts_at,
-          status,
-          capacity,
-          mode,
-          lead_capture,
-          created_at
-        `)
+        .select('*')
         .eq('id', eventId)
         .eq('tenant_id', tenantUser.tenant_id)
         .single()
 
-      if (eventError) {
-        if (eventError.code === 'PGRST116') {
-          setError('Event not found or you do not have permission to view it')
-          return
-        }
-        throw eventError
-      }
+      if (eventError) throw eventError
+      if (!eventData) throw new Error('Event not found')
 
-      console.log('✅ Event found:', eventData.name)
       setEvent(eventData)
 
-      // Fetch horses for this event
-      const { data: horsesData, error: horsesError } = await supabase
-        .from('event_horses')
-        .select(`
-          id,
-          number,
-          name,
-          jockey,
-          is_scratched,
-          position
-        `)
-        .eq('event_id', eventId)
-        .order('number', { ascending: true })
-
-      if (horsesError) throw horsesError
-
-      // Fetch participants and their assignments
+      // Fetch participants and their assignments separately for now
       const { data: participantsData, error: participantsError } = await supabase
         .from('patron_entries')
         .select(`
@@ -150,429 +203,268 @@ export default function EventManagePage() {
           participant_name,
           email,
           phone,
-          marketing_consent,
-          created_at,
-          assignments(
-            event_horse:event_horses(
-              number,
-              name,
-              jockey
-            )
-          )
+          created_at
         `)
         .eq('event_id', eventId)
-        .order('created_at', { ascending: true })
+        .order('created_at', { ascending: false })
 
       if (participantsError) throw participantsError
 
-      console.log('✅ Participants:', participantsData?.length || 0)
-      console.log('✅ Horses:', horsesData?.length || 0)
+      // Fetch assignments to get horse numbers
+      const { data: assignmentsData, error: assignmentsError } = await supabase
+        .from('assignments')
+        .select(`
+          patron_entry_id,
+          event_horses!inner(
+            horse_number,
+            name
+          )
+        `)
+        .in('patron_entry_id', (participantsData || []).map(p => p.id))
 
-      // Mark which horses are assigned
-      const assignedHorseNumbers = new Set(
-        participantsData?.flatMap(p =>
-          p.assignments?.map(a => a.event_horse?.number) || []
-        ) || []
-      )
+      if (assignmentsError) {
+        console.warn('Could not fetch assignments:', assignmentsError)
+      }
 
-      const horsesWithAssignments = horsesData?.map(horse => ({
-        ...horse,
-        assigned: assignedHorseNumbers.has(horse.number)
-      })) || []
+      // Create a map of participant ID to horse assignment
+      const assignmentMap = new Map()
+      if (assignmentsData) {
+        assignmentsData.forEach(assignment => {
+          assignmentMap.set(assignment.patron_entry_id, {
+            horse_number: assignment.event_horses.horse_number,
+            horse_name: assignment.event_horses.name
+          })
+        })
+      }
 
-      setParticipants(participantsData || [])
-      setHorses(horsesWithAssignments)
+      // Transform the data to match our Participant type
+      const transformedParticipants = (participantsData || []).map((p: any) => {
+        const assignment = assignmentMap.get(p.id)
+        return {
+          id: p.id,
+          participant_name: p.participant_name,
+          email: p.email,
+          phone: p.phone,
+          created_at: p.created_at,
+          horse_number: assignment?.horse_number,
+          horse_name: assignment?.horse_name
+        }
+      })
 
+      setParticipants(transformedParticipants)
     } catch (err) {
-      console.error('❌ Error fetching event data:', err)
+      console.error('Error fetching event data:', err)
       setError(err instanceof Error ? err.message : 'Failed to fetch event data')
     } finally {
       setLoading(false)
     }
   }
 
-  async function handleAddParticipant(event: Event) {
-    try {
-      setSelectedEvent(event)
-
-      const { data: participants, error } = await supabase
-        .from('patron_entries')
-        .select('id, participant_name, email, phone, marketing_consent, join_code, created_at')
-        .eq('event_id', event.id)
-        .order('created_at', { ascending: false })
-
-      if (error) {
-        console.error('Error fetching participants:', error)
-        alert('Failed to load participant data')
-        return
-      }
-
-      setEventParticipants(participants || [])
-      setShowAddParticipantModal(true)
-    } catch (err) {
-      console.error('Error opening add participant modal:', err)
-      alert('Failed to open add participant form')
-    }
-  }
-
   async function handleParticipantAdded() {
-    if (selectedEvent) {
-      const { count } = await supabase
-        .from('patron_entries')
-        .select('*', { count: 'exact', head: true })
-        .eq('event_id', selectedEvent.id)
-
-      setParticipants(prevParticipants => {
-        // Refresh participants data
-        fetchEventData()
-        return prevParticipants
-      })
-    }
+    await fetchEventData()
+    setShowAddParticipantModal(false)
   }
 
-  function getStatusBadge(status: string) {
-    switch (status) {
-      case 'draft':
-        return <Badge variant="secondary" className="gap-1"><Clock className="h-3 w-3" />Draft</Badge>
-      case 'active':
-        return <Badge variant="default" className="gap-1 bg-green-500"><Play className="h-3 w-3" />Active</Badge>
-      case 'completed':
-        return <Badge variant="default" className="gap-1 bg-yellow-500"><Trophy className="h-3 w-3" />Completed</Badge>
-      case 'drawing':
-        return <Badge variant="default" className="gap-1 bg-blue-500"><Play className="h-3 w-3" />Drawing</Badge>
-      default:
-        return <Badge variant="outline">{status}</Badge>
-    }
-  }
-
-  function formatDateTime(dateString: string) {
-    return new Date(dateString).toLocaleDateString('en-AU', {
-      weekday: 'long',
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    })
+  function handleHorseClick(horseNumber: number) {
+    // TODO: Implement horse assignment logic
+    console.log(`Horse ${horseNumber} clicked`)
   }
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50">
-        <div className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-center py-12">
-            <div className="text-center">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-              <p className="mt-2 text-gray-600">Loading event...</p>
-            </div>
+      <DashboardLayout>
+        <div className="p-8 flex items-center justify-center h-96">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+            <p className="mt-2 text-gray-600">Loading event...</p>
           </div>
         </div>
-      </div>
+      </DashboardLayout>
     )
   }
 
-  if (error) {
+  if (error || !event) {
     return (
-      <div className="min-h-screen bg-gray-50">
-        <div className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
-          <div className="mb-8">
-            <Link href="/dashboard">
-              <Button variant="ghost" className="mb-4">
-                <ArrowLeft className="mr-2 h-4 w-4" />
-                Back to Dashboard
-              </Button>
-            </Link>
-          </div>
-          <div className="flex items-center justify-center py-12">
-            <div className="text-center">
-              <p className="text-red-600 mb-4">{error}</p>
-              <Button onClick={fetchEventData}>
-                Try Again
-              </Button>
-            </div>
+      <DashboardLayout>
+        <div className="p-8 flex items-center justify-center h-96">
+          <div className="text-center">
+            <p className="text-red-600">Error: {error || 'Event not found'}</p>
+            <button
+              onClick={fetchEventData}
+              className="mt-4 bg-blue-600 text-white px-4 py-2 rounded-lg"
+            >
+              Retry
+            </button>
           </div>
         </div>
-      </div>
+      </DashboardLayout>
     )
   }
 
-  if (!event) {
-    return (
-      <div className="min-h-screen bg-gray-50">
-        <div className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
-          <div className="mb-8">
-            <Link href="/dashboard">
-              <Button variant="ghost" className="mb-4">
-                <ArrowLeft className="mr-2 h-4 w-4" />
-                Back to Dashboard
-              </Button>
-            </Link>
-          </div>
-          <div className="text-center py-12">
-            <p className="text-gray-600">Event not found</p>
-          </div>
-        </div>
-      </div>
-    )
+  const assignedHorses = new Set(
+    participants
+      .filter(p => p.horse_number)
+      .map(p => p.horse_number!)
+  )
+
+  const stats = {
+    participants: `${participants.length} / ${event.capacity}`,
+    horsesAssigned: `${assignedHorses.size} / 24`,
+    eventType: event.mode === 'sweep' ? 'Sweep' : 'Calcutta'
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
-        {/* Header */}
-        <div className="mb-8">
-          <Link href="/dashboard">
-            <Button variant="ghost" className="mb-4">
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Back to Dashboard
-            </Button>
+    <DashboardLayout>
+      <div className="p-8 space-y-8">
+        {/* Breadcrumb */}
+        <div className="flex items-center gap-2 text-sm">
+          <Link href="/dashboard" className="text-slate-600 hover:text-slate-900">
+            Dashboard
           </Link>
+          <ChevronRight className="h-4 w-4 text-slate-400" />
+          <span className="text-slate-900">{event.name}</span>
+        </div>
 
-          <div>
-            <div className="flex items-center gap-3 mb-2">
-              <h1 className="text-3xl font-bold text-gray-900">{event.name}</h1>
-              {getStatusBadge(event.status)}
+        {/* Header */}
+        <div className="flex items-start justify-between">
+          <div className="space-y-2">
+            <div className="flex items-center gap-3">
+              <h1 className="text-3xl font-bold text-slate-900">{event.name}</h1>
+              <StatusPill
+                label={event.status.charAt(0).toUpperCase() + event.status.slice(1)}
+                variant={event.status as any}
+                icon={getStatusIcon(event.status)}
+              />
             </div>
-            <p className="text-gray-600">
-              <Calendar className="inline mr-1 h-4 w-4" />
-              {formatDateTime(event.starts_at)}
+            <p className="text-slate-600">
+              {new Date(event.starts_at).toLocaleDateString('en-AU', {
+                weekday: 'long',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+              })}
             </p>
           </div>
+
+          <Link href={`/dashboard/events/${eventId}/settings`}>
+            <button className="bg-[#f8f7f4] border border-gray-200/50 h-9 px-4 rounded-xl flex items-center gap-2 text-sm text-slate-900 hover:bg-gray-50">
+              <Settings className="h-4 w-4" />
+              Event Settings
+            </button>
+          </Link>
         </div>
 
-        {/* Control Buttons */}
-        <div className="mb-8">
-          <div className="flex flex-wrap gap-2 justify-center sm:justify-start">
-            <Link href={`/dashboard/events/${eventId}/control`}>
-              <Button size="sm" className="bg-blue-600 hover:bg-blue-700">
-                <Play className="mr-2 h-4 w-4" />
-                Event Control
-              </Button>
-            </Link>
-            <Link href={`/dashboard/events/${eventId}/qr`}>
-              <Button variant="outline" size="sm" className="bg-green-50 border-green-200 text-green-700 hover:bg-green-100">
-                <QrCode className="mr-2 h-4 w-4" />
-                QR Code Display
-              </Button>
-            </Link>
-            <Link href={`/dashboard/events/${eventId}/analytics`}>
-              <Button variant="outline" size="sm">
-                <Users className="mr-2 h-4 w-4" />
-                Analytics
-              </Button>
-            </Link>
-            <Link href={`/dashboard/events/${eventId}/results`}>
-              <Button variant="outline" size="sm" className={`${event?.status === 'completed' ? 'bg-yellow-50 border-yellow-200 text-yellow-700 hover:bg-yellow-100' : ''}`}>
-                <Award className="mr-2 h-4 w-4" />
-                {event?.status === 'completed' ? 'Winners' : 'Enter Results'}
-              </Button>
-            </Link>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => window.open(`/events/${eventId}/live`, '_blank')}
-            >
-              <Eye className="mr-2 h-4 w-4" />
-              Live View
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => alert('Export functionality coming soon')}
-            >
-              <Share2 className="mr-2 h-4 w-4" />
-              Export Data
-            </Button>
-            <Link href={`/dashboard/events/${eventId}/settings`}>
-              <Button variant="outline" size="sm">
-                <Settings className="mr-2 h-4 w-4" />
-                Settings
-              </Button>
-            </Link>
-          </div>
+        {/* Segmented Control */}
+        <div>
+          <SegmentedControl eventId={eventId} activeTab="control" />
         </div>
 
-        {/* Quick Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Participants</CardTitle>
-              <Users className="h-4 w-4 text-gray-500" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
-                {participants.length} / {event.capacity}
-              </div>
-              <p className="text-xs text-muted-foreground">
-                {event.capacity - participants.length} spots remaining
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Horses Assigned</CardTitle>
-              <Trophy className="h-4 w-4 text-gray-500" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
-                {horses.filter(h => h.assigned).length} / {horses.length}
-              </div>
-              <p className="text-xs text-muted-foreground">
-                {horses.filter(h => !h.assigned && !h.is_scratched).length} available
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Event Type</CardTitle>
-              <Calendar className="h-4 w-4 text-gray-500" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold capitalize">{event.mode}</div>
-              <p className="text-xs text-muted-foreground">
-                {event.lead_capture ? 'Lead capture enabled' : 'No lead capture'}
-              </p>
-            </CardContent>
-          </Card>
+        {/* Stats Cards */}
+        <div className="grid grid-cols-3 gap-6">
+          <StatCard
+            title="Participants"
+            value={stats.participants}
+            subtitle="Current registrations"
+            icon={Users}
+          />
+          <StatCard
+            title="Horses Assigned"
+            value={stats.horsesAssigned}
+            subtitle="Total assignments"
+            icon={Trophy}
+          />
+          <StatCard
+            title="Event Type"
+            value={stats.eventType}
+            subtitle="Competition format"
+            icon={Calendar}
+          />
         </div>
 
         {/* Main Content */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Participants List */}
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle>Participants</CardTitle>
-                  <CardDescription>
-                    Current registered participants for this event
-                  </CardDescription>
+        <div className="grid grid-cols-2 gap-6">
+          {/* Participants Column */}
+          <div className="bg-white border border-gray-200/50 rounded-[20px] p-6 space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-bold text-slate-900">Participants</h3>
+              <button
+                onClick={() => setShowAddParticipantModal(true)}
+                className="bg-[#f8f7f4] border border-gray-200/50 h-8 px-3 rounded-xl flex items-center gap-2 text-sm text-slate-900 hover:bg-gray-50"
+              >
+                <UserPlus className="h-4 w-4" />
+                Add Participant
+              </button>
+            </div>
+
+            <div className="space-y-2 max-h-96 overflow-y-auto">
+              {participants.length > 0 ? (
+                participants.map((participant) => (
+                  <ParticipantRow key={participant.id} participant={participant} />
+                ))
+              ) : (
+                <div className="text-center py-8">
+                  <Users className="h-8 w-8 text-slate-400 mx-auto mb-2" />
+                  <p className="text-slate-600">No participants yet</p>
+                  <button
+                    onClick={() => setShowAddParticipantModal(true)}
+                    className="mt-2 text-blue-600 text-sm hover:text-blue-700"
+                  >
+                    Add the first participant
+                  </button>
                 </div>
-                <Button
-                  size="sm"
-                  onClick={() => handleAddParticipant(event)}
-                  disabled={(participants.length) >= (event.capacity)}
-                  title={(participants.length) >= (event.capacity) ? 'Event is full' : 'Add participant manually'}
-                >
-                  <Plus className="mr-2 h-4 w-4" />
-                  {(participants.length) >= (event.capacity) ? 'Full' : 'Add Participant'}
-                </Button>
+              )}
+            </div>
+          </div>
+
+          {/* Horse Field Column */}
+          <div className="bg-white border border-gray-200/50 rounded-[20px] p-6 space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-bold text-slate-900">Horse Field</h3>
+              <span className="text-sm text-slate-600">24 runners</span>
+            </div>
+
+            <div className="grid grid-cols-6 gap-2">
+              {Array.from({ length: 24 }, (_, i) => i + 1).map((number) => (
+                <HorseButton
+                  key={number}
+                  number={number}
+                  isAssigned={assignedHorses.has(number)}
+                  onClick={() => handleHorseClick(number)}
+                />
+              ))}
+            </div>
+
+            {/* Legend */}
+            <div className="border-t border-gray-200/50 pt-4 flex gap-4">
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 bg-violet-100 border border-violet-200/60 rounded"></div>
+                <span className="text-xs text-slate-600">Taken</span>
               </div>
-            </CardHeader>
-            <CardContent>
-              {participants.length === 0 ? (
-                <div className="text-center py-8">
-                  <Users className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-                  <p className="text-gray-600 mb-2">No participants yet</p>
-                  <p className="text-sm text-gray-500">
-                    Share your event link to start collecting registrations
-                  </p>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {participants.map((participant, index) => (
-                    <div
-                      key={participant.id}
-                      className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50"
-                    >
-                      <div className="flex items-center space-x-3">
-                        <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center text-sm font-medium text-blue-600">
-                          {index + 1}
-                        </div>
-                        <div>
-                          <p className="font-medium">{participant.participant_name}</p>
-                          {participant.email && (
-                            <p className="text-sm text-gray-500">{participant.email}</p>
-                          )}
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        {participant.assignments && participant.assignments.length > 0 ? (
-                          <div>
-                            <p className="font-medium text-sm">
-                              Horse #{participant.assignments[0].event_horse.number}
-                            </p>
-                            <p className="text-xs text-gray-500">
-                              {participant.assignments[0].event_horse.name}
-                            </p>
-                          </div>
-                        ) : (
-                          <Badge variant="outline">Unassigned</Badge>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Horse Field */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Horse Field</CardTitle>
-              <CardDescription>
-                Current status of all horses in this event
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {horses.length === 0 ? (
-                <div className="text-center py-8">
-                  <Trophy className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-                  <p className="text-gray-600">No horses configured</p>
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {horses.map((horse) => (
-                    <div
-                      key={horse.id}
-                      className={`p-3 border rounded-lg ${
-                        horse.is_scratched
-                          ? 'bg-red-50 border-red-200'
-                          : horse.assigned
-                          ? 'bg-green-50 border-green-200'
-                          : 'bg-gray-50 border-gray-200'
-                      }`}
-                    >
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="font-medium">#{horse.number}</p>
-                          <p className="text-sm text-gray-600">{horse.name}</p>
-                          {horse.jockey && (
-                            <p className="text-xs text-gray-500">{horse.jockey}</p>
-                          )}
-                        </div>
-                        <div>
-                          {horse.is_scratched ? (
-                            <Badge variant="destructive">Scratched</Badge>
-                          ) : horse.assigned ? (
-                            <Badge variant="default" className="bg-green-500">Taken</Badge>
-                          ) : (
-                            <Badge variant="outline">Available</Badge>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 bg-[#f8f7f4] border border-gray-200/60 rounded"></div>
+                <span className="text-xs text-slate-600">Available</span>
+              </div>
+            </div>
+          </div>
         </div>
-
       </div>
 
-      {selectedEvent && (
+      {/* Add Participant Modal */}
+      {event && (
         <AddParticipantModal
           isOpen={showAddParticipantModal}
           onOpenChange={setShowAddParticipantModal}
-          event={selectedEvent}
-          participants={eventParticipants}
+          event={event}
+          participants={participants}
           onParticipantAdded={handleParticipantAdded}
         />
       )}
-    </div>
+    </DashboardLayout>
   )
+}
+
+export default function EventOverviewPage() {
+  return <EventOverviewContent />
 }
