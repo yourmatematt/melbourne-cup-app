@@ -1,6 +1,10 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+// IMMEDIATE DEBUG - This should be the FIRST thing that executes
+console.log('🚨 [IMMEDIATE] Live view page module loading...')
+console.log('🚨 [IMMEDIATE] Timestamp:', new Date().toISOString())
+
+import React, { useState, useEffect } from 'react'
 import { useParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -80,15 +84,57 @@ interface Result {
 }
 
 export default function LiveViewPage() {
-  const params = useParams()
-  const eventId = params.eventId as string
-  const supabase = createClient()
+  // IMMEDIATE DEBUG - Before ANY hooks or logic
+  console.log('🚨 [IMMEDIATE] LiveViewPage function called')
+  console.log('🚨 [IMMEDIATE] Function execution timestamp:', new Date().toISOString())
 
-  // Debug logging for initialization
-  console.log('🚀 [DEBUG] LiveViewPage component initialized')
-  console.log('🔍 [DEBUG] Params:', params)
-  console.log('🔍 [DEBUG] EventId:', eventId)
-  console.log('🔍 [DEBUG] Supabase client:', !!supabase)
+  // Visual debugging banner and error tracking
+  const [debugMode] = useState(true)
+  const [componentError, setComponentError] = useState<string | null>(null)
+  const [debugLogs, setDebugLogs] = useState<string[]>([])
+
+  // Function to add debug logs
+  const addDebugLog = (message: string) => {
+    const timestamp = new Date().toISOString()
+    const logEntry = `[${timestamp}] ${message}`
+    console.log('📝 [DEBUG LOG]', logEntry)
+    setDebugLogs(prev => [...prev.slice(-9), logEntry]) // Keep last 10 logs
+  }
+
+  let params, eventId, supabase
+
+  // Add initial debug logs
+  React.useEffect(() => {
+    addDebugLog('🚀 Component mounted successfully')
+    addDebugLog(`📍 Event ID: ${eventId || 'MISSING'}`)
+    addDebugLog(`🌐 Supabase client: ${!!supabase ? 'CREATED' : 'FAILED'}`)
+  }, [eventId, supabase])
+
+  try {
+    console.log('🚨 [IMMEDIATE] Getting params...')
+    params = useParams()
+    console.log('🚨 [IMMEDIATE] Params received:', params)
+
+    console.log('🚨 [IMMEDIATE] Extracting eventId...')
+    eventId = params.eventId as string
+    console.log('🚨 [IMMEDIATE] EventId extracted:', eventId)
+
+    console.log('🚨 [IMMEDIATE] Creating Supabase client...')
+    supabase = createClient()
+    console.log('🚨 [IMMEDIATE] Supabase client created:', !!supabase)
+
+  } catch (error) {
+    console.error('🚨 [IMMEDIATE] Error in basic setup:', error)
+    const errorMessage = error?.toString() || 'Unknown error'
+    setComponentError(`FATAL ERROR IN LIVE VIEW SETUP: ${errorMessage}`)
+
+    // Return early error component
+    return (
+      <div style={{ background: 'red', color: 'white', padding: '20px', fontSize: '20px' }}>
+        FATAL ERROR IN LIVE VIEW SETUP: {errorMessage}
+      </div>
+    )
+  }
 
   const [event, setEvent] = useState<Event | null>(null)
   const [results, setResults] = useState<Result[]>([])
@@ -101,6 +147,7 @@ export default function LiveViewPage() {
   const [pollingInterval, setPollingInterval] = useState<NodeJS.Timeout | null>(null)
 
   // Use the real-time assignments hook with relations
+  console.log('🔍 [DEBUG] Starting assignments hook initialization...')
   const {
     assignments,
     loading: assignmentsLoading,
@@ -112,9 +159,7 @@ export default function LiveViewPage() {
       // Handle new assignment with animation
       setNewAssignmentId(assignment.id)
       setLastUpdate(new Date())
-
-      // Show flash animation and sound effect (optional)
-      console.log('🎉 New assignment:', assignment)
+      addDebugLog(`🎉 New assignment: ${assignment.patron_entries?.participant_name} → Horse #${assignment.event_horses?.number}`)
 
       // Clear the "new" indicator after animation
       setTimeout(() => {
@@ -123,10 +168,15 @@ export default function LiveViewPage() {
     },
     onError: (error) => {
       console.error('Assignment subscription error:', error)
+      addDebugLog(`❌ Assignment subscription error: ${error?.toString()}`)
+      setComponentError(`Assignment hook error: ${error?.toString()}`)
     }
   })
+  console.log('✅ [DEBUG] Assignments hook initialized successfully')
+  addDebugLog('✅ Assignments hook initialized')
 
   // Use the real-time participants hook
+  console.log('🔍 [DEBUG] Starting participants hook initialization...')
   const {
     participants,
     loading: participantsLoading,
@@ -134,7 +184,7 @@ export default function LiveViewPage() {
     refresh: refreshParticipants
   } = useRealtimeParticipants(eventId, {
     onParticipantAdded: (participant) => {
-      console.log('🆕 New participant:', participant)
+      addDebugLog(`🆕 New participant: ${participant.participant_name}`)
       setLastUpdate(new Date())
 
       // Update event participant count in real-time
@@ -144,7 +194,7 @@ export default function LiveViewPage() {
       } : null)
     },
     onParticipantRemoved: (participantId) => {
-      console.log('🗑️ Participant removed:', participantId)
+      addDebugLog(`🗑️ Participant removed: ${participantId}`)
       setLastUpdate(new Date())
 
       // Update event participant count in real-time
@@ -155,8 +205,12 @@ export default function LiveViewPage() {
     },
     onError: (error) => {
       console.error('Participants subscription error:', error)
+      addDebugLog(`❌ Participants subscription error: ${error?.toString()}`)
+      setComponentError(`Participants hook error: ${error?.toString()}`)
     }
   })
+  console.log('✅ [DEBUG] Participants hook initialized successfully')
+  addDebugLog('✅ Participants hook initialized')
 
   // Combined realtime state with polling fallback
   const realtimeConnected = assignmentsRealtimeState.isConnected && participantsRealtimeState.isConnected
@@ -187,7 +241,9 @@ export default function LiveViewPage() {
   }, [assignments, newAssignmentId])
 
   useEffect(() => {
+    addDebugLog('🔄 useEffect triggered for event data loading')
     if (eventId) {
+      addDebugLog(`📊 Loading event data for eventId: ${eventId}`)
       loadEventData()
 
       // Set up real-time updates for results and event status
@@ -196,7 +252,7 @@ export default function LiveViewPage() {
         .on('postgres_changes',
           { event: '*', schema: 'public', table: 'event_results', filter: `event_id=eq.${eventId}` },
           (payload) => {
-            console.log('🏆 Results updated:', payload)
+            addDebugLog('🏆 Results updated via real-time')
             loadEventData() // Reload results when they change
             setLastUpdate(new Date())
           }
@@ -204,7 +260,7 @@ export default function LiveViewPage() {
         .on('postgres_changes',
           { event: 'UPDATE', schema: 'public', table: 'events', filter: `id=eq.${eventId}` },
           (payload) => {
-            console.log('📅 Event status updated:', payload)
+            addDebugLog(`📅 Event status updated: ${payload.new?.status}`)
             // Update event data in real-time
             const updatedEvent = payload.new as Event
             setEvent(prev => prev ? {
@@ -214,6 +270,7 @@ export default function LiveViewPage() {
 
             // If event becomes completed, reload to get results
             if (updatedEvent.status === 'completed') {
+              addDebugLog('🏁 Event completed, reloading data for results')
               loadEventData()
             }
 
@@ -221,7 +278,7 @@ export default function LiveViewPage() {
           }
         )
         .subscribe((status) => {
-          console.log(`Event status subscription: ${status}`)
+          addDebugLog(`📡 Real-time subscription status: ${status}`)
         })
 
       return () => {
@@ -598,7 +655,64 @@ export default function LiveViewPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
-      <div className="max-w-6xl mx-auto space-y-6">
+      {/* DEBUG MODE BANNER */}
+      {debugMode && (
+        <div style={{
+          background: 'linear-gradient(90deg, #ff0000, #ff6600)',
+          color: 'white',
+          padding: '15px 20px',
+          fontSize: '18px',
+          fontWeight: 'bold',
+          textAlign: 'center',
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          zIndex: 9999,
+          boxShadow: '0 4px 12px rgba(255, 0, 0, 0.3)',
+          border: '3px solid #ffffff'
+        }}>
+          🚨 DEBUG MODE ACTIVE - LIVE VIEW COMPONENT IS RENDERING 🚨
+          <div style={{ fontSize: '14px', marginTop: '5px' }}>
+            Timestamp: {new Date().toISOString()} | Event ID: {eventId || 'MISSING'}
+          </div>
+          {componentError && (
+            <div style={{
+              background: '#fff',
+              color: '#ff0000',
+              padding: '10px',
+              margin: '10px 0',
+              borderRadius: '5px',
+              fontSize: '14px',
+              fontWeight: 'bold'
+            }}>
+              ❌ COMPONENT ERROR: {componentError}
+            </div>
+          )}
+          <div style={{
+            background: 'rgba(0,0,0,0.3)',
+            padding: '10px',
+            margin: '10px 0',
+            borderRadius: '5px',
+            fontSize: '12px',
+            maxHeight: '100px',
+            overflow: 'auto'
+          }}>
+            <div style={{ fontWeight: 'bold', marginBottom: '5px' }}>📝 RECENT DEBUG LOGS:</div>
+            {debugLogs.length === 0 ? (
+              <div>No logs yet...</div>
+            ) : (
+              debugLogs.map((log, index) => (
+                <div key={index} style={{ marginBottom: '2px' }}>
+                  {log}
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      )}
+
+      <div className="max-w-6xl mx-auto space-y-6" style={{ marginTop: debugMode ? '100px' : '0' }}>
         {/* Header */}
         <div className="text-center py-8">
           <h1 className="text-4xl md:text-6xl font-bold text-gray-900 mb-4">
