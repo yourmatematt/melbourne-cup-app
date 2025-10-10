@@ -2,15 +2,23 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { StatCard } from '@/components/ui/stat-card'
-import { StatusPill } from '@/components/ui/status-pill'
-import { Plus, Calendar, Users, TrendingUp, Clock, Play, Trophy, QrCode, ExternalLink, UserPlus, PlusCircle, Settings, Eye } from 'lucide-react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
-import { QRCodeShare } from '@/components/ui/qr-code'
+import { DashboardLayout } from '@/components/layout/dashboard-layout'
 import { AddParticipantModal } from '@/components/shared/add-participant-modal'
+import { StatCard } from '@/components/ui/stat-card'
+import { StatusPill } from '@/components/ui/status-pill'
+import {
+  Calendar,
+  Users,
+  TrendingUp,
+  UserPlus,
+  Settings,
+  PlusCircle,
+  Clock,
+  Play,
+  Trophy
+} from 'lucide-react'
 
 type Event = {
   id: string
@@ -22,6 +30,8 @@ type Event = {
   created_at: string
   participant_count?: number
 }
+
+
 
 function DashboardContent() {
   const [events, setEvents] = useState<Event[]>([])
@@ -42,11 +52,6 @@ function DashboardContent() {
 
   async function fetchUserAndEvents() {
     try {
-      console.log('SUPABASE_URL:', process.env.NEXT_PUBLIC_SUPABASE_URL)
-      console.log('SUPABASE_KEY:', process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ? 'EXISTS' : 'MISSING')
-      console.log('Supabase client:', supabase)
-      console.log('Fetching user and events...')
-
       const { data: { user }, error: userError } = await supabase.auth.getUser()
       if (userError) throw userError
 
@@ -57,7 +62,7 @@ function DashboardContent() {
 
       setUser(user)
 
-      // Try to get tenant data, but don't require it
+      // Try to get tenant data
       const { data: tenantUser, error: tenantError } = await supabase
         .from('tenant_users')
         .select('tenant_id')
@@ -67,7 +72,7 @@ function DashboardContent() {
       if (tenantUser && !tenantError) {
         setTenant(tenantUser)
 
-        // Fetch events via API route only if tenant exists
+        // Fetch events via API route
         const response = await fetch(`/api/events?tenant_id=${tenantUser.tenant_id}`)
         const { data: eventsData, error: eventsError } = await response.json()
 
@@ -101,14 +106,10 @@ function DashboardContent() {
           })
         }
       } else {
-        // No tenant found - set empty state
-        console.log('No tenant found for user, showing empty dashboard')
         setTenant(null)
         setEvents([])
         setStats({ totalEvents: 0, activeParticipants: 0, revenue: 0 })
       }
-
-
     } catch (err) {
       console.error('Error fetching data:', err)
       setError(err instanceof Error ? err.message : 'Failed to fetch data')
@@ -162,109 +163,68 @@ function DashboardContent() {
 
   function getStatusIcon(status: string) {
     switch (status) {
-      case 'draft': return <Clock className="h-4 w-4 text-gray-500" />
-      case 'active': return <Play className="h-4 w-4 text-green-500" />
-      case 'completed': return <Trophy className="h-4 w-4 text-yellow-500" />
-      default: return <Calendar className="h-4 w-4 text-gray-500" />
-    }
-  }
-
-  function getStatusIconComponent(status: string) {
-    switch (status) {
       case 'draft': return Clock
       case 'active': return Play
       case 'drawing': return Clock
       case 'completed': return Trophy
-      case 'cancelled': return Clock
       default: return Calendar
-    }
-  }
-
-  function getStatusText(status: string) {
-    switch (status) {
-      case 'draft': return 'Draft'
-      case 'active': return 'Active'
-      case 'drawing': return 'Drawing'
-      case 'completed': return 'Completed'
-      case 'cancelled': return 'Cancelled'
-      default: return status
     }
   }
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 py-8">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-center py-12">
-            <div className="text-center">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-              <p className="mt-2 text-gray-600">Loading dashboard...</p>
-            </div>
+      <DashboardLayout>
+        <div className="flex items-center justify-center h-96">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+            <p className="mt-2 text-gray-600">Loading dashboard...</p>
           </div>
         </div>
-      </div>
+      </DashboardLayout>
     )
   }
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gray-50 py-8">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-center py-12">
-            <div className="text-center">
-              <p className="text-red-600">Error: {error}</p>
-              <Button onClick={fetchUserAndEvents} className="mt-4">
-                Retry
-              </Button>
-            </div>
+      <DashboardLayout>
+        <div className="flex items-center justify-center h-96">
+          <div className="text-center">
+            <p className="text-red-600">Error: {error}</p>
+            <button
+              onClick={fetchUserAndEvents}
+              className="mt-4 bg-blue-600 text-white px-4 py-2 rounded-lg"
+            >
+              Retry
+            </button>
           </div>
         </div>
-      </div>
+      </DashboardLayout>
     )
   }
 
   return (
-    <div className="min-h-screen bg-[#f8f7f4] py-8">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-
-        <div className="flex justify-between items-center mb-8">
-          <div className="space-y-2">
-            <h1 className="text-3xl font-bold text-slate-900">Dashboard</h1>
-            <p className="text-slate-600">
-              Welcome to your Melbourne Cup venue management
-            </p>
-          </div>
-          <div className="flex items-center space-x-4">
-            <Link href="/dashboard/settings">
-              <Button variant="outline" className="flex items-center gap-2">
-                <Settings className="h-4 w-4" />
-                Edit Venue Settings
-              </Button>
-            </Link>
-            <Link href="/dashboard/events/new">
-              <Button className="bg-slate-900 text-white hover:bg-slate-800 flex items-center gap-2">
-                <Plus className="h-4 w-4" />
-                New Event
-              </Button>
-            </Link>
-          </div>
+    <DashboardLayout>
+      <div className="p-8 space-y-8">
+        {/* Header */}
+        <div className="space-y-2">
+          <h1 className="text-3xl font-bold text-slate-900">Dashboard</h1>
+          <p className="text-slate-600">Welcome to your Melbourne Cup venue management</p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        {/* Stats Cards */}
+        <div className="grid grid-cols-3 gap-6">
           <StatCard
             title="Total Events"
             value={stats.totalEvents}
             subtitle={stats.totalEvents === 0 ? 'No events created yet' : `${events.filter(e => e.status === 'active').length} active`}
             icon={Calendar}
           />
-
           <StatCard
             title="Active Participants"
             value={stats.activeParticipants}
             subtitle={`Across ${stats.totalEvents} events`}
             icon={Users}
           />
-
           <StatCard
             title="Revenue"
             value="$0"
@@ -273,27 +233,28 @@ function DashboardContent() {
           />
         </div>
 
-        {events.length > 0 ? (
-          <>
-            <div className="flex justify-between items-center mb-4">
+        {/* Your Events */}
+        {events.length > 0 && (
+          <div className="space-y-4">
+            <div className="flex justify-between items-center">
               <h2 className="text-xl font-bold text-slate-900">Your Events</h2>
               <Link href="/dashboard/events">
-                <Button variant="ghost" className="text-slate-600 hover:text-slate-900">
+                <button className="text-slate-600 hover:text-slate-900 text-sm">
                   View All
-                </Button>
+                </button>
               </Link>
             </div>
 
-            <Card className="bg-white border border-gray-200 rounded-[20px] p-6 shadow-sm">
+            <div className="bg-white border border-gray-200/50 rounded-[20px] p-6 space-y-4">
               {events.slice(0, 1).map((event) => (
                 <div key={event.id} className="space-y-4">
                   <div className="space-y-2">
                     <div className="flex items-center gap-3">
                       <h3 className="text-lg font-bold text-slate-900">{event.name}</h3>
                       <StatusPill
-                        label={getStatusText(event.status)}
+                        label={event.status.charAt(0).toUpperCase() + event.status.slice(1)}
                         variant={event.status as any}
-                        icon={getStatusIconComponent(event.status)}
+                        icon={getStatusIcon(event.status)}
                       />
                     </div>
                     <p className="text-sm text-slate-600">
@@ -314,64 +275,62 @@ function DashboardContent() {
                       <span>{event.participant_count || 0} / {event.capacity} participants</span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <Button
-                        size="sm"
-                        variant="outline"
+                      <button
                         onClick={() => handleAddParticipant(event)}
                         disabled={(event.participant_count ?? 0) >= (event.capacity ?? 0)}
-                        className="flex items-center gap-2"
+                        className="bg-[#f8f7f4] border border-gray-200/50 h-8 px-3 rounded-xl flex items-center gap-2 text-sm text-slate-900 hover:bg-gray-50 disabled:opacity-50"
                       >
                         <UserPlus className="h-4 w-4" />
                         Add
-                      </Button>
+                      </button>
                       <Link href={`/dashboard/events/${event.id}`}>
-                        <Button size="sm" className="bg-slate-900 text-white hover:bg-slate-800 flex items-center gap-2">
+                        <button className="bg-slate-900 h-8 px-3 rounded-xl flex items-center gap-2 text-sm text-white hover:bg-slate-800">
                           <Settings className="h-4 w-4" />
                           Manage
-                        </Button>
+                        </button>
                       </Link>
                     </div>
                   </div>
                 </div>
               ))}
-            </Card>
-          </>
-        ) : null}
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <Card className="bg-white border border-gray-200 rounded-[20px] p-8 shadow-sm">
-            <div className="space-y-6">
-              <div className="space-y-2">
-                <h3 className="text-lg font-bold text-slate-900">{events.length === 0 ? 'Create Your First Event' : 'Create Another Event'}</h3>
-                <p className="text-sm text-slate-600">
-                  Set up a sweep or calcutta for Melbourne Cup 2025. Our templates make it easy to get started with all the horse details pre-filled.
-                </p>
-              </div>
-              <Link href="/dashboard/events/new">
-                <Button className="w-full bg-gradient-to-r from-orange-500 via-pink-500 to-purple-600 text-white hover:opacity-90 transition-opacity">
-                  <PlusCircle className="mr-2 h-4 w-4" />
-                  Create Melbourne Cup Event
-                </Button>
-              </Link>
             </div>
-          </Card>
+          </div>
+        )}
 
-          <Card className="bg-white border border-gray-200 rounded-[20px] p-8 shadow-sm">
-            <div className="space-y-6">
-              <div className="space-y-2">
-                <h3 className="text-lg font-bold text-slate-900">Recent Activity</h3>
-                <p className="text-sm text-slate-600">Your latest venue activities</p>
-              </div>
-              <div className="text-center py-4">
-                <p className="text-sm text-slate-600">
-                  {events.length === 0 ? 'No activity yet. Create your first event to get started!' : 'Activity tracking coming soon...'}
-                </p>
-              </div>
+        {/* Bottom Row */}
+        <div className="grid grid-cols-2 gap-6">
+          <div className="bg-white border border-gray-200/50 rounded-[20px] p-8 space-y-6">
+            <div className="space-y-2">
+              <h3 className="text-lg font-bold text-slate-900">
+                {events.length === 0 ? 'Create Your First Event' : 'Create Another Event'}
+              </h3>
+              <p className="text-sm text-slate-600">
+                Set up a sweep or calcutta for Melbourne Cup 2025. Our templates make it easy to get started with all the horse details pre-filled.
+              </p>
             </div>
-          </Card>
+            <Link href="/dashboard/events/new">
+              <button className="w-full bg-gradient-to-b from-orange-500 via-pink-500 to-purple-600 text-white h-9 rounded-xl flex items-center justify-center gap-2 text-sm font-medium shadow-lg hover:opacity-90 transition-opacity">
+                <PlusCircle className="h-4 w-4" />
+                Create Melbourne Cup Event
+              </button>
+            </Link>
+          </div>
+
+          <div className="bg-white border border-gray-200/50 rounded-[20px] p-8 space-y-6">
+            <div className="space-y-2">
+              <h3 className="text-lg font-bold text-slate-900">Recent Activity</h3>
+              <p className="text-sm text-slate-600">Your latest venue activities</p>
+            </div>
+            <div className="text-center py-4">
+              <p className="text-sm text-slate-600 text-center">
+                {events.length === 0 ? 'No activity yet. Create your first event to get started!' : 'Activity tracking coming soon...'}
+              </p>
+            </div>
+          </div>
         </div>
       </div>
 
+      {/* Add Participant Modal */}
       {selectedEvent && (
         <AddParticipantModal
           isOpen={showAddParticipantModal}
@@ -381,7 +340,7 @@ function DashboardContent() {
           onParticipantAdded={handleParticipantAdded}
         />
       )}
-    </div>
+    </DashboardLayout>
   )
 }
 
