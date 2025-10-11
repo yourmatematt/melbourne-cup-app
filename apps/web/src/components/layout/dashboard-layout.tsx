@@ -64,7 +64,12 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     {
       href: '/dashboard/events',
       icon: Calendar,
-      label: 'Events'
+      label: 'Event Overview'
+    },
+    {
+      href: '/dashboard/draw',
+      icon: Play,
+      label: 'Draw Controls'
     }
   ]
 

@@ -1,52 +1,42 @@
 'use client'
 
 import { NewEventForm } from '@/components/events/new-event-form'
-import { DashboardLayout } from '@/components/layout/dashboard-layout'
 import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
 
-function NewEventContent() {
+export default function NewEventPage() {
   return (
-    <DashboardLayout>
-      <div className="p-8 space-y-8">
+    <div className="min-h-screen bg-gray-50">
+      <div className="max-w-4xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
         {/* Header */}
-        <div className="space-y-4">
+        <div className="mb-8">
           <Link href="/dashboard/events">
-            <Button variant="ghost" size="sm">
+            <Button variant="ghost" className="mb-4">
               <ArrowLeft className="mr-2 h-4 w-4" />
               Back to Events
             </Button>
           </Link>
-
-          <div className="space-y-2">
-            <h1 className="text-3xl font-bold text-slate-900">Create New Event</h1>
-            <p className="text-slate-600">
-              Set up a new Melbourne Cup sweep or calcutta for your venue
-            </p>
-          </div>
+          <h1 className="text-3xl font-bold text-gray-900">Create New Event</h1>
+          <p className="mt-2 text-gray-600">
+            Set up a new Melbourne Cup sweep or calcutta for your venue
+          </p>
         </div>
 
         {/* Main Form */}
-        <div className="bg-white border border-gray-200/50 rounded-[20px] p-8">
-          <div className="space-y-6">
-            <div className="space-y-2">
-              <h2 className="text-xl font-bold text-slate-900">Event Details</h2>
-              <p className="text-slate-600">
-                Configure your event settings and horse field
-              </p>
-            </div>
-
-            <div className="border-t border-gray-200/50 pt-6">
-              <NewEventForm />
-            </div>
-          </div>
-        </div>
+        <Card>
+          <CardHeader>
+            <CardTitle>Event Details</CardTitle>
+            <CardDescription>
+              Configure your event settings and horse field
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <NewEventForm />
+          </CardContent>
+        </Card>
       </div>
-    </DashboardLayout>
+    </div>
   )
-}
-
-export default function NewEventPage() {
-  return <NewEventContent />
 }
