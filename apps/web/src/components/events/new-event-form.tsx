@@ -424,7 +424,7 @@ export function NewEventForm() {
           <Button type="button" variant="outline" onClick={() => router.back()}>
             Cancel
           </Button>
-          <Button type="submit" disabled={isLoading}>
+          <Button type="submit" variant="gradient" disabled={isLoading}>
             {isLoading ? 'Creating Event...' : 'Create Event'}
           </Button>
         </div>

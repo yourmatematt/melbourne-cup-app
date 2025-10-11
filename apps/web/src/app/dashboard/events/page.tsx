@@ -2,56 +2,22 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { createClient } from '@/lib/supabase/client'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
-// Table components inline since they don't exist in UI
-const Table = ({ children, className = '', ...props }: any) => (
-  <div className={`w-full overflow-auto ${className}`} {...props}>
-    <table className="w-full caption-bottom text-sm">
-      {children}
-    </table>
-  </div>
-)
-
-const TableHeader = ({ children, ...props }: any) => (
-  <thead className="[&_tr]:border-b" {...props}>
-    {children}
-  </thead>
-)
-
-const TableBody = ({ children, ...props }: any) => (
-  <tbody className="[&_tr:last-child]:border-0" {...props}>
-    {children}
-  </tbody>
-)
-
-const TableRow = ({ children, className = '', ...props }: any) => (
-  <tr className={`border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted ${className}`} {...props}>
-    {children}
-  </tr>
-)
-
-const TableHead = ({ children, className = '', ...props }: any) => (
-  <th className={`h-12 px-4 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 ${className}`} {...props}>
-    {children}
-  </th>
-)
-
-const TableCell = ({ children, className = '', ...props }: any) => (
-  <td className={`p-4 align-middle [&:has([role=checkbox])]:pr-0 ${className}`} {...props}>
-    {children}
-  </td>
-)
-import { Plus, Calendar, Users, Clock, Play, Trophy, Eye, Settings, MoreHorizontal } from 'lucide-react'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
 import Link from 'next/link'
+import { createClient } from '@/lib/supabase/client'
+import { DashboardLayout } from '@/components/layout/dashboard-layout'
+import { StatCard } from '@/components/ui/stat-card'
+import { StatusPill } from '@/components/ui/status-pill'
+import { Button } from '@/components/ui/button'
+import {
+  Calendar,
+  Users,
+  Trophy,
+  Clock,
+  Play,
+  Plus,
+  Settings,
+  Eye
+} from 'lucide-react'
 
 interface Event {
   id: string
@@ -63,7 +29,112 @@ interface Event {
   participant_count?: number
 }
 
-export default function EventsPage() {
+function getStatusIcon(status: string) {
+  switch (status) {
+    case 'draft': return Clock
+    case 'active': return Play
+    case 'drawing': return Clock
+    case 'completed': return Trophy
+    default: return Calendar
+  }
+}
+
+function formatDateTime(dateString: string) {
+  return new Date(dateString).toLocaleDateString('en-AU', {
+    weekday: 'short',
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  })
+}
+
+function EventCard({ event }: { event: Event }) {
+  const participantPercentage = Math.round((event.participant_count || 0) / event.capacity * 100)
+
+  return (
+    <div className="bg-white border border-gray-200/50 rounded-[20px] p-6 space-y-4">
+      <div className="flex items-start justify-between">
+        <div className="space-y-2">
+          <div className="flex items-center gap-3">
+            <h3 className="text-lg font-bold text-slate-900">{event.name}</h3>
+            <StatusPill
+              label={event.status.charAt(0).toUpperCase() + event.status.slice(1)}
+              variant={event.status as any}
+              icon={getStatusIcon(event.status)}
+            />
+          </div>
+          <p className="text-sm text-slate-600">
+            {formatDateTime(event.starts_at)}
+          </p>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <Link href={`/dashboard/events/${event.id}/settings`}>
+            <Button variant="outline" size="sm">
+              <Settings className="h-4 w-4" />
+            </Button>
+          </Link>
+          <Link href={`/dashboard/events/${event.id}`}>
+            <Button size="sm">
+              <Eye className="h-4 w-4 mr-2" />
+              View
+            </Button>
+          </Link>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-3 gap-4">
+        <div>
+          <p className="text-xs text-slate-600 uppercase tracking-wider font-medium">Participants</p>
+          <div className="flex items-center gap-2 mt-1">
+            <Users className="h-4 w-4 text-slate-600" />
+            <span className="text-sm font-medium text-slate-900">
+              {event.participant_count || 0} / {event.capacity}
+            </span>
+          </div>
+        </div>
+
+        <div>
+          <p className="text-xs text-slate-600 uppercase tracking-wider font-medium">Fill Rate</p>
+          <p className="text-sm font-medium text-slate-900 mt-1">
+            {participantPercentage}%
+          </p>
+        </div>
+
+        <div>
+          <p className="text-xs text-slate-600 uppercase tracking-wider font-medium">Created</p>
+          <p className="text-sm font-medium text-slate-900 mt-1">
+            {new Date(event.created_at).toLocaleDateString('en-AU', {
+              month: 'short',
+              day: 'numeric'
+            })}
+          </p>
+        </div>
+      </div>
+
+      <div className="pt-2 border-t border-gray-200/50">
+        <div className="flex items-center gap-3">
+          <Link href={`/dashboard/events/${event.id}`} className="flex-1">
+            <Button variant="outline" className="w-full">
+              <Eye className="h-4 w-4 mr-2" />
+              Manage Event
+            </Button>
+          </Link>
+          <Link href={`/dashboard/events/${event.id}/control`}>
+            <Button variant="gradient" className="flex-1">
+              <Play className="h-4 w-4 mr-2" />
+              Draw Controls
+            </Button>
+          </Link>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function EventsContent() {
   const [events, setEvents] = useState<Event[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -131,183 +202,110 @@ export default function EventsPage() {
     }
   }
 
-  function getStatusBadge(status: string) {
-    switch (status) {
-      case 'draft':
-        return <Badge variant="secondary" className="gap-1"><Clock className="h-3 w-3" />Draft</Badge>
-      case 'active':
-        return <Badge variant="default" className="gap-1 bg-green-500"><Play className="h-3 w-3" />Active</Badge>
-      case 'completed':
-        return <Badge variant="default" className="gap-1 bg-yellow-500"><Trophy className="h-3 w-3" />Completed</Badge>
-      case 'drawing':
-        return <Badge variant="default" className="gap-1 bg-blue-500"><Play className="h-3 w-3" />Drawing</Badge>
-      default:
-        return <Badge variant="outline">{status}</Badge>
-    }
-  }
-
-  function formatDateTime(dateString: string) {
-    return new Date(dateString).toLocaleDateString('en-AU', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    })
-  }
-
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50">
-        <div className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-center py-12">
-            <div className="text-center">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-              <p className="mt-2 text-gray-600">Loading events...</p>
-            </div>
+      <DashboardLayout>
+        <div className="p-8 flex items-center justify-center h-96">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+            <p className="mt-2 text-slate-600">Loading events...</p>
           </div>
         </div>
-      </div>
+      </DashboardLayout>
     )
   }
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gray-50">
-        <div className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
-          <div className="text-center py-12">
+      <DashboardLayout>
+        <div className="p-8 flex items-center justify-center h-96">
+          <div className="text-center">
             <p className="text-red-600 mb-4">{error}</p>
             <Button onClick={loadEvents}>Try Again</Button>
           </div>
         </div>
-      </div>
+      </DashboardLayout>
     )
   }
 
+  const stats = {
+    totalEvents: events.length,
+    activeEvents: events.filter(e => e.status === 'active').length,
+    totalParticipants: events.reduce((sum, event) => sum + (event.participant_count || 0), 0)
+  }
+
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
+    <DashboardLayout>
+      <div className="p-8 space-y-8">
         {/* Header */}
-        <div className="flex justify-between items-center mb-8">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">Events</h1>
-            <p className="mt-2 text-gray-600">
-              Manage your Melbourne Cup sweeps and calcuttas
-            </p>
+        <div className="flex items-start justify-between">
+          <div className="space-y-2">
+            <h1 className="text-3xl font-bold text-slate-900">Events</h1>
+            <p className="text-slate-600">Manage your Melbourne Cup sweeps and calcuttas</p>
           </div>
+
           <Link href="/dashboard/events/new">
-            <Button>
-              <Plus className="mr-2 h-4 w-4" />
-              New Event
+            <Button variant="gradient">
+              <Plus className="h-4 w-4 mr-2" />
+              Create New Event
             </Button>
           </Link>
         </div>
 
+        {/* Stats Cards */}
+        {events.length > 0 && (
+          <div className="grid grid-cols-3 gap-6">
+            <StatCard
+              title="Total Events"
+              value={stats.totalEvents}
+              subtitle={`${stats.activeEvents} currently active`}
+              icon={Calendar}
+            />
+            <StatCard
+              title="Total Participants"
+              value={stats.totalParticipants}
+              subtitle="Across all events"
+              icon={Users}
+            />
+            <StatCard
+              title="Completion Rate"
+              value={`${Math.round((events.filter(e => e.status === 'completed').length / events.length) * 100)}%`}
+              subtitle="Events completed"
+              icon={Trophy}
+            />
+          </div>
+        )}
+
+        {/* Events Grid */}
         {events.length === 0 ? (
-          /* Empty state */
-          <Card>
-            <CardHeader>
-              <CardTitle>No Events Yet</CardTitle>
-              <CardDescription>
-                Create your first Melbourne Cup event to get started
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Link href="/dashboard/events/new">
-                <Button>
-                  <Plus className="mr-2 h-4 w-4" />
-                  Create Your First Event
-                </Button>
-              </Link>
-            </CardContent>
-          </Card>
+          <div className="bg-white border border-gray-200/50 rounded-[20px] p-12 text-center">
+            <Calendar className="h-16 w-16 text-slate-400 mx-auto mb-4" />
+            <h3 className="text-xl font-bold text-slate-900 mb-2">No Events Yet</h3>
+            <p className="text-slate-600 mb-6 max-w-md mx-auto">
+              Create your first Melbourne Cup event to get started with running sweeps and calcuttas at your venue.
+            </p>
+            <Link href="/dashboard/events/new">
+              <Button variant="gradient">
+                <Plus className="h-4 w-4 mr-2" />
+                Create Your First Event
+              </Button>
+            </Link>
+          </div>
         ) : (
-          /* Events Table */
-          <Card>
-            <CardHeader>
-              <CardTitle>Your Events</CardTitle>
-              <CardDescription>
-                {events.length} event{events.length !== 1 ? 's' : ''} total
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Event Name</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Participants</TableHead>
-                    <TableHead>Start Date</TableHead>
-                    <TableHead>Created</TableHead>
-                    <TableHead className="w-[100px]">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {events.map((event) => (
-                    <TableRow key={event.id}>
-                      <TableCell className="font-medium">
-                        <Link
-                          href={`/dashboard/events/${event.id}`}
-                          className="hover:underline text-blue-600"
-                        >
-                          {event.name}
-                        </Link>
-                      </TableCell>
-                      <TableCell>
-                        {getStatusBadge(event.status)}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-1">
-                          <Users className="h-4 w-4 text-gray-500" />
-                          {event.participant_count} / {event.capacity}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-1 text-sm text-gray-600">
-                          <Calendar className="h-4 w-4" />
-                          {formatDateTime(event.starts_at)}
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-sm text-gray-600">
-                        {formatDateTime(event.created_at)}
-                      </TableCell>
-                      <TableCell>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" className="h-8 w-8 p-0">
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem asChild>
-                              <Link href={`/dashboard/events/${event.id}`}>
-                                <Eye className="mr-2 h-4 w-4" />
-                                View Event
-                              </Link>
-                            </DropdownMenuItem>
-                            <DropdownMenuItem asChild>
-                              <Link href={`/dashboard/events/${event.id}/settings`}>
-                                <Settings className="mr-2 h-4 w-4" />
-                                Settings
-                              </Link>
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={() => window.open(`/events/${event.id}/live`, '_blank')}
-                            >
-                              <Eye className="mr-2 h-4 w-4" />
-                              Live View
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
+          <div className="space-y-4">
+            <h2 className="text-xl font-bold text-slate-900">Your Events</h2>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {events.map((event) => (
+                <EventCard key={event.id} event={event} />
+              ))}
+            </div>
+          </div>
         )}
       </div>
-    </div>
+    </DashboardLayout>
   )
+}
+
+export default function EventsPage() {
+  return <EventsContent />
 }
