@@ -220,7 +220,7 @@ export function AddParticipantModal({
             </Label>
           </div>
 
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+          <div className="bg-blue-50 border border-blue-200 rounded-xl p-3">
             <h4 className="font-medium text-blue-900 mb-1">What happens next:</h4>
             <ul className="text-sm text-blue-700 space-y-0.5">
               <li>• Participant gets a unique join code</li>
@@ -239,6 +239,7 @@ export function AddParticipantModal({
             Cancel
           </Button>
           <Button
+            variant="gradient"
             onClick={handleAddParticipant}
             disabled={!newParticipant.displayName.trim() || isLoading || isEventFull}
           >

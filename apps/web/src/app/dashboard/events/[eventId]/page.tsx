@@ -77,7 +77,7 @@ function SegmentedControl({ eventId, activeTab }: { eventId: string, activeTab: 
           href={`/dashboard/events/${eventId}${tab.href}`}
           className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${
             activeTab === tab.id
-              ? 'bg-gradient-to-b from-orange-500 via-pink-500 to-purple-600 text-white shadow-lg'
+              ? 'bg-gradient-to-r from-orange-500 via-pink-500 to-purple-600 text-white shadow-lg'
               : 'text-slate-600 hover:text-slate-900'
           }`}
         >
@@ -93,7 +93,7 @@ function ParticipantRow({ participant }: { participant: Participant }) {
 
   return (
     <div className="flex items-center gap-3 p-3 rounded-xl hover:bg-gray-50/50 transition-colors">
-      <div className="bg-gradient-to-b from-orange-500 via-pink-500 to-purple-600 rounded-full size-10 flex items-center justify-center">
+      <div className="bg-gradient-to-r from-orange-500 via-pink-500 to-purple-600 rounded-full size-10 flex items-center justify-center">
         <span className="text-white text-sm font-medium">{initials}</span>
       </div>
 

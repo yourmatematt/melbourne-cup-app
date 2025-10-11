@@ -309,7 +309,7 @@ function DashboardContent() {
               </p>
             </div>
             <Link href="/dashboard/events/new">
-              <button className="w-full bg-gradient-to-b from-orange-500 via-pink-500 to-purple-600 text-white h-9 rounded-xl flex items-center justify-center gap-2 text-sm font-medium shadow-lg hover:opacity-90 transition-opacity">
+              <button className="w-full bg-gradient-to-r from-orange-500 via-pink-500 to-purple-600 text-white h-9 rounded-xl flex items-center justify-center gap-2 text-sm font-medium shadow-lg hover:opacity-90 transition-opacity">
                 <PlusCircle className="h-4 w-4" />
                 Create Melbourne Cup Event
               </button>

@@ -101,7 +101,7 @@ export function LoginForm() {
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
         {error && (
-          <div className="p-3 text-sm text-red-600 bg-red-50 border border-red-200 rounded-md">
+          <div className="p-3 text-sm text-red-600 bg-red-50 border border-red-200 rounded-xl">
             {error}
           </div>
         )}
@@ -147,7 +147,7 @@ export function LoginForm() {
           </a>
         </div>
 
-        <Button type="submit" className="w-full" disabled={isLoading}>
+        <Button type="submit" variant="gradient" className="w-full" disabled={isLoading}>
           {isLoading ? 'Signing In...' : 'Sign In'}
         </Button>
       </form>

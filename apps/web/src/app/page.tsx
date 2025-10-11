@@ -3,18 +3,18 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 
 export default function HomePage() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-yellow-50 to-orange-50">
+    <div className="min-h-screen bg-[#f8f7f4]">
       {/* Hero Section */}
       <div className="relative overflow-hidden">
         <div className="max-w-7xl mx-auto">
           <div className="relative z-10 pb-8 sm:pb-16 md:pb-20 lg:pb-28 xl:pb-32">
             <main className="mt-10 mx-auto max-w-7xl px-4 sm:mt-12 sm:px-6 md:mt-16 lg:mt-20 lg:px-8 xl:mt-28">
               <div className="sm:text-center lg:text-left">
-                <h1 className="text-4xl tracking-tight font-extrabold text-gray-900 sm:text-5xl md:text-6xl">
+                <h1 className="text-4xl tracking-tight font-extrabold text-slate-900 sm:text-5xl md:text-6xl">
                   <span className="block xl:inline">Melbourne Cup</span>{' '}
                   <span className="block text-yellow-600 xl:inline">Sweeps Made Easy</span>
                 </h1>
-                <p className="mt-3 text-base text-gray-500 sm:mt-5 sm:text-lg sm:max-w-xl sm:mx-auto md:mt-5 md:text-xl lg:mx-0">
+                <p className="mt-3 text-base text-slate-600 sm:mt-5 sm:text-lg sm:max-w-xl sm:mx-auto md:mt-5 md:text-xl lg:mx-0">
                   Run professional Melbourne Cup sweeps at your venue with real-time draws,
                   custom branding, and seamless participant management.
                 </p>
@@ -22,7 +22,7 @@ export default function HomePage() {
                   <div className="rounded-md shadow">
                     <a
                       href="/signup"
-                      className="w-full flex items-center justify-center px-8 py-3 border border-transparent text-base font-medium rounded-md text-white bg-yellow-600 hover:bg-yellow-700 md:py-4 md:text-lg md:px-10"
+                      className="w-full flex items-center justify-center px-8 py-3 border border-transparent text-base font-medium rounded-xl text-white bg-gradient-to-r from-orange-500 via-pink-500 to-purple-600 hover:opacity-90 transition-opacity md:py-4 md:text-lg md:px-10"
                     >
                       Start Your Venue
                     </a>
@@ -30,7 +30,7 @@ export default function HomePage() {
                   <div className="mt-3 sm:mt-0 sm:ml-3">
                     <a
                       href="/login"
-                      className="w-full flex items-center justify-center px-8 py-3 border border-transparent text-base font-medium rounded-md text-yellow-700 bg-yellow-100 hover:bg-yellow-200 md:py-4 md:text-lg md:px-10"
+                      className="w-full flex items-center justify-center px-8 py-3 border border-gray-200 text-base font-medium rounded-xl text-slate-900 bg-white hover:bg-gray-50 md:py-4 md:text-lg md:px-10"
                     >
                       Sign In
                     </a>
@@ -46,8 +46,8 @@ export default function HomePage() {
       <div className="py-12 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="lg:text-center">
-            <h2 className="text-base text-yellow-600 font-semibold tracking-wide uppercase">Features</h2>
-            <p className="mt-2 text-3xl leading-8 font-extrabold tracking-tight text-gray-900 sm:text-4xl">
+            <h2 className="text-base bg-gradient-to-r from-orange-500 via-pink-500 to-purple-600 bg-clip-text text-transparent font-semibold tracking-wide uppercase">Features</h2>
+            <p className="mt-2 text-3xl leading-8 font-extrabold tracking-tight text-slate-900 sm:text-4xl">
               Everything you need for the perfect sweep
             </p>
           </div>
@@ -59,7 +59,7 @@ export default function HomePage() {
                   <CardHeader>
                     <div className="flex items-center">
                       <div className="flex-shrink-0">
-                        <div className="flex items-center justify-center h-12 w-12 rounded-md bg-yellow-500 text-white">
+                        <div className="flex items-center justify-center h-12 w-12 rounded-xl bg-gradient-to-r from-orange-500 via-pink-500 to-purple-600 text-white">
                           🎲
                         </div>
                       </div>
@@ -81,7 +81,7 @@ export default function HomePage() {
                   <CardHeader>
                     <div className="flex items-center">
                       <div className="flex-shrink-0">
-                        <div className="flex items-center justify-center h-12 w-12 rounded-md bg-yellow-500 text-white">
+                        <div className="flex items-center justify-center h-12 w-12 rounded-xl bg-gradient-to-r from-orange-500 via-pink-500 to-purple-600 text-white">
                           🎨
                         </div>
                       </div>
@@ -103,7 +103,7 @@ export default function HomePage() {
                   <CardHeader>
                     <div className="flex items-center">
                       <div className="flex-shrink-0">
-                        <div className="flex items-center justify-center h-12 w-12 rounded-md bg-yellow-500 text-white">
+                        <div className="flex items-center justify-center h-12 w-12 rounded-xl bg-gradient-to-r from-orange-500 via-pink-500 to-purple-600 text-white">
                           📱
                         </div>
                       </div>
@@ -125,7 +125,7 @@ export default function HomePage() {
                   <CardHeader>
                     <div className="flex items-center">
                       <div className="flex-shrink-0">
-                        <div className="flex items-center justify-center h-12 w-12 rounded-md bg-yellow-500 text-white">
+                        <div className="flex items-center justify-center h-12 w-12 rounded-xl bg-gradient-to-r from-orange-500 via-pink-500 to-purple-600 text-white">
                           🏆
                         </div>
                       </div>

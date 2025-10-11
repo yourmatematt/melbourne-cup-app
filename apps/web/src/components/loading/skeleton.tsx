@@ -94,7 +94,7 @@ export function SkeletonText({ lines = 1, className, ...props }: { lines?: numbe
 
 export function SkeletonCard({ className, ...props }: SkeletonProps) {
   return (
-    <div className={cn("p-6 border rounded-lg", className)}>
+    <div className={cn("p-6 border rounded-[20px]", className)}>
       <Skeleton className="h-6 w-1/3 mb-4" {...props} />
       <SkeletonText lines={3} {...props} />
       <div className="mt-4 flex space-x-2">
@@ -117,7 +117,7 @@ export function SkeletonAvatar({ className, ...props }: SkeletonProps) {
 export function SkeletonButton({ className, ...props }: SkeletonProps) {
   return (
     <Skeleton
-      className={cn("h-10 w-24 rounded-md", className)}
+      className={cn("h-10 w-24 rounded-xl", className)}
       {...props}
     />
   )
@@ -245,7 +245,7 @@ export function EventListSkeleton() {
   return (
     <div className="space-y-4">
       {Array.from({ length: 3 }).map((_, i) => (
-        <div key={i} className="border rounded-lg p-6">
+        <div key={i} className="border rounded-[20px] p-6">
           <div className="flex justify-between items-start mb-4">
             <div>
               <Skeleton className="h-6 w-48 mb-2" />
@@ -298,7 +298,7 @@ export function AnalyticsCardSkeleton() {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
       {Array.from({ length: 4 }).map((_, i) => (
-        <div key={i} className="border rounded-lg p-6">
+        <div key={i} className="border rounded-[20px] p-6">
           <div className="flex items-center justify-between mb-4">
             <Skeleton className="h-4 w-24" />
             <Skeleton className="h-8 w-8 rounded-full" />
@@ -351,7 +351,7 @@ export function PatronJoinSkeleton() {
       <div className="w-full max-w-md space-y-6">
         {/* Header skeleton */}
         <div className="text-center space-y-4">
-          <Skeleton className="h-16 w-16 rounded-lg mx-auto" />
+          <Skeleton className="h-16 w-16 rounded-[20px] mx-auto" />
           <Skeleton className="h-8 w-48 mx-auto" />
           <Skeleton className="h-4 w-32 mx-auto" />
         </div>
@@ -360,7 +360,7 @@ export function PatronJoinSkeleton() {
         <SkeletonCard />
 
         {/* Join form skeleton */}
-        <div className="border rounded-lg p-6">
+        <div className="border rounded-[20px] p-6">
           <Skeleton className="h-6 w-24 mb-4" />
           <div className="space-y-4">
             <div>

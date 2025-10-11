@@ -28,7 +28,7 @@ function SidebarItem({ href, icon: Icon, label, isActive }: SidebarItemProps) {
       className={cn(
         "flex items-center gap-3 px-4 py-3 rounded-xl text-base font-medium transition-all",
         isActive
-          ? "bg-gradient-to-b from-orange-500 via-pink-500 to-purple-600 text-white shadow-lg"
+          ? "bg-gradient-to-r from-orange-500 via-pink-500 to-purple-600 text-white shadow-lg"
           : "text-slate-600 hover:text-slate-900"
       )}
     >
