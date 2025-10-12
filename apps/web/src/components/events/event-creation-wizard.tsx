@@ -60,12 +60,11 @@ function EventDetailsStep({ formData, setFormData, errors }: {
               <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-5 h-5" />
               <Input
                 type="date"
-                value={formData.startsAt ? (typeof formData.startsAt === 'string' ? formData.startsAt.split('T')[0] : formData.startsAt.toISOString().split('T')[0]) : ''}
+                value={formData.startsAt ? formData.startsAt.toISOString().split('T')[0] : ''}
                 onChange={(e) => {
                   const date = new Date(e.target.value)
                   if (formData.startsAt) {
-                    const currentDate = new Date(formData.startsAt)
-                    date.setHours(currentDate.getHours(), currentDate.getMinutes())
+                    date.setHours(formData.startsAt.getHours(), formData.startsAt.getMinutes())
                   } else {
                     date.setHours(15, 0) // Default 3 PM
                   }
@@ -78,7 +77,7 @@ function EventDetailsStep({ formData, setFormData, errors }: {
               <Clock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-5 h-5" />
               <Input
                 type="time"
-                value={formData.startsAt ? (typeof formData.startsAt === 'string' ? new Date(formData.startsAt).toTimeString().slice(0, 5) : formData.startsAt.toTimeString().slice(0, 5)) : ''}
+                value={formData.startsAt ? formData.startsAt.toTimeString().slice(0, 5) : ''}
                 onChange={(e) => {
                   const [hours, minutes] = e.target.value.split(':').map(Number)
                   const date = formData.startsAt ? new Date(formData.startsAt) : new Date()
@@ -455,7 +454,7 @@ export function EventCreationWizard() {
     resolver: zodResolver(newEventSchema),
     defaultValues: {
       name: '',
-      startsAt: MELBOURNE_CUP_2025_DATE,
+      startsAt: new Date(MELBOURNE_CUP_2025_DATE),
       timezone: 'Australia/Melbourne',
       capacity: 24,
       mode: 'sweep',
@@ -557,7 +556,7 @@ export function EventCreationWizard() {
       const eventData = {
         tenant_id: tenantId,
         name: data.name,
-        starts_at: typeof data.startsAt === 'string' ? data.startsAt : data.startsAt.toISOString(),
+        starts_at: data.startsAt.toISOString(),
         timezone: data.timezone,
         capacity: data.capacity,
         mode: data.mode,
