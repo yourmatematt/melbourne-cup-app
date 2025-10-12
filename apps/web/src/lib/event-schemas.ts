@@ -3,12 +3,15 @@ import { z } from 'zod'
 // Event creation schemas
 export const newEventSchema = z.object({
   name: z.string().min(1, 'Event name is required').max(100, 'Name too long'),
-  startsAt: z.string().min(1, 'Start date and time is required'),
+  startsAt: z.date({
+    required_error: 'Start date and time is required'
+  }),
   timezone: z.string().default('Australia/Melbourne'),
-  capacity: z.number().int().min(10, 'Minimum capacity is 10').max(200, 'Maximum capacity is 200'),
+  capacity: z.number().int().min(2, 'Minimum capacity is 2').max(200, 'Maximum capacity is 200'),
   mode: z.enum(['sweep', 'calcutta'], {
     required_error: 'Please select an event mode'
   }),
+  entryFee: z.number().min(0, 'Entry fee cannot be negative').max(999.99, 'Entry fee too high').optional(),
   leadCapture: z.boolean().default(false),
   customTerms: z.string().optional(),
   customRules: z.string().optional(),
