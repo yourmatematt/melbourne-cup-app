@@ -9,6 +9,7 @@ import { StatCard } from '@/components/ui/stat-card'
 import { StatusPill } from '@/components/ui/status-pill'
 import { AddParticipantModal } from '@/components/shared/add-participant-modal'
 import {
+  ChevronLeft,
   ChevronRight,
   Users,
   Trophy,
@@ -23,7 +24,18 @@ import {
   Eye,
   Download,
   Settings,
-  CheckCircle
+  CheckCircle,
+  MoreHorizontal,
+  Copy,
+  Printer,
+  Share2,
+  TrendingUp,
+  Target,
+  DollarSign,
+  Activity,
+  Medal,
+  CheckCircle2,
+  Podium
 } from 'lucide-react'
 
 type Event = {
@@ -44,6 +56,7 @@ type Participant = {
   horse_number?: number
   horse_name?: string
   created_at: string
+  payment_status?: 'paid' | 'pending' | 'unpaid'
 }
 
 type DrawStats = {
@@ -55,12 +68,10 @@ type DrawStats = {
 
 const TABS = [
   { id: 0, label: 'Event Control', icon: Play },
-  { id: 1, label: 'QR Code Display', icon: QrCode },
+  { id: 1, label: 'QR & Links', icon: QrCode },
   { id: 2, label: 'Analytics', icon: BarChart3 },
   { id: 3, label: 'Race Results', icon: Trophy },
-  { id: 4, label: 'Live View', icon: Eye },
-  { id: 5, label: 'Export Data', icon: Download },
-  { id: 6, label: 'Settings', icon: Settings }
+  { id: 4, label: 'Event Settings', icon: Settings }
 ]
 
 function getInitials(name: string): string {
@@ -154,38 +165,63 @@ function ActionCard({
   )
 }
 
-function ParticipantRow({ participant }: { participant: Participant }) {
+function ParticipantRow({ participant, onPaymentToggle }: {
+  participant: Participant
+  onPaymentToggle?: (participantId: string, newStatus: 'paid' | 'unpaid') => void
+}) {
   const initials = getInitials(participant.participant_name)
+  const isPaid = participant.payment_status === 'paid'
 
   return (
-    <div className="flex items-center gap-3 p-3 rounded-xl hover:bg-gray-50/50 transition-colors">
-      <div className="bg-gradient-to-r from-orange-500 via-pink-500 to-purple-600 rounded-full size-10 flex items-center justify-center">
-        <span className="text-white text-sm font-medium">{initials}</span>
+    <div className="bg-white border border-[rgba(0,0,0,0.06)] rounded-[20px] p-5 flex items-center gap-4 hover:shadow-sm transition-all duration-200">
+      {/* Left side - Avatar and Info */}
+      <div className="flex items-center gap-4 flex-1">
+        <div className="bg-gradient-to-b from-[#ff8a00] via-[#ff4d8d] to-[#8b5cf6] rounded-full w-12 h-12 flex items-center justify-center shadow-sm">
+          <span className="text-white text-sm font-semibold">{initials}</span>
+        </div>
+
+        <div className="flex-1 min-w-0">
+          <p className="text-base font-semibold text-slate-900 truncate leading-tight">
+            {participant.participant_name}
+          </p>
+          <p className="text-sm text-slate-500 truncate mt-0.5">
+            {participant.email}
+          </p>
+        </div>
       </div>
 
-      <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium text-slate-900 truncate">
-          {participant.participant_name}
-        </p>
-        <p className="text-xs text-slate-600 truncate">
-          {participant.email}
-        </p>
-      </div>
-
-      <div>
+      {/* Right side - Horse Badge and Payment Toggle */}
+      <div className="flex items-center gap-4">
+        {/* Horse Badge */}
         {participant.horse_number ? (
-          <div className="bg-violet-100 border border-violet-200/60 rounded-full px-2.5 py-1">
-            <span className="text-xs font-medium text-violet-700">
-              Horse #{participant.horse_number} - {participant.horse_name || 'TBD'}
+          <div className="bg-gradient-to-r from-violet-50 to-purple-50 border border-violet-200 rounded-full px-4 py-2 shadow-sm">
+            <span className="text-sm font-bold text-violet-700 uppercase tracking-wide">
+              Horse #{participant.horse_number}
             </span>
           </div>
         ) : (
-          <div className="bg-gray-100 border border-gray-200/60 rounded-full px-2.5 py-1">
-            <span className="text-xs font-medium text-slate-600">
-              Not assigned
+          <div className="bg-gradient-to-r from-orange-50 to-red-50 border border-orange-200 rounded-full px-4 py-2 shadow-sm">
+            <span className="text-sm font-bold text-orange-600 uppercase tracking-wide">
+              Waiting
             </span>
           </div>
         )}
+
+        {/* Payment Toggle */}
+        <button
+          onClick={() => onPaymentToggle?.(participant.id, isPaid ? 'unpaid' : 'paid')}
+          className={`w-12 h-6 rounded-full border-2 transition-all relative shadow-sm ${
+            isPaid
+              ? 'bg-emerald-500 border-emerald-500'
+              : 'bg-slate-200 border-slate-300 hover:border-slate-400'
+          }`}
+        >
+          <div
+            className={`w-4 h-4 bg-white rounded-full shadow-md transition-transform absolute top-0.5 ${
+              isPaid ? 'translate-x-6' : 'translate-x-0.5'
+            }`}
+          />
+        </button>
       </div>
     </div>
   )
@@ -199,10 +235,10 @@ function HorseButton({ number, isAssigned, onClick }: {
   return (
     <button
       onClick={onClick}
-      className={`w-full aspect-square rounded-xl border-2 flex items-center justify-center text-sm font-bold transition-colors ${
+      className={`w-full aspect-square rounded-[16px] border-2 flex items-center justify-center text-sm font-bold transition-all duration-200 ${
         isAssigned
-          ? 'bg-violet-100 border-violet-200/60 text-violet-700'
-          : 'bg-[#f8f7f4] border-gray-200/60 text-slate-600 hover:bg-gray-100'
+          ? 'bg-gradient-to-br from-violet-50 to-purple-50 border-violet-300 text-violet-700 shadow-sm hover:shadow-md'
+          : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50 hover:border-slate-300 hover:shadow-sm'
       }`}
     >
       #{number}
@@ -212,12 +248,12 @@ function HorseButton({ number, isAssigned, onClick }: {
 
 function TabMenu({ activeTab, setActiveTab }: { activeTab: number, setActiveTab: (tab: number) => void }) {
   return (
-    <div className="bg-[#F8F7F4] border border-black/8 rounded-2xl p-1.5 inline-flex">
+    <div className="bg-[#F8F7F4] border border-black/8 rounded-[16px] p-1.5 inline-flex w-[615px] h-[46px]">
       {TABS.map((tab) => (
         <button
           key={tab.id}
           onClick={() => setActiveTab(tab.id)}
-          className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${
+          className={`px-4 py-2 rounded-[12px] text-sm font-medium transition-all flex-1 ${
             activeTab === tab.id
               ? 'bg-gradient-to-b from-[#FF8A00] via-[#FF4D8D] to-[#8B5CF6] text-white shadow-lg'
               : 'text-slate-600 hover:bg-black/5'
@@ -341,7 +377,8 @@ function EventOverviewContent() {
           phone: p.phone,
           created_at: p.created_at,
           horse_number: assignment?.horse_number,
-          horse_name: assignment?.horse_name
+          horse_name: assignment?.horse_name,
+          payment_status: 'unpaid' as 'paid' | 'pending' | 'unpaid' // TODO: Fetch from database
         }
       })
 
@@ -371,6 +408,24 @@ function EventOverviewContent() {
   async function handleParticipantAdded() {
     await fetchEventData()
     setShowAddParticipantModal(false)
+  }
+
+  async function handlePaymentToggle(participantId: string, newStatus: 'paid' | 'unpaid') {
+    try {
+      // Update local state immediately for responsive UI
+      setParticipants(prevParticipants =>
+        prevParticipants.map(p =>
+          p.id === participantId ? { ...p, payment_status: newStatus } : p
+        )
+      )
+
+      // TODO: Update payment status in database
+      console.log(`Payment status for ${participantId} changed to ${newStatus}`)
+    } catch (err) {
+      console.error('Error updating payment status:', err)
+      // Revert local state on error
+      await fetchEventData()
+    }
   }
 
   function handleHorseClick(horseNumber: number) {
@@ -564,28 +619,28 @@ function EventOverviewContent() {
       case 0: // Event Control
         return (
           <div className="space-y-8">
-            {/* Stats Cards */}
+            {/* Stats Cards - Figma Design */}
             <div className="grid grid-cols-3 gap-6">
               <StatCard
                 title="Participants"
                 value={`${participants.length} / ${event.capacity}`}
                 subtitle="Current registrations"
                 icon={Users}
-                className="h-[110px]"
+                className="h-[134px]"
               />
               <StatCard
                 title="Horses Assigned"
                 value={`${drawStats.assigned} / 24`}
                 subtitle="Total assignments"
                 icon={Trophy}
-                className="h-[110px]"
+                className="h-[134px]"
               />
               <StatCard
-                title="Event Type"
-                value={event.mode === 'sweep' ? 'Sweep' : 'Calcutta'}
-                subtitle="Competition format"
-                icon={Calendar}
-                className="h-[110px]"
+                title="Payment Status"
+                value={`${Math.round((participants.length / event.capacity) * 100)}%`}
+                subtitle="Payments received"
+                icon={CheckCircle}
+                className="h-[134px]"
               />
             </div>
 
@@ -673,7 +728,11 @@ function EventOverviewContent() {
                 <div className="space-y-2 max-h-96 overflow-y-auto">
                   {participants.length > 0 ? (
                     participants.map((participant) => (
-                      <ParticipantRow key={participant.id} participant={participant} />
+                      <ParticipantRow
+                        key={participant.id}
+                        participant={participant}
+                        onPaymentToggle={handlePaymentToggle}
+                      />
                     ))
                   ) : (
                     <div className="text-center py-8">
@@ -691,13 +750,13 @@ function EventOverviewContent() {
               </div>
 
               {/* Horse Field Column */}
-              <div className="bg-white border border-gray-200/50 rounded-[20px] p-6 space-y-4">
+              <div className="bg-white border border-gray-200/50 rounded-[20px] p-6 space-y-5">
                 <div className="flex items-center justify-between">
                   <h3 className="text-lg font-bold text-slate-900">Horse Field</h3>
-                  <span className="text-sm text-slate-600">24 runners</span>
+                  <span className="text-sm text-slate-500 bg-slate-100 px-3 py-1 rounded-full">24 runners</span>
                 </div>
 
-                <div className="grid grid-cols-6 gap-2">
+                <div className="grid grid-cols-6 gap-3">
                   {Array.from({ length: 24 }, (_, i) => i + 1).map((number) => (
                     <HorseButton
                       key={number}
@@ -724,62 +783,461 @@ function EventOverviewContent() {
           </div>
         )
 
-      case 1: // QR Code Display
+      case 1: // QR & Links
         return (
-          <div className="bg-white border border-gray-200/50 rounded-[20px] p-8">
-            <h2 className="text-2xl font-bold text-slate-900 mb-4">QR Code Display</h2>
-            <p className="text-slate-600">QR code display functionality will be implemented here.</p>
-          </div>
-        )
+          <div className="grid grid-cols-2 gap-6">
+            {/* Left Column - Participant Signup QR Code */}
+            <div className="bg-white border border-[rgba(0,0,0,0.08)] rounded-[20px] p-8">
+              <h3 className="text-base text-slate-900 mb-6">
+                Participant Signup QR Code
+              </h3>
 
-      case 2: // Analytics
-        return (
-          <div className="bg-white border border-gray-200/50 rounded-[20px] p-8">
-            <h2 className="text-2xl font-bold text-slate-900 mb-4">Analytics</h2>
-            <p className="text-slate-600">Event analytics and insights will be displayed here.</p>
-          </div>
-        )
+              <div className="flex flex-col items-center gap-4 mb-6">
+                {/* QR Code Placeholder */}
+                <div className="bg-[rgba(248,247,244,0.3)] rounded-[16px] w-[250px] h-[250px] flex items-center justify-center">
+                  <QrCode className="w-20 h-20 text-slate-400" />
+                </div>
 
-      case 3: // Race Results
-        return (
-          <div className="bg-white border border-gray-200/50 rounded-[20px] p-8">
-            <h2 className="text-2xl font-bold text-slate-900 mb-4">Race Results</h2>
-            <div className="space-y-4">
-              <p className="text-slate-600">
-                Results will be added automatically once the race has been confirmed. Winners will be notified immediately.
+                {/* URL Display */}
+                <div className="bg-[rgba(248,247,244,0.3)] rounded-[12px] p-4 w-full">
+                  <p className="font-mono text-sm text-slate-900">
+                    https://app.melbournecupsweep.com.au/events/{eventId}/join
+                  </p>
+                </div>
+
+                {/* Action Buttons */}
+                <div className="grid grid-cols-3 gap-2 w-full">
+                  <button className="bg-[#f8f7f4] border border-[rgba(0,0,0,0.08)] rounded-[12px] px-4 py-3 flex items-center gap-2 text-sm text-slate-900 hover:bg-gray-100 transition-colors">
+                    <Copy className="w-4 h-4" />
+                    Copy
+                  </button>
+                  <button className="bg-[#f8f7f4] border border-[rgba(0,0,0,0.08)] rounded-[12px] px-4 py-3 flex items-center gap-2 text-sm text-slate-900 hover:bg-gray-100 transition-colors">
+                    <Download className="w-4 h-4" />
+                    Download
+                  </button>
+                  <button className="bg-[#f8f7f4] border border-[rgba(0,0,0,0.08)] rounded-[12px] px-4 py-3 flex items-center gap-2 text-sm text-slate-900 hover:bg-gray-100 transition-colors">
+                    <Printer className="w-4 h-4" />
+                    Print
+                  </button>
+                </div>
+              </div>
+
+              <p className="text-sm text-slate-600 text-center">
+                Display this QR code at your venue for easy participant signup
               </p>
-              <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
-                <p className="text-blue-800 text-sm">
-                  <strong>Note:</strong> Race results are managed centrally and updated across all events in real-time.
+            </div>
+
+            {/* Right Column - Live View TV Display */}
+            <div className="bg-white border border-[rgba(0,0,0,0.08)] rounded-[20px] p-8">
+              <h3 className="text-base text-slate-900 mb-4">
+                Display Live View on Your TV
+              </h3>
+
+              <div className="space-y-4 mb-6">
+                <p className="text-sm text-slate-600">
+                  Enter this URL on your TV:
                 </p>
+
+                {/* TV URL Display */}
+                <div className="bg-[#ffebe6] border border-[rgba(0,0,0,0.08)] rounded-[12px] p-4 flex items-center justify-between">
+                  <p className="font-mono font-bold text-base text-slate-900">
+                    sweep.app/live/{eventId}
+                  </p>
+                  <button className="w-5 h-5 text-slate-600">
+                    <Download className="w-full h-full" />
+                  </button>
+                </div>
+
+                <div className="text-center py-4">
+                  <p className="text-sm text-slate-600 mb-4">
+                    Or scan with your TV remote:
+                  </p>
+
+                  {/* TV QR Code */}
+                  <div className="bg-[rgba(248,247,244,0.3)] rounded-[12px] w-[150px] h-[150px] mx-auto flex items-center justify-center">
+                    <QrCode className="w-16 h-16 text-slate-400" />
+                  </div>
+                </div>
+              </div>
+
+              {/* Instructions */}
+              <div>
+                <h4 className="text-sm font-bold text-slate-900 mb-3">
+                  How to use:
+                </h4>
+                <ul className="space-y-1.5 text-sm text-slate-600">
+                  <li>• Type the URL into your TV browser or smart device</li>
+                  <li>• Display will update automatically during the race</li>
+                  <li>• Perfect for projection at your venue</li>
+                </ul>
               </div>
             </div>
           </div>
         )
 
-      case 4: // Live View
+      case 2: // Analytics
         return (
-          <div className="bg-white border border-gray-200/50 rounded-[20px] p-8">
-            <h2 className="text-2xl font-bold text-slate-900 mb-4">Live View</h2>
-            <p className="text-slate-600">Live view settings and controls will be available here.</p>
+          <div className="space-y-6">
+            {/* Analytics Header */}
+            <div className="bg-white border border-gray-200/50 rounded-[20px] p-6">
+              <h2 className="text-xl font-bold text-slate-900 mb-2">Event Analytics</h2>
+              <p className="text-slate-600">Track your event performance and participant engagement</p>
+            </div>
+
+            {/* Key Metrics Grid */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+              <StatCard
+                title="Registration Rate"
+                value={`${Math.round((participants.length / event.capacity) * 100)}%`}
+                subtitle={`${participants.length} of ${event.capacity} spots`}
+                icon={Target}
+                className="h-[120px]"
+              />
+              <StatCard
+                title="Payment Rate"
+                value={`${Math.round((participants.filter(p => p.payment_status === 'paid').length / Math.max(participants.length, 1)) * 100)}%`}
+                subtitle={`${participants.filter(p => p.payment_status === 'paid').length} paid participants`}
+                icon={DollarSign}
+                className="h-[120px]"
+              />
+              <StatCard
+                title="Draw Progress"
+                value={`${Math.round(drawStats.progressPercentage)}%`}
+                subtitle={`${drawStats.assigned} horses assigned`}
+                icon={Activity}
+                className="h-[120px]"
+              />
+              <StatCard
+                title="Engagement"
+                value="High"
+                subtitle="Active participation"
+                icon={TrendingUp}
+                className="h-[120px]"
+              />
+            </div>
+
+            {/* Analytics Charts Grid */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Registration Timeline */}
+              <div className="bg-white border border-gray-200/50 rounded-[20px] p-6">
+                <h3 className="text-lg font-bold text-slate-900 mb-4">Registration Timeline</h3>
+                <div className="h-48 bg-[rgba(248,247,244,0.3)] rounded-[12px] flex items-center justify-center">
+                  <div className="text-center">
+                    <BarChart3 className="w-12 h-12 text-slate-400 mx-auto mb-2" />
+                    <p className="text-sm text-slate-600">Registration timeline chart</p>
+                  </div>
+                </div>
+                <div className="mt-4 flex items-center justify-between text-sm text-slate-600">
+                  <span>Peak time: 2:00 PM - 4:00 PM</span>
+                  <span>{participants.length} total registrations</span>
+                </div>
+              </div>
+
+              {/* Payment Status Breakdown */}
+              <div className="bg-white border border-gray-200/50 rounded-[20px] p-6">
+                <h3 className="text-lg font-bold text-slate-900 mb-4">Payment Status</h3>
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-3 h-3 bg-emerald-500 rounded-full"></div>
+                      <span className="text-sm text-slate-900">Paid</span>
+                    </div>
+                    <div className="text-right">
+                      <span className="text-sm font-semibold text-slate-900">
+                        {participants.filter(p => p.payment_status === 'paid').length}
+                      </span>
+                      <span className="text-xs text-slate-600 ml-1">participants</span>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-3 h-3 bg-orange-500 rounded-full"></div>
+                      <span className="text-sm text-slate-900">Pending</span>
+                    </div>
+                    <div className="text-right">
+                      <span className="text-sm font-semibold text-slate-900">
+                        {participants.filter(p => p.payment_status === 'unpaid').length}
+                      </span>
+                      <span className="text-xs text-slate-600 ml-1">participants</span>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-3 h-3 bg-slate-300 rounded-full"></div>
+                      <span className="text-sm text-slate-900">Available Spots</span>
+                    </div>
+                    <div className="text-right">
+                      <span className="text-sm font-semibold text-slate-900">
+                        {event.capacity - participants.length}
+                      </span>
+                      <span className="text-xs text-slate-600 ml-1">remaining</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Event Performance Summary */}
+            <div className="bg-white border border-gray-200/50 rounded-[20px] p-6">
+              <h3 className="text-lg font-bold text-slate-900 mb-4">Performance Summary</h3>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="text-center">
+                  <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                    <CheckCircle2 className="w-8 h-8 text-emerald-600" />
+                  </div>
+                  <h4 className="font-semibold text-slate-900 mb-1">Registration Success</h4>
+                  <p className="text-sm text-slate-600">
+                    {Math.round((participants.length / event.capacity) * 100)}% capacity filled
+                  </p>
+                </div>
+                <div className="text-center">
+                  <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                    <DollarSign className="w-8 h-8 text-blue-600" />
+                  </div>
+                  <h4 className="font-semibold text-slate-900 mb-1">Revenue Generated</h4>
+                  <p className="text-sm text-slate-600">
+                    ${participants.filter(p => p.payment_status === 'paid').length * 20} collected
+                  </p>
+                </div>
+                <div className="text-center">
+                  <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                    <Trophy className="w-8 h-8 text-purple-600" />
+                  </div>
+                  <h4 className="font-semibold text-slate-900 mb-1">Event Status</h4>
+                  <p className="text-sm text-slate-600">
+                    {event.status === 'active' ? 'Running smoothly' : `Status: ${event.status}`}
+                  </p>
+                </div>
+              </div>
+            </div>
           </div>
         )
 
-      case 5: // Export Data
+      case 3: // Race Results
         return (
-          <div className="bg-white border border-gray-200/50 rounded-[20px] p-8">
-            <h2 className="text-2xl font-bold text-slate-900 mb-4">Export Data</h2>
-            <p className="text-slate-600">Data export options will be implemented here.</p>
+          <div className="space-y-6">
+            {/* Race Results Header */}
+            <div className="bg-white border border-gray-200/50 rounded-[20px] p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-xl font-bold text-slate-900 mb-2">Race Results</h2>
+                  <p className="text-slate-600">Manage race outcomes and winner payouts</p>
+                </div>
+                <div className="flex items-center gap-3">
+                  <StatusPill
+                    label={event.status === 'completed' ? 'Results Final' : 'Pending Results'}
+                    variant={event.status === 'completed' ? 'completed' : 'draft'}
+                    icon={event.status === 'completed' ? CheckCircle2 : Clock}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {event.status !== 'completed' ? (
+              /* Pre-Race State */
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Race Status */}
+                <div className="bg-white border border-gray-200/50 rounded-[20px] p-6">
+                  <h3 className="text-lg font-bold text-slate-900 mb-4">Race Information</h3>
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-slate-600">Race Date</span>
+                      <span className="text-sm font-medium text-slate-900">
+                        {new Date(event.starts_at).toLocaleDateString('en-AU', {
+                          weekday: 'long',
+                          day: 'numeric',
+                          month: 'long',
+                          year: 'numeric'
+                        })}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-slate-600">Race Time</span>
+                      <span className="text-sm font-medium text-slate-900">
+                        {new Date(event.starts_at).toLocaleTimeString('en-AU', {
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        })}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-slate-600">Total Prize Pool</span>
+                      <span className="text-sm font-medium text-slate-900">
+                        ${participants.filter(p => p.payment_status === 'paid').length * 20}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-slate-600">Participants</span>
+                      <span className="text-sm font-medium text-slate-900">
+                        {participants.length} registered
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Prize Breakdown */}
+                <div className="bg-white border border-gray-200/50 rounded-[20px] p-6">
+                  <h3 className="text-lg font-bold text-slate-900 mb-4">Prize Breakdown</h3>
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                      <div className="flex items-center gap-3">
+                        <Medal className="w-5 h-5 text-yellow-600" />
+                        <span className="text-sm font-medium text-slate-900">1st Place</span>
+                      </div>
+                      <span className="text-sm font-bold text-yellow-700">
+                        ${Math.round(participants.filter(p => p.payment_status === 'paid').length * 20 * 0.6)}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between p-3 bg-gray-50 border border-gray-200 rounded-lg">
+                      <div className="flex items-center gap-3">
+                        <Medal className="w-5 h-5 text-gray-500" />
+                        <span className="text-sm font-medium text-slate-900">2nd Place</span>
+                      </div>
+                      <span className="text-sm font-bold text-gray-600">
+                        ${Math.round(participants.filter(p => p.payment_status === 'paid').length * 20 * 0.3)}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between p-3 bg-orange-50 border border-orange-200 rounded-lg">
+                      <div className="flex items-center gap-3">
+                        <Medal className="w-5 h-5 text-orange-500" />
+                        <span className="text-sm font-medium text-slate-900">3rd Place</span>
+                      </div>
+                      <span className="text-sm font-bold text-orange-600">
+                        ${Math.round(participants.filter(p => p.payment_status === 'paid').length * 20 * 0.1)}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              /* Post-Race Results State */
+              <div className="space-y-6">
+                {/* Winners Podium */}
+                <div className="bg-white border border-gray-200/50 rounded-[20px] p-6">
+                  <h3 className="text-lg font-bold text-slate-900 mb-6 text-center">🏆 Race Winners</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    {/* 1st Place */}
+                    <div className="text-center p-6 bg-gradient-to-b from-yellow-50 to-yellow-100 border-2 border-yellow-300 rounded-[16px]">
+                      <div className="w-16 h-16 bg-yellow-500 rounded-full flex items-center justify-center mx-auto mb-3">
+                        <Trophy className="w-8 h-8 text-white" />
+                      </div>
+                      <h4 className="font-bold text-slate-900 mb-1">1st Place</h4>
+                      <p className="text-sm text-slate-600 mb-2">Horse #3 - Exemplar</p>
+                      <p className="text-sm font-medium text-slate-900">Sarah Johnson</p>
+                      <p className="text-lg font-bold text-yellow-700 mt-2">
+                        ${Math.round(participants.filter(p => p.payment_status === 'paid').length * 20 * 0.6)}
+                      </p>
+                    </div>
+
+                    {/* 2nd Place */}
+                    <div className="text-center p-6 bg-gradient-to-b from-gray-50 to-gray-100 border-2 border-gray-300 rounded-[16px]">
+                      <div className="w-16 h-16 bg-gray-500 rounded-full flex items-center justify-center mx-auto mb-3">
+                        <Medal className="w-8 h-8 text-white" />
+                      </div>
+                      <h4 className="font-bold text-slate-900 mb-1">2nd Place</h4>
+                      <p className="text-sm text-slate-600 mb-2">Horse #12 - Knight's Choice</p>
+                      <p className="text-sm font-medium text-slate-900">Michael Chen</p>
+                      <p className="text-lg font-bold text-gray-700 mt-2">
+                        ${Math.round(participants.filter(p => p.payment_status === 'paid').length * 20 * 0.3)}
+                      </p>
+                    </div>
+
+                    {/* 3rd Place */}
+                    <div className="text-center p-6 bg-gradient-to-b from-orange-50 to-orange-100 border-2 border-orange-300 rounded-[16px]">
+                      <div className="w-16 h-16 bg-orange-500 rounded-full flex items-center justify-center mx-auto mb-3">
+                        <Medal className="w-8 h-8 text-white" />
+                      </div>
+                      <h4 className="font-bold text-slate-900 mb-1">3rd Place</h4>
+                      <p className="text-sm text-slate-600 mb-2">Horse #7 - Onesmoothoperator</p>
+                      <p className="text-sm font-medium text-slate-900">David Wilson</p>
+                      <p className="text-lg font-bold text-orange-700 mt-2">
+                        ${Math.round(participants.filter(p => p.payment_status === 'paid').length * 20 * 0.1)}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Full Results Table */}
+                <div className="bg-white border border-gray-200/50 rounded-[20px] p-6">
+                  <h3 className="text-lg font-bold text-slate-900 mb-4">Complete Race Results</h3>
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead>
+                        <tr className="border-b border-gray-200">
+                          <th className="text-left py-3 px-2 text-sm font-medium text-slate-600">Position</th>
+                          <th className="text-left py-3 px-2 text-sm font-medium text-slate-600">Horse</th>
+                          <th className="text-left py-3 px-2 text-sm font-medium text-slate-600">Participant</th>
+                          <th className="text-right py-3 px-2 text-sm font-medium text-slate-600">Prize</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr className="border-b border-gray-100">
+                          <td className="py-3 px-2 text-sm font-bold text-yellow-600">1st</td>
+                          <td className="py-3 px-2 text-sm text-slate-900">#3 Exemplar</td>
+                          <td className="py-3 px-2 text-sm text-slate-900">Sarah Johnson</td>
+                          <td className="py-3 px-2 text-sm font-bold text-right text-yellow-600">
+                            ${Math.round(participants.filter(p => p.payment_status === 'paid').length * 20 * 0.6)}
+                          </td>
+                        </tr>
+                        <tr className="border-b border-gray-100">
+                          <td className="py-3 px-2 text-sm font-bold text-gray-600">2nd</td>
+                          <td className="py-3 px-2 text-sm text-slate-900">#12 Knight's Choice</td>
+                          <td className="py-3 px-2 text-sm text-slate-900">Michael Chen</td>
+                          <td className="py-3 px-2 text-sm font-bold text-right text-gray-600">
+                            ${Math.round(participants.filter(p => p.payment_status === 'paid').length * 20 * 0.3)}
+                          </td>
+                        </tr>
+                        <tr className="border-b border-gray-100">
+                          <td className="py-3 px-2 text-sm font-bold text-orange-600">3rd</td>
+                          <td className="py-3 px-2 text-sm text-slate-900">#7 Onesmoothoperator</td>
+                          <td className="py-3 px-2 text-sm text-slate-900">David Wilson</td>
+                          <td className="py-3 px-2 text-sm font-bold text-right text-orange-600">
+                            ${Math.round(participants.filter(p => p.payment_status === 'paid').length * 20 * 0.1)}
+                          </td>
+                        </tr>
+                        {participants.slice(3).map((participant, index) => (
+                          <tr key={participant.id} className="border-b border-gray-50">
+                            <td className="py-3 px-2 text-sm text-slate-500">{index + 4}th</td>
+                            <td className="py-3 px-2 text-sm text-slate-700">
+                              {participant.horse_number ? `#${participant.horse_number}` : 'No horse'}
+                            </td>
+                            <td className="py-3 px-2 text-sm text-slate-700">{participant.participant_name}</td>
+                            <td className="py-3 px-2 text-sm text-right text-slate-500">$0</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Race Results Notice */}
+            <div className="bg-blue-50 border border-blue-200 rounded-[20px] p-6">
+              <div className="flex items-start gap-3">
+                <div className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <CheckCircle2 className="w-4 h-4 text-white" />
+                </div>
+                <div>
+                  <h4 className="font-medium text-blue-900 mb-1">Automatic Results Integration</h4>
+                  <p className="text-sm text-blue-800">
+                    Race results are automatically updated from official Melbourne Cup sources.
+                    Winners are notified immediately via email and SMS when results are confirmed.
+                  </p>
+                </div>
+              </div>
+            </div>
           </div>
         )
 
-      case 6: // Settings
+      case 4: // Event Settings
         return (
           <div className="bg-white border border-gray-200/50 rounded-[20px] p-8">
             <h2 className="text-2xl font-bold text-slate-900 mb-4">Event Settings</h2>
             <p className="text-slate-600">Event configuration and settings will be available here.</p>
           </div>
         )
+
 
       default:
         return null
@@ -789,35 +1247,52 @@ function EventOverviewContent() {
   return (
     <DashboardLayout>
       <div className="p-8 space-y-8">
-        {/* Breadcrumb */}
-        <div className="flex items-center gap-2 text-sm">
-          <Link href="/dashboard" className="text-slate-600 hover:text-slate-900">
-            Dashboard
-          </Link>
-          <ChevronRight className="h-4 w-4 text-slate-400" />
-          <span className="text-slate-900">{event.name}</span>
-        </div>
+        {/* Event Header - Figma Design */}
+        <div className="bg-white border border-gray-200/50 rounded-[20px] p-6 h-[76px] flex items-center justify-between">
+          {/* Left Section - Back Button + Title + Status + Date */}
+          <div className="flex items-center gap-4">
+            {/* Back Button */}
+            <Link href="/dashboard">
+              <button className="flex items-center justify-center w-10 h-10 rounded-full hover:bg-gray-50 transition-colors">
+                <ChevronLeft className="w-5 h-5 text-slate-600" />
+              </button>
+            </Link>
 
-        {/* Header */}
-        <div className="space-y-2">
-          <div className="flex items-center gap-3">
-            <h1 className="text-3xl font-bold text-slate-900">{event.name}</h1>
-            <StatusPill
-              label={event.status.charAt(0).toUpperCase() + event.status.slice(1)}
-              variant={event.status as any}
-              icon={getStatusIcon(event.status)}
-            />
+            {/* Title */}
+            <h1 className="text-[32px] font-normal text-slate-900">
+              {event.name}
+            </h1>
+
+            {/* Status Badge */}
+            <div className="bg-[#8B5CF6] text-white px-3 py-1.5 rounded-full">
+              <span className="text-sm font-medium">
+                {event.status.toUpperCase()}
+              </span>
+            </div>
+
+            {/* Date/Time */}
+            <span className="text-slate-600 text-sm">
+              {new Date(event.starts_at).toLocaleDateString('en-AU', {
+                weekday: 'short',
+                month: 'short',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+              })}
+            </span>
           </div>
-          <p className="text-slate-600">
-            {new Date(event.starts_at).toLocaleDateString('en-AU', {
-              weekday: 'long',
-              year: 'numeric',
-              month: 'long',
-              day: 'numeric',
-              hour: '2-digit',
-              minute: '2-digit'
-            })}
-          </p>
+
+          {/* Right Section - Action Buttons */}
+          <div className="flex items-center gap-3">
+            <button className="bg-[#f8f7f4] border border-gray-200 h-9 px-4 rounded-xl flex items-center gap-2 text-sm text-slate-900 hover:bg-gray-50 transition-colors">
+              <Download className="h-4 w-4" />
+              Export
+            </button>
+            <button className="bg-[#f8f7f4] border border-gray-200 h-9 px-4 rounded-xl flex items-center gap-2 text-sm text-slate-900 hover:bg-gray-50 transition-colors">
+              <MoreHorizontal className="h-4 w-4" />
+              More
+            </button>
+          </div>
         </div>
 
         {/* Tab Menu */}

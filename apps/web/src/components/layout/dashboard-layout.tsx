@@ -5,13 +5,7 @@ import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
 import {
   Home,
-  Palette,
-  LayoutDashboard,
-  Calendar,
-  Play,
-  TrendingUp,
-  Settings,
-  Gauge
+  Settings
 } from 'lucide-react'
 
 interface SidebarItemProps {
@@ -49,141 +43,62 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     {
       href: '/dashboard',
       icon: Home,
-      label: 'Home'
-    },
-    {
-      href: '/design-system',
-      icon: Palette,
-      label: 'Design System'
-    },
-    {
-      href: '/dashboard',
-      icon: LayoutDashboard,
       label: 'Dashboard'
-    },
-    {
-      href: '/dashboard/events',
-      icon: Calendar,
-      label: 'Event Overview'
-    },
-    {
-      href: '/dashboard/draw',
-      icon: Play,
-      label: 'Draw Controls'
-    }
-  ]
-
-  const bottomItems = [
-    {
-      href: '/dashboard/analytics',
-      icon: Gauge,
-      label: 'Analytics'
     },
     {
       href: '/dashboard/settings',
       icon: Settings,
-      label: 'Settings'
+      label: 'Venue Settings'
     }
   ]
 
   return (
     <div className="bg-[#f8f7f4] min-h-screen">
-      {/* Header */}
-      <div className="bg-white border-b border-gray-200 h-[69px] fixed top-0 left-0 right-0 z-40">
-        <div className="h-full flex items-center justify-between px-48">
-          <div className="h-8 w-42 bg-gray-200 rounded"></div>
-          <div className="flex items-center gap-3">
-            <Link href="/dashboard/settings">
-              <button className="bg-[#f8f7f4] border border-gray-200 h-9 px-4 rounded-xl flex items-center gap-2 text-sm text-slate-900">
-                <Settings className="h-4 w-4" />
-                Edit Venue Settings
-              </button>
-            </Link>
-            <Link href="/dashboard/events/new">
-              <button className="bg-slate-900 h-9 px-4 rounded-xl flex items-center gap-2 text-sm text-white shadow-lg">
-                <Calendar className="h-4 w-4" />
-                New Event
-              </button>
-            </Link>
-          </div>
-        </div>
-      </div>
+      {/* New Sidebar - Figma Design */}
+      <div className="bg-white border-r border-[rgba(0,0,0,0.08)] w-[256px] fixed left-0 top-0 bottom-0 z-30">
+        {/* Brand Header */}
+        <div className="h-[89px] border-b border-[rgba(0,0,0,0.08)] p-6">
+          <div className="flex items-center gap-2">
+            {/* Brand Logo */}
+            <div className="w-8 h-8 bg-gradient-to-b from-[#ff8a00] via-[#ff4d8d] to-[#8b5cf6] rounded-lg"></div>
 
-      {/* Sidebar */}
-      <div className="bg-white border-r border-gray-200 w-64 fixed left-0 top-[69px] bottom-0 z-30">
-        <div className="p-4 space-y-2">
-          {navigationItems.map((item) => (
-            <SidebarItem
-              key={item.href}
-              href={item.href}
-              icon={item.icon}
-              label={item.label}
-              isActive={item.label === 'Dashboard' && pathname === '/dashboard'}
-            />
-          ))}
-
-          <div className="border-t border-gray-200 pt-4 mt-4">
-            {bottomItems.map((item) => (
-              <SidebarItem
-                key={item.href}
-                href={item.href}
-                icon={item.icon}
-                label={item.label}
-                isActive={pathname === item.href}
-              />
-            ))}
-          </div>
-        </div>
-
-        {/* Design Tokens Card */}
-        <div className="absolute bottom-6 left-6 right-6 bg-white border border-gray-200 rounded-[20px] p-4">
-          <h4 className="text-sm font-bold text-slate-900 mb-3">Design Tokens</h4>
-          <div className="space-y-2">
+            {/* Brand Text */}
             <div>
-              <p className="text-sm text-slate-600 mb-1">Brand Gradient:</p>
-              <div className="h-3 w-full bg-gradient-to-r from-orange-500 via-pink-500 to-purple-600 rounded-full"></div>
-            </div>
-            <div className="grid grid-cols-4 gap-1">
-              <div className="h-8 bg-green-500 rounded-[20px]"></div>
-              <div className="h-8 bg-blue-500 rounded-[20px]"></div>
-              <div className="h-8 bg-amber-500 rounded-[20px]"></div>
-              <div className="h-8 bg-red-500 rounded-[20px]"></div>
-            </div>
-            <div className="border-t border-gray-200 pt-2 mt-3">
-              <p className="text-sm text-slate-600">
-                Radius: 20px | Shadows: Soft | Type: Inter
+              <h2 className="text-base font-bold text-slate-900 leading-6">
+                MelbourneCupSweep
+              </h2>
+              <p className="text-xs text-slate-600 leading-4">
+                Admin Dashboard
               </p>
             </div>
           </div>
         </div>
+
+        {/* Navigation */}
+        <div className="flex-1 p-4 space-y-2">
+          {navigationItems.map((item, index) => (
+            <Link
+              key={`nav-${index}-${item.href}`}
+              href={item.href}
+              className="flex items-center gap-3 px-4 py-3 rounded-xl text-base text-slate-600 hover:text-slate-900 transition-all"
+            >
+              <item.icon className="h-5 w-5" />
+              {item.label}
+            </Link>
+          ))}
+        </div>
+
+        {/* Footer */}
+        <div className="h-[49px] border-t border-[rgba(0,0,0,0.08)] p-4">
+          <p className="text-xs text-slate-600 leading-4">
+            © 2025 MelbourneCupSweep
+          </p>
+        </div>
       </div>
 
       {/* Main Content */}
-      <div className="ml-64 pt-[69px]">
+      <div className="ml-[256px]">
         {children}
-      </div>
-
-      {/* Toast Notification */}
-      <div className="fixed top-6 right-6 bg-white border border-gray-200 rounded-[20px] p-4 shadow-lg w-96 z-50">
-        <div className="flex items-start gap-3">
-          <div className="bg-green-100 rounded-[20px] p-1.5">
-            <div className="h-4 w-4 bg-green-500 rounded-full"></div>
-          </div>
-          <div className="flex-1">
-            <p className="text-sm font-medium text-slate-900">
-              Connected — Real-time updates are active
-            </p>
-            <p className="text-sm text-slate-600">
-              All participants will see draws instantly
-            </p>
-            <p className="text-xs text-slate-600 mt-1">
-              7:20:56 PM
-            </p>
-          </div>
-          <button className="text-slate-400 hover:text-slate-600">
-            <Settings className="h-4 w-4" />
-          </button>
-        </div>
       </div>
     </div>
   )

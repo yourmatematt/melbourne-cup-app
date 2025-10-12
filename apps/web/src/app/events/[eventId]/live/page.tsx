@@ -19,7 +19,10 @@ import {
   Zap,
   Radio,
   Wifi,
-  Activity
+  Activity,
+  QrCode,
+  ArrowRight,
+  Check
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useRealtimeAssignments } from '@/hooks/use-realtime-assignments'
@@ -62,6 +65,23 @@ interface RecentAssignment {
   jockey?: string
   created_at: string
   isNew?: boolean
+}
+
+interface Horse {
+  id: string
+  number: number
+  name: string
+  jockey?: string
+  is_scratched: boolean
+}
+
+interface ParticipantStatus {
+  id: string
+  participant_name: string
+  horse_number?: number
+  horse_name?: string
+  has_paid: boolean
+  assigned_at?: string
 }
 
 interface Result {
@@ -112,6 +132,7 @@ function LiveViewPage() {
 
   const [event, setEvent] = useState<Event | null>(null)
   const [results, setResults] = useState<Result[]>([])
+  const [horses, setHorses] = useState<Horse[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [lastUpdate, setLastUpdate] = useState(new Date())
@@ -514,6 +535,25 @@ function LiveViewPage() {
         participant_count: data.data.participantCount
       })
 
+      // Fetch horses data
+      console.log('🔍 [DEBUG] Fetching horses data...')
+      try {
+        const { data: horsesData, error: horsesError } = await supabase
+          .from('event_horses')
+          .select('*')
+          .eq('event_id', eventId)
+          .order('number')
+
+        if (horsesError) {
+          console.error('❌ [DEBUG] Horses query error:', horsesError)
+        } else {
+          console.log('✅ [DEBUG] Successfully fetched horses:', horsesData?.length || 0)
+          setHorses(horsesData || [])
+        }
+      } catch (horsesErr) {
+        console.error('❌ [DEBUG] Error fetching horses:', horsesErr)
+      }
+
       // Force refresh assignments from Supabase directly
       console.log('🔍 [DEBUG] Refreshing assignments data...')
       try {
@@ -629,533 +669,294 @@ function LiveViewPage() {
     )
   }
 
-  // Show loading state with debug banner if available
+  // Show loading state
   if (loading || assignmentsLoading || participantsLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
-        {/* Client-only debug banner */}
-        {debugMode && mounted && (
-          <ClientDebugBanner
-            eventId={eventId}
-            componentError={componentError}
-          />
-        )}
-        <div className="text-center" style={{ marginTop: debugMode && mounted ? '200px' : '0' }}>
-          <Loader2 className="h-12 w-12 animate-spin text-blue-600 mx-auto mb-4" />
-          <p className="text-xl text-gray-600">Loading live event...</p>
+      <div className="min-h-screen bg-[#f8f7f4] flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="h-16 w-16 animate-spin text-slate-900 mx-auto mb-6" />
+          <p className="text-2xl text-slate-600 font-['Arial']">Loading live event...</p>
         </div>
       </div>
     )
   }
 
-  // Show error state with debug banner if available
+  // Show error state
   if (error || !event) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-red-50 to-pink-100 flex items-center justify-center p-4">
-        {/* Client-only debug banner */}
-        {debugMode && mounted && (
-          <ClientDebugBanner
-            eventId={eventId}
-            componentError={componentError}
-          />
-        )}
-        <Card className="w-full max-w-md" style={{ marginTop: debugMode && mounted ? '200px' : '0' }}>
-          <CardHeader className="text-center">
-            <CardTitle className="text-red-600">Event Unavailable</CardTitle>
-            <CardDescription>{error || 'Event not found'}</CardDescription>
-          </CardHeader>
-        </Card>
+      <div className="min-h-screen bg-[#f8f7f4] flex items-center justify-center p-4">
+        <div className="text-center">
+          <h1 className="text-4xl font-bold text-red-600 font-['Arial'] mb-4">Event Unavailable</h1>
+          <p className="text-xl text-slate-600 font-['Arial']">{error || 'Event not found'}</p>
+        </div>
       </div>
     )
   }
 
+  // Create participant status array combining participants and assignments
+  const participantStatuses: ParticipantStatus[] = participants.map(participant => {
+    const assignment = assignments.find(a => a.patron_entry_id === participant.id)
+    return {
+      id: participant.id,
+      participant_name: participant.participant_name,
+      horse_number: assignment?.event_horses?.number,
+      horse_name: assignment?.event_horses?.name,
+      has_paid: participant.payment_status === 'completed',
+      assigned_at: assignment?.created_at
+    }
+  })
+
+  // Calculate progress percentage
+  const progressPercentage = Math.min((participants.length / event.capacity) * 100, 100)
+
+  // Calculate prize pool (simple calculation - could be from database)
+  const prizePool = participants.filter(p => p.payment_status === 'completed').length * 20 // Assuming $20 per entry
+
+  // Get recent activity for footer
+  const recentActivity = recentAssignments.slice(0, 3).map(assignment =>
+    `${assignment.participant_name} drew Horse #${assignment.horse_number} - ${assignment.horse_name}`
+  )
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
-      {/* Client-only debug banner */}
-      {debugMode && mounted && (
-        <ClientDebugBanner
-          eventId={eventId}
-          componentError={componentError}
-        />
+    <div className="min-h-screen bg-[#f8f7f4] overflow-hidden w-screen h-screen relative" style={{ minWidth: '1920px', minHeight: '1080px' }}>
+      {/* Real-time Flash Indicator */}
+      {realtimeFlash && (
+        <div className="absolute top-0 left-0 right-0 bg-green-500 text-white text-center py-3 z-50 animate-pulse">
+          <p className="text-2xl font-bold">⚡ REAL-TIME UPDATE RECEIVED!</p>
+        </div>
       )}
 
-      <div className="max-w-6xl mx-auto space-y-6" style={{ marginTop: debugMode && mounted ? '200px' : '0' }}>
-        {/* Header */}
-        <div className="text-center py-8 relative">
-          {/* Real-time flash indicator */}
-          {realtimeFlash && (
-            <div className="absolute top-0 left-0 right-0 bg-green-500 text-white text-center py-2 rounded-lg animate-pulse z-10">
-              ⚡ REAL-TIME UPDATE RECEIVED!
-            </div>
-          )}
-
-          <h1 className="text-4xl md:text-6xl font-bold text-gray-900 mb-4">
-            {event.name}
-          </h1>
-          <div className="flex justify-center mb-4">
-            {getStatusBadge(event.status)}
+      {/* Header Section - 120px height */}
+      <div className="h-[120px] bg-white border-b border-gray-200 shadow-sm flex items-center justify-between px-8">
+        {/* Left: Venue Avatar + Event Details */}
+        <div className="flex items-center space-x-6">
+          {/* Venue Avatar with Gradient */}
+          <div
+            className="w-20 h-20 rounded-full flex items-center justify-center text-white text-2xl font-bold"
+            style={{
+              background: 'linear-gradient(180deg, #ff8a00 0%, #ff4d8d 50%, #8b5cf6 100%)'
+            }}
+          >
+            {event.tenant.name.charAt(0).toUpperCase()}
           </div>
-          <p className="text-xl text-gray-600 mb-2">{event.tenant.name}</p>
-          <div className="flex items-center justify-center space-x-4 text-gray-500">
-            <div className="flex items-center space-x-1">
-              <Calendar className="h-4 w-4" />
-              <span>{formatDateTime(event.starts_at)}</span>
-            </div>
+
+          {/* Event Details */}
+          <div className="text-left">
+            <h1 className="text-4xl font-bold text-slate-900 leading-tight">
+              {event.name}
+            </h1>
+            <p className="text-2xl text-slate-600 mt-1">
+              {event.tenant.name}
+            </p>
+            <p className="text-xl text-slate-600 mt-1">
+              {formatDateTime(event.starts_at)}
+            </p>
           </div>
         </div>
 
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <Card className="text-center">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-lg flex items-center justify-center space-x-2">
-                <Users className="h-5 w-5 text-blue-600" />
-                <span>Participants</span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-4xl font-bold text-blue-600 mb-2 flex items-center justify-center space-x-2">
-                <span>{participants.length}</span>
-                {participantsRealtimeState.isConnected && (
-                  <Zap className="h-5 w-5 text-green-500" title="Live participant updates active" />
-                )}
-              </div>
-              <div className="text-sm text-gray-500">
-                of {event.capacity} spots
-              </div>
-              <div className="w-full bg-gray-200 rounded-full h-2 mt-3">
+        {/* Right: QR Code + Join Text */}
+        <div className="flex items-center space-x-4">
+          {/* QR Code */}
+          <div className="w-[100px] h-[100px] bg-slate-900 rounded-lg flex items-center justify-center">
+            <QrCode className="w-20 h-20 text-white" />
+          </div>
+          <div className="text-right">
+            <p className="text-2xl font-bold text-slate-900">Scan to Join</p>
+            <p className="text-lg text-slate-600">/events/{eventId}</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Progress Bar Section - 100px height */}
+      <div
+        className="h-[100px] flex items-center justify-center"
+        style={{
+          background: 'linear-gradient(180deg, #ff8a00 0%, #ff4d8d 50%, #8b5cf6 100%)'
+        }}
+      >
+        <div className="text-center">
+          <p className="text-5xl font-bold text-white mb-3">
+            PARTICIPANTS: {participants.length} / {event.capacity} SPOTS FILLED
+          </p>
+          <div className="w-[600px] h-3 bg-white bg-opacity-30 rounded-full overflow-hidden">
+            <div
+              className="h-full bg-white transition-all duration-500 ease-out"
+              style={{ width: `${progressPercentage}%` }}
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Status Legend - 30px height */}
+      <div className="h-[30px] px-10 pt-10 flex items-center justify-start space-x-8">
+        <div className="flex items-center space-x-2">
+          <div className="w-4 h-4 rounded-full bg-[#00c950]"></div>
+          <span className="text-xl text-slate-700">JOINED & PAID</span>
+        </div>
+        <div className="flex items-center space-x-2">
+          <div className="w-4 h-4 rounded-full bg-[#fe9a00]"></div>
+          <span className="text-xl text-slate-700">JOINED - NOT PAID</span>
+        </div>
+        <div className="flex items-center space-x-2">
+          <div className="w-4 h-4 rounded-full bg-[#d1d5dc]"></div>
+          <span className="text-xl text-slate-700">AVAILABLE</span>
+        </div>
+      </div>
+
+      {/* Horse Grid - 620px height */}
+      <div className="h-[620px] px-10 py-5">
+        <div className="grid grid-cols-6 gap-5 h-full">
+          {Array.from({ length: 24 }, (_, index) => {
+            const horse = horses.find(h => h.number === index + 1) || {
+              id: `placeholder-${index + 1}`,
+              number: index + 1,
+              name: `Horse ${index + 1}`,
+              jockey: '',
+              is_scratched: false
+            }
+            // Find participant assigned to this horse
+            const assignedParticipant = participantStatuses.find(p => p.horse_number === horse.number)
+
+            // Determine card state
+            let cardState: 'paid' | 'pending' | 'available' = 'available'
+            if (assignedParticipant) {
+              cardState = assignedParticipant.has_paid ? 'paid' : 'pending'
+            }
+
+            // Card styling based on state
+            const cardStyles = {
+              paid: {
+                border: '3px solid #00c950',
+                background: '#f9fafb',
+                numberColor: '#008236',
+                nameColor: '#0d542b',
+                badgeColor: '#00c950'
+              },
+              pending: {
+                border: '3px solid #fe9a00',
+                background: '#fef9f3',
+                numberColor: '#bb4d00',
+                nameColor: '#7b3306',
+                badgeColor: '#fe9a00'
+              },
+              available: {
+                border: '2px solid #d1d5dc',
+                background: '#ffffff',
+                numberColor: '#99a1af',
+                nameColor: '#6a7282',
+                badgeColor: '#d1d5dc'
+              }
+            }
+
+            const style = cardStyles[cardState]
+
+            // Check if this assignment is new
+            const isNewAssignment = assignedParticipant?.assigned_at &&
+              newAssignmentId &&
+              assignments.find(a => a.id === newAssignmentId && a.event_horses?.number === horse.number)
+
+            return (
+              <div
+                key={horse.id}
+                className={`rounded-xl flex flex-col items-center justify-center p-4 transition-all duration-500 ${
+                  isNewAssignment ? 'animate-pulse ring-4 ring-yellow-400 transform scale-105' : ''
+                }`}
+                style={{
+                  border: style.border,
+                  backgroundColor: style.background,
+                  height: '140px'
+                }}
+              >
+                {/* Horse Number */}
                 <div
-                  className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-                  style={{
-                    width: `${Math.min((participants.length / event.capacity) * 100, 100)}%`
-                  }}
-                />
-              </div>
-              {!participantsRealtimeState.isConnected && participantsRealtimeState.error && (
-                <div className="text-xs text-red-500 mt-1">
-                  Participant updates offline
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          <Card className="text-center">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-lg flex items-center justify-center space-x-2">
-                <Trophy className="h-5 w-5 text-yellow-600" />
-                <span>Assignments</span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-4xl font-bold text-yellow-600 mb-2 flex items-center justify-center space-x-2">
-                <span>{assignments.length}</span>
-                {realtimeState.isConnected && (
-                  <div className="flex items-center space-x-1">
-                    {realtimeState.connectionType === 'realtime' ? (
-                      <Zap className="h-5 w-5 text-green-500 animate-pulse" title="Real-time updates active" />
-                    ) : (
-                      <Radio className="h-5 w-5 text-blue-500 animate-pulse" title="Polling updates active" />
-                    )}
-                  </div>
-                )}
-              </div>
-              <div className="text-sm text-gray-500">
-                horses assigned
-              </div>
-              {realtimeState.isConnected ? (
-                <div className="text-xs text-center mt-1">
-                  {realtimeState.connectionType === 'realtime' ? (
-                    <span className="text-green-600 font-medium">⚡ Real-time Active</span>
-                  ) : (
-                    <span className="text-blue-600 font-medium">📡 Live Updates Active</span>
-                  )}
-                </div>
-              ) : (
-                <div className="text-xs text-red-500 mt-1 text-center">
-                  Connection lost
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          <Card className="text-center">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-lg flex items-center justify-center space-x-2">
-                <Clock className="h-5 w-5 text-green-600" />
-                <span>Last Update</span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-lg font-medium text-green-600 mb-2">
-                {lastUpdate.toLocaleTimeString('en-AU', {
-                  hour: '2-digit',
-                  minute: '2-digit',
-                  second: '2-digit'
-                })}
-              </div>
-              <div className="flex space-x-2">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={async () => {
-                    console.log('🔄 [DEBUG] Manual refresh button clicked')
-                    try {
-                      // Refresh all data sources
-                      await Promise.all([
-                        loadEventData(),
-                        refreshAssignments?.(),
-                        refreshParticipants?.()
-                      ])
-                      console.log('✅ [DEBUG] Manual refresh completed')
-                    } catch (error) {
-                      console.error('❌ [DEBUG] Manual refresh error:', error)
-                    }
-                  }}
-                  className="text-xs"
+                  className="text-4xl font-bold mb-2"
+                  style={{ color: style.numberColor }}
                 >
-                  <RefreshCw className="h-3 w-3 mr-1" />
-                  Refresh
-                </Button>
-                {!realtimeConnected && (
-                  <Button
-                    size="sm"
-                    variant={pollingActive ? "default" : "outline"}
-                    onClick={pollingActive ? stopPolling : startPolling}
-                    className="text-xs"
-                  >
-                    <Radio className="h-3 w-3 mr-1" />
-                    {pollingActive ? 'Stop Polling' : 'Start Polling'}
-                  </Button>
-                )}
-                {process.env.NODE_ENV === 'development' && (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => {
-                      console.log('🔍 [DEBUG] Current state snapshot:', {
-                        eventId,
-                        assignmentsCount: assignments.length,
-                        participantsCount: participants.length,
-                        realtimeConnected,
-                        pollingActive,
-                        assignmentsRealtimeState,
-                        participantsRealtimeState
-                      })
-                    }}
-                    className="text-xs"
-                  >
-                    Debug Log
-                  </Button>
+                  {horse.number}
+                </div>
+
+                {cardState === 'available' ? (
+                  <>
+                    <div
+                      className="text-2xl text-center mb-2"
+                      style={{ color: style.nameColor }}
+                    >
+                      JOIN NOW
+                    </div>
+                    <ArrowRight className="w-5 h-5" style={{ color: style.nameColor }} />
+                  </>
+                ) : (
+                  <>
+                    {/* Participant Name */}
+                    <div
+                      className="text-2xl font-bold text-center uppercase mb-2 leading-tight"
+                      style={{ color: style.nameColor }}
+                    >
+                      {assignedParticipant?.participant_name}
+                    </div>
+
+                    {/* Status Badge */}
+                    <div
+                      className="px-3 py-1 rounded-full flex items-center space-x-1"
+                      style={{ backgroundColor: style.badgeColor }}
+                    >
+                      {cardState === 'paid' ? (
+                        <Check className="w-4 h-4 text-white" />
+                      ) : (
+                        <Clock className="w-4 h-4 text-white" />
+                      )}
+                      <span className="text-lg font-bold text-white">
+                        {cardState === 'paid' ? 'PAID' : 'PENDING'}
+                      </span>
+                    </div>
+                  </>
                 )}
               </div>
-            </CardContent>
-          </Card>
+            )
+          })}
+        </div>
+      </div>
+
+      {/* Footer Section - 200px height */}
+      <div className="h-[200px] bg-[#111111] flex">
+        {/* Left: Recent Activity Feed */}
+        <div className="flex-1 p-8">
+          <div className="flex items-center space-x-3 mb-4">
+            <Activity className="w-7 h-7 text-white" />
+            <h3 className="text-3xl font-bold text-white">RECENT ACTIVITY</h3>
+          </div>
+          <div className="space-y-2">
+            {recentActivity.length > 0 ? (
+              recentActivity.map((activity, index) => (
+                <div
+                  key={index}
+                  className="text-2xl text-white opacity-90"
+                >
+                  {activity}
+                </div>
+              ))
+            ) : (
+              <div className="text-2xl text-white opacity-75">
+                Waiting for first horse draw...
+              </div>
+            )}
+          </div>
         </div>
 
-        {/* Winners Section - Only show if event is completed and has results */}
-        {event.status === 'completed' && results.length > 0 && (
-          <div className="space-y-6">
-            {/* Main Winner */}
-            {results.find(r => r.place === 1) && (
-              <Card className="bg-gradient-to-br from-yellow-50 to-yellow-100 border-yellow-300">
-                <CardContent className="text-center py-8">
-                  <div className="flex justify-center mb-4">
-                    <Crown className="h-16 w-16 text-yellow-600" />
-                  </div>
-                  <h2 className="text-3xl md:text-4xl font-bold text-yellow-800 mb-2">
-                    🏆 MELBOURNE CUP WINNER! 🏆
-                  </h2>
-                  {(() => {
-                    const winner = results.find(r => r.place === 1)
-                    return winner && (
-                      <>
-                        <div className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">
-                          {winner.patron_entries?.participant_name || 'Unknown Winner'}
-                        </div>
-                        {winner.event_horses && (
-                          <div className="text-xl md:text-2xl text-gray-700 mb-4">
-                            Horse #{winner.event_horses.number} - {winner.event_horses.name}
-                          </div>
-                        )}
-                        {winner.prize_amount && (
-                          <div className="text-2xl md:text-3xl font-bold text-green-700">
-                            Prize: {formatCurrency(winner.prize_amount)}
-                          </div>
-                        )}
-                      </>
-                    )
-                  })()}
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Second and Third Place */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Second Place */}
-              {results.find(r => r.place === 2) && (
-                <Card className="bg-gradient-to-br from-gray-50 to-gray-100 border-gray-300">
-                  <CardContent className="text-center py-6">
-                    <div className="flex justify-center mb-3">
-                      <Medal className="h-12 w-12 text-gray-500" />
-                    </div>
-                    <h3 className="text-xl font-bold text-gray-800 mb-2">🥈 Second Place</h3>
-                    {(() => {
-                      const second = results.find(r => r.place === 2)
-                      return second && (
-                        <>
-                          <div className="text-lg font-bold text-gray-900 mb-1">
-                            {second.patron_entries?.participant_name || 'Unknown'}
-                          </div>
-                          {second.event_horses && (
-                            <div className="text-sm text-gray-600 mb-3">
-                              Horse #{second.event_horses.number} - {second.event_horses.name}
-                            </div>
-                          )}
-                          {second.prize_amount && (
-                            <div className="text-lg font-bold text-green-600">
-                              {formatCurrency(second.prize_amount)}
-                            </div>
-                          )}
-                        </>
-                      )
-                    })()}
-                  </CardContent>
-                </Card>
-              )}
-
-              {/* Third Place */}
-              {results.find(r => r.place === 3) && (
-                <Card className="bg-gradient-to-br from-orange-50 to-orange-100 border-orange-300">
-                  <CardContent className="text-center py-6">
-                    <div className="flex justify-center mb-3">
-                      <Award className="h-12 w-12 text-orange-600" />
-                    </div>
-                    <h3 className="text-xl font-bold text-orange-800 mb-2">🥉 Third Place</h3>
-                    {(() => {
-                      const third = results.find(r => r.place === 3)
-                      return third && (
-                        <>
-                          <div className="text-lg font-bold text-gray-900 mb-1">
-                            {third.patron_entries?.participant_name || 'Unknown'}
-                          </div>
-                          {third.event_horses && (
-                            <div className="text-sm text-gray-600 mb-3">
-                              Horse #{third.event_horses.number} - {third.event_horses.name}
-                            </div>
-                          )}
-                          {third.prize_amount && (
-                            <div className="text-lg font-bold text-green-600">
-                              {formatCurrency(third.prize_amount)}
-                            </div>
-                          )}
-                        </>
-                      )
-                    })()}
-                  </CardContent>
-                </Card>
-              )}
+        {/* Right: Prize Pool Display */}
+        <div className="flex items-center justify-center p-8">
+          <div
+            className="w-[547px] h-[136px] rounded-xl flex flex-col items-center justify-center"
+            style={{
+              background: 'linear-gradient(180deg, #ff8a00 0%, #ff4d8d 50%, #8b5cf6 100%)'
+            }}
+          >
+            <p className="text-lg text-white opacity-80 mb-2">PRIZE POOL</p>
+            <div className="text-6xl font-bold text-white mb-1">
+              {formatCurrency(prizePool)}
             </div>
+            <p className="text-base text-white opacity-70">Winner takes all!</p>
           </div>
-        )}
-
-        {/* Recent Assignments */}
-        {recentAssignments.length > 0 && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
-                <Crown className="h-5 w-5" />
-                <span>Recent Horse Assignments</span>
-                {realtimeState.isConnected && (
-                  <Badge
-                    variant="outline"
-                    className={`${
-                      realtimeState.connectionType === 'realtime'
-                        ? 'text-green-600 border-green-600 bg-green-50'
-                        : 'text-blue-600 border-blue-600 bg-blue-50'
-                    }`}
-                  >
-                    {realtimeState.connectionType === 'realtime' ? (
-                      <>
-                        <Zap className="h-3 w-3 mr-1" />
-                        REAL-TIME
-                      </>
-                    ) : (
-                      <>
-                        <Radio className="h-3 w-3 mr-1" />
-                        LIVE UPDATES
-                      </>
-                    )}
-                  </Badge>
-                )}
-              </CardTitle>
-              <CardDescription>
-                Latest participant to horse assignments •
-                {realtimeState.connectionType === 'realtime'
-                  ? ' Real-time streaming'
-                  : ' Updates every 2 seconds'
-                }
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3 max-h-80 overflow-y-auto">
-                {recentAssignments.slice(0, 10).map((assignment) => (
-                  <div
-                    key={assignment.id}
-                    className={`
-                      flex justify-between items-center p-3 rounded-lg border transition-all duration-500
-                      ${
-                        assignment.isNew
-                          ? 'bg-gradient-to-r from-yellow-50 to-yellow-100 border-yellow-300 shadow-lg transform scale-105'
-                          : 'bg-white border-gray-200 hover:border-gray-300'
-                      }
-                    `}
-                  >
-                    <div>
-                      <div className="font-medium text-gray-900 flex items-center space-x-2">
-                        <span>{assignment.participant_name}</span>
-                        {assignment.isNew && (
-                          <Badge className="bg-yellow-500 text-yellow-900 text-xs animate-pulse">
-                            NEW!
-                          </Badge>
-                        )}
-                      </div>
-                      <div className="text-sm text-gray-500">
-                        {new Date(assignment.created_at).toLocaleTimeString('en-AU', {
-                          hour: '2-digit',
-                          minute: '2-digit'
-                        })}
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <div className={`
-                        font-mono font-bold text-lg transition-colors duration-300
-                        ${assignment.isNew ? 'text-yellow-700' : 'text-gray-900'}
-                      `}>
-                        #{assignment.horse_number} {assignment.horse_name}
-                      </div>
-                      {assignment.jockey && (
-                        <div className="text-sm text-gray-500">
-                          {assignment.jockey}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* No Assignments Message */}
-        {recentAssignments.length === 0 && event.status === 'active' && (
-          <Card>
-            <CardContent className="text-center py-12">
-              <div className="flex justify-center mb-4">
-                <Trophy className="h-16 w-16 text-gray-400" />
-                {realtimeState.isConnected && (
-                  <Zap className="h-6 w-6 text-green-500 ml-2 animate-pulse" />
-                )}
-              </div>
-              <h3 className="text-xl font-medium text-gray-900 mb-2">
-                No Horse Assignments Yet
-              </h3>
-              <p className="text-gray-500 mb-2">
-                Assignments will appear here when the draw begins
-              </p>
-              {realtimeState.isConnected ? (
-                <p className="text-green-600 text-sm flex items-center justify-center space-x-1">
-                  <Zap className="h-4 w-4" />
-                  <span>Live updates active - ready to show new assignments</span>
-                </p>
-              ) : (
-                <p className="text-red-500 text-sm">
-                  ⚠️ Connection lost - refresh to see latest assignments
-                </p>
-              )}
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Footer */}
-        <div className="text-center text-gray-500 text-sm py-4">
-          <div className="flex flex-col items-center space-y-2 mb-4">
-            {/* Overall Connection Status */}
-            <div className="flex items-center space-x-2">
-              {realtimeState.isConnected ? (
-                <>
-                  {realtimeState.connectionType === 'realtime' ? (
-                    <>
-                      <Zap className="h-4 w-4 text-green-500 animate-pulse" />
-                      <span className="text-green-600 font-medium">Real-time streaming active</span>
-                    </>
-                  ) : (
-                    <>
-                      <Radio className="h-4 w-4 text-blue-500 animate-pulse" />
-                      <span className="text-blue-600 font-medium">Live updates active (polling)</span>
-                    </>
-                  )}
-                </>
-              ) : realtimeState.isReconnecting ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin text-yellow-500" />
-                  <span className="text-yellow-600 font-medium">Reconnecting...</span>
-                </>
-              ) : (
-                <>
-                  <div className="h-4 w-4 rounded-full bg-red-500"></div>
-                  <span className="text-red-600 font-medium">Connection issues</span>
-                </>
-              )}
-            </div>
-
-            {/* Detailed Connection Status */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
-              <div className="flex items-center justify-center space-x-1">
-                {realtimeState.isConnected ? (
-                  <div className={`w-2 h-2 rounded-full ${realtimeState.connectionType === 'realtime' ? 'bg-green-500' : 'bg-blue-500'}`}></div>
-                ) : (
-                  <div className="w-2 h-2 rounded-full bg-red-500"></div>
-                )}
-                <span>Assignments</span>
-              </div>
-              <div className="flex items-center justify-center space-x-1">
-                {realtimeState.isConnected ? (
-                  <div className={`w-2 h-2 rounded-full ${realtimeState.connectionType === 'realtime' ? 'bg-green-500' : 'bg-blue-500'}`}></div>
-                ) : (
-                  <div className="w-2 h-2 rounded-full bg-red-500"></div>
-                )}
-                <span>Participants</span>
-              </div>
-              <div className="flex items-center justify-center space-x-1">
-                {realtimeState.isConnected ? (
-                  <div className={`w-2 h-2 rounded-full ${realtimeState.connectionType === 'realtime' ? 'bg-green-500' : 'bg-blue-500'}`}></div>
-                ) : (
-                  <div className="w-2 h-2 rounded-full bg-red-500"></div>
-                )}
-                <span>Results & Status</span>
-              </div>
-            </div>
-
-            {/* Connection Type Info */}
-            {realtimeState.isConnected && (
-              <div className="text-xs text-gray-400">
-                {realtimeState.connectionType === 'realtime'
-                  ? 'Using Supabase real-time subscriptions'
-                  : 'Using efficient polling every 2 seconds'
-                }
-              </div>
-            )}
-
-            {/* Last Update Time */}
-            <div className="text-gray-400">
-              Last update: {lastUpdate.toLocaleTimeString('en-AU', {
-                hour: '2-digit',
-                minute: '2-digit',
-                second: '2-digit'
-              })}
-            </div>
-          </div>
-          <p>Melbourne Cup Manager</p>
         </div>
       </div>
     </div>

@@ -39,8 +39,25 @@ export function NewEventForm() {
   )
   const [user, setUser] = useState<any>(null)
   const [tenantId, setTenantId] = useState<string | null>(null)
+  const [selectedEventType, setSelectedEventType] = useState<string>('sweep')
   const router = useRouter()
   const supabase = createClient()
+
+  // Get selected event type from localStorage
+  useEffect(() => {
+    const storedType = localStorage.getItem('selectedEventType')
+    if (storedType) {
+      setSelectedEventType(storedType)
+      localStorage.removeItem('selectedEventType') // Clean up
+    }
+  }, [])
+
+  // Update form mode when selected type changes
+  useEffect(() => {
+    if (form && selectedEventType) {
+      form.setValue('mode', selectedEventType as 'sweep' | 'calcutta')
+    }
+  }, [selectedEventType, form])
 
   // Get user and tenant info
   useEffect(() => {
@@ -75,7 +92,7 @@ export function NewEventForm() {
       startsAt: MELBOURNE_CUP_2025_DATE,
       timezone: 'Australia/Melbourne',
       capacity: 24,
-      mode: 'sweep',
+      mode: selectedEventType as 'sweep' | 'calcutta',
       leadCapture: false,
       customTerms: '',
       customRules: '',
@@ -136,8 +153,8 @@ export function NewEventForm() {
 
       if (horsesError) throw horsesError
 
-      // Redirect to event details
-      router.push('/dashboard')
+      // Redirect to the created event details page
+      router.push(`/dashboard/events/${event.id}`)
     } catch (err) {
       console.error('Error creating event:', err)
       setError(err instanceof Error ? err.message : 'Failed to create event')
@@ -158,7 +175,7 @@ export function NewEventForm() {
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8 p-8">
         {error && (
           <div className="p-4 text-sm text-red-600 bg-red-50 border border-red-200 rounded-md">
             {error}
