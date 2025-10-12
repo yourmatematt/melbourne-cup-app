@@ -547,29 +547,47 @@ export function EventCreationWizard() {
     try {
       const data = form.getValues()
 
+      // Log the form data for debugging
+      console.log('🔍 Form data before submission:', data)
+      console.log('🔍 User ID:', user.id)
+      console.log('🔍 Tenant ID:', tenantId)
+      console.log('🔍 Date value type:', typeof data.startsAt, data.startsAt)
+
+      // Prepare the event data for submission - mapping to correct database schema
+      const eventData = {
+        tenant_id: tenantId,
+        name: data.name,
+        starts_at: typeof data.startsAt === 'string' ? data.startsAt : data.startsAt.toISOString(),
+        timezone: data.timezone,
+        capacity: data.capacity,
+        mode: data.mode,
+        lead_capture: data.leadCapture,
+        promo_enabled: data.promoEnabled,
+        promo_message: data.promoEnabled ? data.promoMessage : null,
+        promo_duration: data.promoEnabled ? data.promoDuration : null,
+        status: 'draft',
+        entry_fee: data.entryFee || 0,
+        custom_terms: data.customTerms || null,
+        custom_rules: data.customRules || null
+      }
+
+      console.log('🔍 Event data being sent to Supabase:', eventData)
+
       // Create event
       const { data: event, error: eventError } = await supabase
         .from('events')
-        .insert({
-          tenant_id: tenantId,
-          name: data.name,
-          starts_at: data.startsAt,
-          timezone: data.timezone,
-          capacity: data.capacity,
-          mode: data.mode,
-          lead_capture: data.leadCapture,
-          promo_enabled: data.promoEnabled,
-          promo_message: data.promoEnabled ? data.promoMessage : null,
-          promo_duration: data.promoEnabled ? data.promoDuration : null,
-          status: 'draft',
-          entry_fee: data.entryFee || 0,
-          custom_terms: data.customTerms || null,
-          custom_rules: data.customRules || null
-        })
+        .insert(eventData)
         .select()
         .single()
 
-      if (eventError) throw eventError
+      if (eventError) {
+        console.error('❌ Supabase event creation error:', eventError)
+        console.error('❌ Error code:', eventError.code)
+        console.error('❌ Error message:', eventError.message)
+        console.error('❌ Error details:', eventError.details)
+        console.error('❌ Error hint:', eventError.hint)
+        throw eventError
+      }
 
       // Create horses
       const horsesToInsert = horses.map(horse => ({
@@ -586,10 +604,17 @@ export function EventCreationWizard() {
 
       if (horsesError) throw horsesError
 
+      console.log('✅ Event created successfully:', event)
+
       // Redirect to the created event details page
       router.push(`/dashboard/events/${event.id}`)
     } catch (err) {
-      console.error('Error creating event:', err)
+      console.error('❌ Error creating event:', err)
+      console.error('❌ Error message:', err instanceof Error ? err.message : 'Unknown error')
+      console.error('❌ Form data sent:', form.getValues())
+
+      // Show user-friendly error message
+      alert('Failed to create event. Please check the console for details and try again.')
     } finally {
       setIsLoading(false)
     }
