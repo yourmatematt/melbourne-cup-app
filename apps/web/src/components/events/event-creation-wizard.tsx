@@ -570,38 +570,35 @@ export function EventCreationWizard() {
         custom_rules: data.customRules || null
       }
 
-      console.log('🔍 Event data being sent to Supabase:', eventData)
-
-      // Create event
-      const { data: event, error: eventError } = await supabase
-        .from('events')
-        .insert(eventData)
-        .select()
-        .single()
-
-      if (eventError) {
-        console.error('❌ Supabase event creation error:', eventError)
-        console.error('❌ Error code:', eventError.code)
-        console.error('❌ Error message:', eventError.message)
-        console.error('❌ Error details:', eventError.details)
-        console.error('❌ Error hint:', eventError.hint)
-        throw eventError
-      }
-
-      // Create horses
-      const horsesToInsert = horses.map(horse => ({
-        event_id: event.id,
+      // Prepare horses data for API
+      const horsesData = horses.map(horse => ({
         number: horse.number,
         name: horse.name,
         jockey: horse.jockey || null,
         is_scratched: horse.isScratched
       }))
 
-      const { error: horsesError } = await supabase
-        .from('event_horses')
-        .insert(horsesToInsert)
+      // Prepare full request payload for API
+      const requestPayload = {
+        event: eventData,
+        horses: horsesData
+      }
 
-      if (horsesError) throw horsesError
+      console.log('🔍 Data being sent to API:', requestPayload)
+
+      // Create event via API route
+      const response = await fetch('/api/events', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(requestPayload)
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || 'Failed to create event')
+      }
+
+      const { event } = await response.json()
 
       console.log('✅ Event created successfully:', event)
 
