@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { useParams } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { createClient } from '@/lib/supabase/client'
-import { QrCode, Link, BarChart3, Trophy, Settings, ArrowLeft } from 'lucide-react'
+import { QrCode, BarChart3, Trophy, Settings, ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
 
 interface Event {
@@ -19,7 +19,7 @@ interface Event {
 
 export default function EventOverviewPage() {
   const params = useParams()
-  const eventId = params.id as string
+  const eventId = params.eventId as string
   const [event, setEvent] = useState<Event | null>(null)
   const [activeTab, setActiveTab] = useState('control')
   const [loading, setLoading] = useState(true)
