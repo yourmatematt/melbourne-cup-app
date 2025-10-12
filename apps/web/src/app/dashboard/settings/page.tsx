@@ -5,12 +5,10 @@ import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { ArrowLeft, Settings, Save, Building, Palette, Loader2, CheckCircle, AlertTriangle } from 'lucide-react'
-import Link from 'next/link'
+import { DashboardLayout } from '@/components/layout/dashboard-layout'
+import { Upload, ChevronDown, Building, Palette } from 'lucide-react'
 import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase/client'
 
@@ -243,363 +241,279 @@ export default function VenueSettingsPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <Loader2 className="h-8 w-8 animate-spin text-blue-600 mx-auto mb-4" />
-          <p className="text-gray-600">Loading venue settings...</p>
+      <DashboardLayout>
+        <div className="flex items-center justify-center h-96">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600 mx-auto mb-4"></div>
+            <p className="text-gray-600">Loading venue settings...</p>
+          </div>
         </div>
-      </div>
+      </DashboardLayout>
     )
   }
 
   if (error || !venueSettings) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <Card className="w-full max-w-md">
-          <CardHeader className="text-center">
-            <CardTitle className="text-red-600">Error</CardTitle>
-            <CardDescription>{error || 'Venue settings not found'}</CardDescription>
-          </CardHeader>
-          <CardContent className="text-center">
-            <Link href="/dashboard">
-              <Button>Back to Dashboard</Button>
-            </Link>
-          </CardContent>
-        </Card>
-      </div>
+      <DashboardLayout>
+        <div className="flex items-center justify-center h-96">
+          <div className="bg-white rounded-[20px] border border-gray-200/50 shadow-sm p-8 text-center max-w-md">
+            <h2 className="text-xl font-semibold text-red-600 mb-2">Error</h2>
+            <p className="text-gray-600 mb-4">{error || 'Venue settings not found'}</p>
+            <Button
+              onClick={() => window.location.href = '/dashboard'}
+              className="bg-gradient-to-b from-[#ff8a00] via-[#ff4d8d] to-[#8b5cf6] text-white rounded-[12px]"
+            >
+              Back to Dashboard
+            </Button>
+          </div>
+        </div>
+      </DashboardLayout>
     )
   }
 
   const canEdit = venueSettings.user_role === 'owner' || venueSettings.user_role === 'admin'
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-white border-b">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
-              <Link href="/dashboard">
-                <Button variant="outline" size="sm">
-                  <ArrowLeft className="h-4 w-4 mr-2" />
-                  Back to Dashboard
-                </Button>
-              </Link>
-              <div>
-                <h1 className="text-2xl font-bold text-gray-900">Venue Settings</h1>
-                <p className="text-gray-600">{venueSettings.tenant.name}</p>
-              </div>
+    <DashboardLayout>
+      <div className="max-w-[1400px] mx-auto px-4 md:px-6 lg:px-8 py-4 md:py-6 lg:py-8">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-8">
+          {/* Venue Dropdown */}
+          <div className="bg-[rgba(0,0,0,0.04)] border border-[rgba(0,0,0,0.08)] rounded-lg px-4 py-2.5 flex items-center gap-2 min-w-[180px]">
+            <div className="w-6 h-6 bg-gradient-to-b from-[#ff8a00] via-[#ff4d8d] to-[#8b5cf6] rounded-full flex items-center justify-center">
+              <span className="text-white text-xs font-medium">T</span>
             </div>
-            <div className="flex items-center space-x-3">
-              {hasUnsavedChanges && (
-                <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">
-                  Unsaved Changes
-                </Badge>
-              )}
-              {getBillingStatusBadge(venueSettings.tenant.billing_status)}
-              <Badge variant="outline">
-                {venueSettings.user_role.charAt(0).toUpperCase() + venueSettings.user_role.slice(1)}
-              </Badge>
-            </div>
+            <span className="text-sm text-gray-800 flex-1">The Royal Hotel</span>
+            <ChevronDown className="w-4 h-4 text-gray-600" />
           </div>
         </div>
-      </div>
 
-      {/* Main Content */}
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <Tabs defaultValue="general" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="general" className="flex items-center space-x-2">
-              <Building className="h-4 w-4" />
-              <span>General</span>
-            </TabsTrigger>
-            <TabsTrigger value="branding" className="flex items-center space-x-2">
-              <Palette className="h-4 w-4" />
-              <span>Branding</span>
-            </TabsTrigger>
-          </TabsList>
+        {/* Page Title */}
+        <div className="mb-8">
+          <h1 className="text-[32px] leading-[48px] font-normal text-slate-900 mb-1">Venue Settings</h1>
+          <p className="text-[14px] leading-[20px] text-slate-600">Manage your venue configuration and branding</p>
+        </div>
 
-          {/* GENERAL TAB */}
-          <TabsContent value="general" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center space-x-2">
-                  <Building className="h-5 w-5" />
-                  <span>Venue Information</span>
-                </CardTitle>
-                <CardDescription>
-                  Basic venue details and contact information
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <Label htmlFor="name">Venue Name *</Label>
-                    <Input
-                      id="name"
-                      value={formData.name}
-                      onChange={(e) => handleNameChange(e.target.value)}
-                      placeholder="The Crown Hotel"
-                      className="mt-1"
-                      disabled={!canEdit}
-                    />
-                  </div>
+        {/* Tabs */}
+        <div className="bg-white rounded-[20px] border border-gray-200/50 shadow-sm">
+          <Tabs defaultValue="branding" className="w-full">
+            <div className="p-8 pb-0">
+              <TabsList className="bg-[#f8f7f4] border border-[rgba(0,0,0,0.08)] rounded-[16px] h-[46px] p-1 w-[200px]">
+                <TabsTrigger
+                  value="general"
+                  className="data-[state=active]:bg-transparent data-[state=inactive]:bg-transparent data-[state=inactive]:opacity-70 rounded-[10px] h-[36px] px-4 text-[16px] text-slate-900"
+                >
+                  General
+                </TabsTrigger>
+                <TabsTrigger
+                  value="branding"
+                  className="data-[state=active]:bg-gradient-to-b data-[state=active]:from-[#ff8a00] data-[state=active]:via-[#ff4d8d] data-[state=active]:to-[#8b5cf6] data-[state=active]:text-white data-[state=inactive]:bg-transparent data-[state=inactive]:text-slate-900 rounded-[10px] h-[36px] px-4 text-[16px]"
+                >
+                  Branding
+                </TabsTrigger>
+              </TabsList>
+            </div>
 
-                  <div>
-                    <Label htmlFor="slug">Venue Slug</Label>
-                    <Input
-                      id="slug"
-                      value={formData.slug}
-                      onChange={(e) => updateFormData('slug', e.target.value)}
-                      placeholder="the-crown-hotel"
-                      className="mt-1"
-                      disabled={!canEdit}
-                    />
-                    <p className="text-xs text-gray-500 mt-1">
-                      Used in URLs and system references
-                    </p>
-                  </div>
-                </div>
-
-                {!canEdit && (
-                  <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
-                    <p className="text-sm text-amber-700">
-                      You need owner or admin permissions to edit venue settings.
-                    </p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Account Information</CardTitle>
-                <CardDescription>
-                  Account status and subscription details
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <Label>Account Status</Label>
-                    <div className="mt-1">
-                      {getBillingStatusBadge(venueSettings.tenant.billing_status)}
-                    </div>
-                  </div>
-
-                  <div>
-                    <Label>Your Role</Label>
-                    <div className="mt-1">
-                      <Badge variant="outline">
-                        {venueSettings.user_role.charAt(0).toUpperCase() + venueSettings.user_role.slice(1)}
-                      </Badge>
-                    </div>
-                  </div>
-                </div>
-
-                <Separator />
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm">
-                  <div>
-                    <Label className="text-gray-600">Created</Label>
-                    <p className="mt-1">
-                      {new Date(venueSettings.tenant.created_at).toLocaleDateString('en-AU', {
-                        year: 'numeric',
-                        month: 'long',
-                        day: 'numeric'
-                      })}
-                    </p>
-                  </div>
-                  <div>
-                    <Label className="text-gray-600">Last Updated</Label>
-                    <p className="mt-1">
-                      {new Date(venueSettings.tenant.updated_at).toLocaleDateString('en-AU', {
-                        year: 'numeric',
-                        month: 'long',
-                        day: 'numeric'
-                      })}
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          {/* BRANDING TAB */}
-          <TabsContent value="branding" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center space-x-2">
-                  <Palette className="h-5 w-5" />
-                  <span>Brand Colors</span>
-                </CardTitle>
-                <CardDescription>
-                  Customize your venue's brand colors for events and communications
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <Label htmlFor="color_primary">Primary Color</Label>
-                    <div className="flex space-x-3 mt-1">
-                      <Input
-                        id="color_primary"
-                        type="color"
-                        value={formData.color_primary}
-                        onChange={(e) => updateFormData('color_primary', e.target.value)}
-                        className="w-16 h-10 p-1 rounded cursor-pointer"
-                        disabled={!canEdit}
-                      />
-                      <Input
-                        value={formData.color_primary}
-                        onChange={(e) => updateFormData('color_primary', e.target.value)}
-                        placeholder="#1F2937"
-                        className="flex-1 font-mono"
-                        disabled={!canEdit}
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <Label htmlFor="color_secondary">Secondary Color</Label>
-                    <div className="flex space-x-3 mt-1">
-                      <Input
-                        id="color_secondary"
-                        type="color"
-                        value={formData.color_secondary}
-                        onChange={(e) => updateFormData('color_secondary', e.target.value)}
-                        className="w-16 h-10 p-1 rounded cursor-pointer"
-                        disabled={!canEdit}
-                      />
-                      <Input
-                        value={formData.color_secondary}
-                        onChange={(e) => updateFormData('color_secondary', e.target.value)}
-                        placeholder="#6B7280"
-                        className="flex-1 font-mono"
-                        disabled={!canEdit}
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
-                  <Label className="text-sm font-medium">Color Preview</Label>
-                  <div className="flex space-x-4 mt-2">
-                    <div className="flex items-center space-x-2">
-                      <div
-                        className="w-8 h-8 rounded border"
-                        style={{ backgroundColor: formData.color_primary }}
-                      />
-                      <span className="text-sm">Primary</span>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <div
-                        className="w-8 h-8 rounded border"
-                        style={{ backgroundColor: formData.color_secondary }}
-                      />
-                      <span className="text-sm">Secondary</span>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Brand Assets</CardTitle>
-                <CardDescription>
-                  Upload and manage your venue's logo and background images
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
+            {/* GENERAL TAB */}
+            <TabsContent value="general" className="p-8 pt-6">
+              <div className="space-y-8">
+                {/* Venue Information */}
                 <div>
-                  <Label htmlFor="logo_url">Logo URL</Label>
-                  <Input
-                    id="logo_url"
-                    value={formData.logo_url}
-                    onChange={(e) => updateFormData('logo_url', e.target.value)}
-                    placeholder="https://example.com/logo.png"
-                    className="mt-1"
-                    disabled={!canEdit}
-                  />
-                  <p className="text-xs text-gray-500 mt-1">
-                    Direct URL to your venue logo (recommended: PNG, 200x200px)
-                  </p>
-                </div>
-
-                <div>
-                  <Label htmlFor="bg_image_url">Background Image URL</Label>
-                  <Input
-                    id="bg_image_url"
-                    value={formData.bg_image_url}
-                    onChange={(e) => updateFormData('bg_image_url', e.target.value)}
-                    placeholder="https://example.com/background.jpg"
-                    className="mt-1"
-                    disabled={!canEdit}
-                  />
-                  <p className="text-xs text-gray-500 mt-1">
-                    Background image for event pages (recommended: JPG, 1920x1080px)
-                  </p>
-                </div>
-
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                  <p className="text-sm text-blue-700">
-                    💡 Tip: Upload your images to a service like Cloudinary, AWS S3, or use your website's media library to get direct URLs.
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          {/* Save Actions Bar */}
-          {canEdit && (
-            <div className="sticky bottom-0 bg-white border-t border-gray-200 p-4 rounded-lg shadow-lg">
-              <div className="flex justify-between items-center">
-                <div className="flex items-center space-x-4">
-                  {hasUnsavedChanges && (
-                    <div className="flex items-center space-x-2 text-amber-600">
-                      <AlertTriangle className="h-4 w-4" />
-                      <span className="text-sm">You have unsaved changes</span>
+                  <h3 className="text-[18px] leading-[28px] font-normal text-slate-900 mb-5">Venue Information</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                      <Label className="text-[14px] text-slate-900 mb-3 block">Venue Name *</Label>
+                      <Input
+                        value={formData.name}
+                        onChange={(e) => handleNameChange(e.target.value)}
+                        placeholder="The Crown Hotel"
+                        className="bg-white border border-[rgba(0,0,0,0.08)] rounded-[8px] h-[48px] px-3"
+                        disabled={!canEdit}
+                      />
                     </div>
-                  )}
+                    <div>
+                      <Label className="text-[14px] text-slate-900 mb-3 block">Venue Slug</Label>
+                      <Input
+                        value={formData.slug}
+                        onChange={(e) => updateFormData('slug', e.target.value)}
+                        placeholder="the-crown-hotel"
+                        className="bg-white border border-[rgba(0,0,0,0.08)] rounded-[8px] h-[48px] px-3"
+                        disabled={!canEdit}
+                      />
+                      <p className="text-[12px] text-gray-500 mt-2">Used in URLs and system references</p>
+                    </div>
+                  </div>
                 </div>
 
-                <div className="flex space-x-3">
+                <Separator className="bg-[rgba(0,0,0,0.08)]" />
+
+                {/* Account Information */}
+                <div>
+                  <h3 className="text-[18px] leading-[28px] font-normal text-slate-900 mb-5">Account Information</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                      <Label className="text-[14px] text-slate-900 mb-3 block">Account Status</Label>
+                      <div className="mt-1">
+                        {getBillingStatusBadge(venueSettings.tenant.billing_status)}
+                      </div>
+                    </div>
+                    <div>
+                      <Label className="text-[14px] text-slate-900 mb-3 block">Your Role</Label>
+                      <div className="mt-1">
+                        <span className="bg-gray-100 text-gray-800 px-3 py-1 rounded-full text-sm">
+                          {venueSettings.user_role.charAt(0).toUpperCase() + venueSettings.user_role.slice(1)}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Save Actions */}
+              {canEdit && (
+                <div className="flex justify-end gap-3 mt-8 pt-6 border-t border-gray-200">
                   <Button
                     variant="outline"
                     onClick={() => {
                       if (hasUnsavedChanges) {
-                        loadVenueSettings() // Reset form
+                        loadVenueSettings()
                       }
                     }}
                     disabled={saving || !hasUnsavedChanges}
+                    className="bg-[#f8f7f4] border border-[rgba(0,0,0,0.08)] rounded-[12px] h-[36px] px-4"
                   >
-                    {hasUnsavedChanges ? 'Discard Changes' : 'Cancel'}
+                    Cancel
                   </Button>
-
                   <Button
                     onClick={handleSave}
                     disabled={saving || !formData.name.trim()}
-                    size="lg"
+                    className="bg-gradient-to-b from-[#ff8a00] via-[#ff4d8d] to-[#8b5cf6] text-white rounded-[12px] h-[36px] px-4"
                   >
-                    {saving ? (
-                      <>
-                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                        Saving...
-                      </>
-                    ) : (
-                      <>
-                        <Save className="h-4 w-4 mr-2" />
-                        Save Changes
-                      </>
-                    )}
+                    {saving ? 'Saving...' : 'Save Changes'}
                   </Button>
                 </div>
+              )}
+            </TabsContent>
+
+            {/* BRANDING TAB */}
+            <TabsContent value="branding" className="p-8 pt-6">
+              <div className="space-y-8">
+                {/* Brand Assets */}
+                <div>
+                  <h3 className="text-[18px] leading-[28px] font-normal text-slate-900 mb-5">Brand Assets</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    {/* Logo Upload */}
+                    <div>
+                      <Label className="text-[14px] text-slate-900 mb-3 block">Logo</Label>
+                      <div className="bg-[rgba(0,0,0,0.02)] border-2 border-[rgba(0,0,0,0.1)] border-dashed rounded-[8px] h-[140px] flex items-center justify-center">
+                        <div className="text-center">
+                          <div className="bg-[rgba(248,247,244,0.5)] rounded-full w-6 h-6 flex items-center justify-center mx-auto mb-2">
+                            <Upload className="w-4 h-4 text-slate-600" />
+                          </div>
+                          <p className="text-[14px] text-slate-900 mb-1">Click to upload or drag & drop</p>
+                          <p className="text-[12px] text-gray-500 mb-4">PNG, JPG, SVG (recommended: 200x200px)</p>
+                          <Button className="bg-[#f8f7f4] border border-[rgba(0,0,0,0.08)] text-slate-900 rounded-[8px] h-[42px] px-6">
+                            <Upload className="w-4 h-4 mr-2" />
+                            Upload Logo
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Background Image Upload */}
+                    <div>
+                      <Label className="text-[14px] text-slate-900 mb-3 block">Background Image</Label>
+                      <div className="bg-[rgba(0,0,0,0.02)] border-2 border-[rgba(0,0,0,0.1)] border-dashed rounded-[8px] h-[140px] flex items-center justify-center">
+                        <div className="text-center">
+                          <div className="bg-[rgba(248,247,244,0.5)] rounded-full w-6 h-6 flex items-center justify-center mx-auto mb-2">
+                            <Upload className="w-4 h-4 text-slate-600" />
+                          </div>
+                          <p className="text-[14px] text-slate-900 mb-1">Click to upload or drag & drop</p>
+                          <p className="text-[12px] text-gray-500 mb-4">JPG, PNG (recommended: 1920x1080px)</p>
+                          <Button className="bg-[#f8f7f4] border border-[rgba(0,0,0,0.08)] text-slate-900 rounded-[8px] h-[42px] px-6">
+                            <Upload className="w-4 h-4 mr-2" />
+                            Upload Background
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <Separator className="bg-[rgba(0,0,0,0.08)]" />
+
+                {/* Brand Colours */}
+                <div>
+                  <h3 className="text-[18px] leading-[28px] font-normal text-slate-900 mb-5">Brand Colours</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    {/* Primary Color */}
+                    <div>
+                      <Label className="text-[14px] text-slate-900 mb-3 block">Primary Color</Label>
+                      <div className="flex gap-3">
+                        <div
+                          className="w-12 h-12 rounded-[8px] border border-[rgba(0,0,0,0.08)]"
+                          style={{ backgroundColor: formData.color_primary }}
+                        />
+                        <Input
+                          value={formData.color_primary}
+                          onChange={(e) => updateFormData('color_primary', e.target.value)}
+                          placeholder="#1F2937"
+                          className="bg-white border border-[rgba(0,0,0,0.08)] rounded-[8px] h-[48px] px-3 w-[120px] font-mono text-[14px]"
+                          disabled={!canEdit}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Secondary Color */}
+                    <div>
+                      <Label className="text-[14px] text-slate-900 mb-3 block">Secondary Color</Label>
+                      <div className="flex gap-3">
+                        <div
+                          className="w-12 h-12 rounded-[8px] border border-[rgba(0,0,0,0.08)]"
+                          style={{ backgroundColor: formData.color_secondary }}
+                        />
+                        <Input
+                          value={formData.color_secondary}
+                          onChange={(e) => updateFormData('color_secondary', e.target.value)}
+                          placeholder="#6B7280"
+                          className="bg-white border border-[rgba(0,0,0,0.08)] rounded-[8px] h-[48px] px-3 w-[120px] font-mono text-[14px]"
+                          disabled={!canEdit}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                  <p className="text-[12px] text-gray-400 mt-4">Used for printable QR displays and results posters</p>
+                </div>
               </div>
-            </div>
-          )}
-        </Tabs>
+
+              {/* Save Actions */}
+              {canEdit && (
+                <div className="flex justify-end gap-3 mt-8 pt-6 border-t border-gray-200">
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      if (hasUnsavedChanges) {
+                        loadVenueSettings()
+                      }
+                    }}
+                    disabled={saving || !hasUnsavedChanges}
+                    className="bg-[#f8f7f4] border border-[rgba(0,0,0,0.08)] rounded-[12px] h-[36px] px-4"
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={handleSave}
+                    disabled={saving || !formData.name.trim()}
+                    className="bg-gradient-to-b from-[#ff8a00] via-[#ff4d8d] to-[#8b5cf6] text-white rounded-[12px] h-[36px] px-4"
+                  >
+                    {saving ? 'Saving...' : 'Save Changes'}
+                  </Button>
+                </div>
+              )}
+            </TabsContent>
+          </Tabs>
+        </div>
       </div>
-    </div>
+    </DashboardLayout>
   )
 }

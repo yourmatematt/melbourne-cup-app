@@ -14,17 +14,17 @@ export function StatCard({ title, value, subtitle, icon: Icon, className }: Stat
   return (
     <div
       className={cn(
-        "bg-white border border-gray-200 rounded-[20px] p-6 flex justify-between items-start shadow-sm",
+        "bg-white border border-[rgba(0,0,0,0.08)] rounded-[20px] pt-[25px] pb-[1px] px-[25px] flex justify-between items-start",
         className
       )}
     >
-      <div className="flex flex-col space-y-1">
-        <p className="text-sm text-slate-600 font-medium">{title}</p>
-        <h3 className="text-3xl font-bold text-slate-900">{value}</h3>
-        <p className="text-sm text-slate-600">{subtitle}</p>
+      <div className="flex flex-col gap-1 flex-1 h-[84px]">
+        <p className="text-[14px] leading-[20px] text-slate-600 font-['Arial:Regular',_sans-serif]">{title}</p>
+        <h3 className="text-[30px] leading-[36px] font-['Arial:Bold',_sans-serif] text-slate-900 font-bold">{value}</h3>
+        <p className="text-[14px] leading-[20px] text-slate-600 font-['Arial:Regular',_sans-serif]">{subtitle}</p>
       </div>
-      <div className="p-2 rounded-[20px] bg-gray-50">
-        <Icon className="h-5 w-5 text-gray-600" />
+      <div className="w-[36px] h-[36px] rounded-[20px] flex items-center justify-center pt-2 px-2 pb-0">
+        <Icon className="w-5 h-5" />
       </div>
     </div>
   )
