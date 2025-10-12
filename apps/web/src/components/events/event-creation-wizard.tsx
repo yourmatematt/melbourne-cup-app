@@ -60,11 +60,12 @@ function EventDetailsStep({ formData, setFormData, errors }: {
               <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-5 h-5" />
               <Input
                 type="date"
-                value={formData.startsAt ? formData.startsAt.toISOString().split('T')[0] : ''}
+                value={formData.startsAt ? (typeof formData.startsAt === 'string' ? formData.startsAt.split('T')[0] : formData.startsAt.toISOString().split('T')[0]) : ''}
                 onChange={(e) => {
                   const date = new Date(e.target.value)
                   if (formData.startsAt) {
-                    date.setHours(formData.startsAt.getHours(), formData.startsAt.getMinutes())
+                    const currentDate = new Date(formData.startsAt)
+                    date.setHours(currentDate.getHours(), currentDate.getMinutes())
                   } else {
                     date.setHours(15, 0) // Default 3 PM
                   }
@@ -77,7 +78,7 @@ function EventDetailsStep({ formData, setFormData, errors }: {
               <Clock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-5 h-5" />
               <Input
                 type="time"
-                value={formData.startsAt ? formData.startsAt.toTimeString().slice(0, 5) : ''}
+                value={formData.startsAt ? (typeof formData.startsAt === 'string' ? new Date(formData.startsAt).toTimeString().slice(0, 5) : formData.startsAt.toTimeString().slice(0, 5)) : ''}
                 onChange={(e) => {
                   const [hours, minutes] = e.target.value.split(':').map(Number)
                   const date = formData.startsAt ? new Date(formData.startsAt) : new Date()
