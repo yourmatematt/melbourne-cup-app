@@ -297,12 +297,12 @@ export default function VenueSettingsPage() {
 
         {/* Tabs */}
         <div className="bg-white rounded-[20px] border border-gray-200/50 shadow-sm">
-          <Tabs defaultValue="branding" className="w-full">
+          <Tabs defaultValue="general" className="w-full">
             <div className="p-8 pb-0">
               <TabsList className="bg-[#f8f7f4] border border-[rgba(0,0,0,0.08)] rounded-[16px] h-[46px] p-1 w-[200px]">
                 <TabsTrigger
                   value="general"
-                  className="data-[state=active]:bg-transparent data-[state=inactive]:bg-transparent data-[state=inactive]:opacity-70 rounded-[10px] h-[36px] px-4 text-[16px] text-slate-900"
+                  className="data-[state=active]:bg-gradient-to-b data-[state=active]:from-[#ff8a00] data-[state=active]:via-[#ff4d8d] data-[state=active]:to-[#8b5cf6] data-[state=active]:text-white data-[state=inactive]:bg-transparent data-[state=inactive]:text-slate-900 rounded-[10px] h-[36px] px-4 text-[16px]"
                 >
                   General
                 </TabsTrigger>
