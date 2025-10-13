@@ -123,6 +123,9 @@ export default function EventSettingsPage() {
   const router = useRouter()
   const eventId = params.eventId as string
 
+  // Ensure Badge component is loaded in initial bundle
+  const _ = Badge
+
   const [eventSettings, setEventSettings] = useState<EventSettings | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
