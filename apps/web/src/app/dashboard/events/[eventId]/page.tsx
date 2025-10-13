@@ -559,6 +559,13 @@ function EventOverviewContent() {
   const [activeTab, setActiveTab] = useState(0)
   const [showVenueDropdown, setShowVenueDropdown] = useState(false)
   const venueDropdownRef = useRef<HTMLDivElement>(null)
+
+  // Handle navigation to settings page when Settings tab is selected
+  useEffect(() => {
+    if (activeTab === 5) {
+      router.push(`/dashboard/events/${eventId}/settings`)
+    }
+  }, [activeTab, router, eventId])
   const [showPaymentConfirmModal, setShowPaymentConfirmModal] = useState(false)
   const [pendingPaymentChange, setPendingPaymentChange] = useState<{
     participantId: string
@@ -1825,12 +1832,8 @@ function EventOverviewContent() {
         )
 
       case 5: // Event Settings
-        return (
-          <div className="bg-white border border-gray-200/50 rounded-[20px] p-8">
-            <h2 className="text-2xl font-bold text-slate-900 mb-4">Event Settings</h2>
-            <p className="text-slate-600">Event configuration and settings will be available here.</p>
-          </div>
-        )
+        // Navigation is handled by useEffect, this case should not normally be rendered
+        return null
 
 
       default:
