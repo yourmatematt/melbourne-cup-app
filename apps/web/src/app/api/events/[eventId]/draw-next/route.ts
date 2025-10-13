@@ -26,16 +26,38 @@ export async function POST(
 
     console.log('✅ EventId validated:', eventId)
 
+    // Fetch event to check if payment is required
+    const { data: event, error: eventError } = await supabaseAdmin
+      .from('events')
+      .select('requires_payment')
+      .eq('id', eventId)
+      .single()
+
+    if (eventError) {
+      console.error('❌ Error fetching event:', eventError)
+      throw eventError
+    }
+
+    console.log('✅ Event payment requirement:', event?.requires_payment ? 'Required' : 'Not required')
+
     // Get participants who haven't been assigned horses yet
-    const { data: participantsData, error: participantsError } = await supabaseAdmin
+    const participantsQuery = supabaseAdmin
       .from('patron_entries')
       .select(`
         id,
         participant_name,
-        created_at
+        created_at,
+        payment_status
       `)
       .eq('event_id', eventId)
       .order('created_at', { ascending: true })
+
+    // If event requires payment, only include paid participants
+    if (event?.requires_payment) {
+      participantsQuery.eq('payment_status', 'paid')
+    }
+
+    const { data: participantsData, error: participantsError } = await participantsQuery
 
     if (participantsError) {
       console.error('❌ Error fetching participants:', participantsError)
@@ -58,8 +80,11 @@ export async function POST(
     const waitingParticipants = (participantsData || []).filter(p => !assignedParticipantIds.has(p.id))
 
     if (waitingParticipants.length === 0) {
+      const message = event?.requires_payment
+        ? 'No paid participants waiting for assignment'
+        : 'No participants waiting for assignment'
       return NextResponse.json(
-        { error: 'No participants waiting for assignment' },
+        { error: message },
         { status: 400 }
       )
     }
