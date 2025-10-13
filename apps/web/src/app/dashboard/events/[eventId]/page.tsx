@@ -644,71 +644,73 @@ function EventOverviewContent() {
               />
             </div>
 
-            {/* Draw Controls */}
-            <div className="bg-[#f8f7f4] rounded-[20px] p-6 mb-8">
-              <h3 className="text-lg font-bold text-slate-900 mb-6">Draw Progress</h3>
+            {/* Draw Controls - Only show when participants exist */}
+            {participants.length > 0 && (
+              <div className="bg-[#f8f7f4] rounded-[20px] p-6 mb-8">
+                <h3 className="text-lg font-bold text-slate-900 mb-6">Draw Progress</h3>
 
-              <div className="space-y-2 mb-4">
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-slate-600">Progress</span>
-                  <span className="text-slate-900 font-medium">{drawStats.progressPercentage}%</span>
+                <div className="space-y-2 mb-4">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-slate-600">Progress</span>
+                    <span className="text-slate-900 font-medium">{drawStats.progressPercentage}%</span>
+                  </div>
+                  <GradientProgressBar percentage={drawStats.progressPercentage} />
                 </div>
-                <GradientProgressBar percentage={drawStats.progressPercentage} />
+
+                <div className="flex items-center justify-between text-sm mb-6">
+                  <span className="text-slate-600">
+                    {drawStats.assigned} of 24 horses assigned
+                  </span>
+                  <span className="text-slate-900 font-medium">
+                    {drawStats.waiting} participants waiting
+                  </span>
+                </div>
+
+                {/* All Assigned Message */}
+                {allAssigned && (
+                  <div className="bg-green-50 border border-green-200 rounded-[20px] p-6 text-center mb-6">
+                    <CheckCircle className="h-8 w-8 text-green-600 mx-auto mb-2" />
+                    <h3 className="text-lg font-bold text-green-900 mb-1">All participants assigned!</h3>
+                    <p className="text-green-700">Every participant has been assigned a horse. The draw is complete.</p>
+                  </div>
+                )}
+
+                {/* Action Cards */}
+                {!allAssigned && (
+                  <div className="grid grid-cols-2 gap-6">
+                    <ActionCard
+                      title="Draw Next"
+                      description="Draw a random horse for the next waiting participant"
+                      bulletPoints={[
+                        "Perfect for building suspense during your event",
+                        "Results appear live on the QR code display",
+                        "Creates an exciting reveal moment"
+                      ]}
+                      buttonText={isDrawing ? "Drawing..." : "Draw Next Participant"}
+                      buttonIcon={Shuffle}
+                      onButtonClick={handleDrawNext}
+                      disabled={isDrawing || drawStats.waiting === 0}
+                      buttonVariant="primary"
+                    />
+
+                    <ActionCard
+                      title="Draw All"
+                      description="Instantly assign all remaining participants to horses"
+                      bulletPoints={[
+                        "Fast and convenient for quick setup",
+                        "Participants can check results via QR code",
+                        "Great for online or async sweeps"
+                      ]}
+                      buttonText={isDrawing ? "Drawing..." : "Draw All Remaining"}
+                      buttonIcon={Zap}
+                      onButtonClick={handleDrawAll}
+                      disabled={isDrawing || drawStats.waiting === 0}
+                      buttonVariant="secondary"
+                    />
+                  </div>
+                )}
               </div>
-
-              <div className="flex items-center justify-between text-sm mb-6">
-                <span className="text-slate-600">
-                  {drawStats.assigned} of 24 horses assigned
-                </span>
-                <span className="text-slate-900 font-medium">
-                  {drawStats.waiting} participants waiting
-                </span>
-              </div>
-
-              {/* All Assigned Message */}
-              {allAssigned && (
-                <div className="bg-green-50 border border-green-200 rounded-[20px] p-6 text-center mb-6">
-                  <CheckCircle className="h-8 w-8 text-green-600 mx-auto mb-2" />
-                  <h3 className="text-lg font-bold text-green-900 mb-1">All participants assigned!</h3>
-                  <p className="text-green-700">Every participant has been assigned a horse. The draw is complete.</p>
-                </div>
-              )}
-
-              {/* Action Cards */}
-              {!allAssigned && (
-                <div className="grid grid-cols-2 gap-6">
-                  <ActionCard
-                    title="Draw Next"
-                    description="Draw a random horse for the next waiting participant"
-                    bulletPoints={[
-                      "Perfect for building suspense during your event",
-                      "Results appear live on the QR code display",
-                      "Creates an exciting reveal moment"
-                    ]}
-                    buttonText={isDrawing ? "Drawing..." : "Draw Next Participant"}
-                    buttonIcon={Shuffle}
-                    onButtonClick={handleDrawNext}
-                    disabled={isDrawing || drawStats.waiting === 0}
-                    buttonVariant="primary"
-                  />
-
-                  <ActionCard
-                    title="Draw All"
-                    description="Instantly assign all remaining participants to horses"
-                    bulletPoints={[
-                      "Fast and convenient for quick setup",
-                      "Participants can check results via QR code",
-                      "Great for online or async sweeps"
-                    ]}
-                    buttonText={isDrawing ? "Drawing..." : "Draw All Remaining"}
-                    buttonIcon={Zap}
-                    onButtonClick={handleDrawAll}
-                    disabled={isDrawing || drawStats.waiting === 0}
-                    buttonVariant="secondary"
-                  />
-                </div>
-              )}
-            </div>
+            )}
 
             {/* Two-column layout */}
             <div className="grid grid-cols-2 gap-6">
