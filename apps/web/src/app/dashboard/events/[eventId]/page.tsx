@@ -1046,73 +1046,114 @@ function EventOverviewContent() {
 
   const handlePrintQR = () => {
     try {
-      // Create a new window for printing
-      const printWindow = window.open('', '_blank')
-      if (!printWindow) {
-        toast.error('Failed to open print window')
+      const qrSvg = document.getElementById('qr-code-canvas')
+      if (!qrSvg) {
+        toast.error('QR code not found')
         return
       }
 
-      printWindow.document.write(`
-        <!DOCTYPE html>
-        <html>
-        <head>
-          <title>QR Code - ${event?.name || 'Event'}</title>
-          <style>
-            body {
-              font-family: Arial, sans-serif;
-              text-align: center;
-              padding: 40px;
-              margin: 0;
-            }
-            .qr-container {
-              display: inline-block;
-              padding: 20px;
-              border: 2px solid #000;
-              margin: 20px 0;
-            }
-            .qr-placeholder {
-              width: 250px;
-              height: 250px;
-              border: 1px solid #ccc;
-              display: flex;
-              align-items: center;
-              justify-content: center;
-              font-size: 16px;
-              margin: 0 auto 20px;
-            }
-            .url {
-              font-family: monospace;
-              font-size: 14px;
-              word-break: break-all;
-              margin: 10px 0;
-            }
-            @media print {
-              body { margin: 0; }
-            }
-          </style>
-        </head>
-        <body>
-          <h1>${event?.name || 'Event'} - QR Code</h1>
-          <div class="qr-container">
-            <div class="qr-placeholder">QR Code</div>
-            <div class="url">${joinUrl}</div>
-          </div>
-          <p>Scan to join the event</p>
-        </body>
-        </html>
-      `)
+      // Convert SVG to canvas
+      const canvas = document.createElement('canvas')
+      const ctx = canvas.getContext('2d')
+      if (!ctx) {
+        toast.error('Failed to create canvas')
+        return
+      }
 
-      printWindow.document.close()
-      printWindow.focus()
+      // Set canvas size with padding
+      canvas.width = 350
+      canvas.height = 350
 
-      // Wait for content to load then print
-      setTimeout(() => {
-        printWindow.print()
-        printWindow.close()
-      }, 500)
+      // Create white background
+      ctx.fillStyle = '#ffffff'
+      ctx.fillRect(0, 0, 350, 350)
 
-      toast.success('Print dialog opened', { duration: 2000 })
+      // Create an image from the SVG
+      const svgData = new XMLSerializer().serializeToString(qrSvg)
+      const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' })
+      const url = URL.createObjectURL(svgBlob)
+
+      const img = new Image()
+      img.onload = () => {
+        // Draw the SVG image centered on canvas
+        ctx.drawImage(img, 50, 50, 250, 250)
+
+        // Get the data URL for the QR image
+        const dataUrl = canvas.toDataURL('image/png')
+
+        // Create a new window for printing
+        const printWindow = window.open('', '_blank')
+        if (!printWindow) {
+          toast.error('Failed to open print window')
+          URL.revokeObjectURL(url)
+          return
+        }
+
+        printWindow.document.write(`
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <title>QR Code - ${event?.name || 'Event'}</title>
+            <style>
+              body {
+                font-family: Arial, sans-serif;
+                text-align: center;
+                padding: 40px;
+                margin: 0;
+              }
+              .qr-container {
+                display: inline-block;
+                padding: 20px;
+                border: 2px solid #000;
+                margin: 20px 0;
+              }
+              .qr-image {
+                width: 300px;
+                height: 300px;
+                margin: 0 auto 20px;
+              }
+              .url {
+                font-family: monospace;
+                font-size: 14px;
+                word-break: break-all;
+                margin: 10px 0;
+              }
+              @media print {
+                body { margin: 0; }
+              }
+            </style>
+          </head>
+          <body>
+            <h1>${event?.name || 'Event'} - QR Code</h1>
+            <div class="qr-container">
+              <img src="${dataUrl}" class="qr-image" alt="QR Code" />
+              <div class="url">${joinUrl}</div>
+            </div>
+            <p>Scan to join the event</p>
+          </body>
+          </html>
+        `)
+
+        printWindow.document.close()
+        printWindow.focus()
+
+        // Wait for content to load then print
+        setTimeout(() => {
+          printWindow.print()
+          printWindow.close()
+        }, 500)
+
+        URL.revokeObjectURL(url)
+        toast.success('Print dialog opened', { duration: 2000 })
+      }
+
+      img.onerror = () => {
+        console.error('Failed to load SVG image')
+        toast.error('Failed to load QR code image')
+        URL.revokeObjectURL(url)
+      }
+
+      img.src = url
     } catch (error) {
       console.error('Error printing QR code:', error)
       toast.error('Failed to print QR code')
