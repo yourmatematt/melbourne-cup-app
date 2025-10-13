@@ -762,6 +762,14 @@ function EventOverviewContent() {
 
       setParticipants(transformedParticipants)
 
+      // Debug payment status calculation
+      console.log('DEBUG: Payment status breakdown:')
+      console.log('Total participants:', transformedParticipants.length)
+      console.log('Payment statuses:', transformedParticipants.map(p => ({ name: p.participant_name, status: p.payment_status })))
+      console.log('Paid count:', transformedParticipants.filter(p => p.payment_status === 'paid').length)
+      console.log('Pending count:', transformedParticipants.filter(p => p.payment_status === 'pending').length)
+      console.log('Expired count:', transformedParticipants.filter(p => p.payment_status === 'expired').length)
+
       // Calculate stats
       const assigned = transformedParticipants.filter(p => p.horse_number).length
       const waiting = transformedParticipants.filter(p => !p.horse_number).length
