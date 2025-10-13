@@ -564,10 +564,7 @@ export function EventCreationWizard() {
         promo_enabled: data.promoEnabled ?? false,
         promo_message: data.promoEnabled ? data.promoMessage : null,
         promo_duration: data.promoEnabled ? data.promoDuration : null,
-        status: 'draft',
-        entry_fee: data.entryFee || 0,
-        custom_terms: data.customTerms || null,
-        custom_rules: data.customRules || null
+        status: 'draft'
       }
 
       // Prepare horses data for API
