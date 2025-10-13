@@ -346,7 +346,7 @@ function EventOverviewContent() {
         .select(`
           patron_entry_id,
           event_horses!inner(
-            horse_number,
+            number,
             name
           )
         `)
@@ -361,7 +361,7 @@ function EventOverviewContent() {
       if (assignmentsData) {
         assignmentsData.forEach(assignment => {
           assignmentMap.set(assignment.patron_entry_id, {
-            horse_number: assignment.event_horses.horse_number,
+            horse_number: assignment.event_horses.number,
             horse_name: assignment.event_horses.name
           })
         })
@@ -471,7 +471,7 @@ function EventOverviewContent() {
         .from('event_horses')
         .select('id, name')
         .eq('event_id', eventId)
-        .eq('horse_number', randomHorse)
+        .eq('number', randomHorse)
         .single()
 
       if (horseError) throw horseError
@@ -535,16 +535,16 @@ function EventOverviewContent() {
       // Get horse details for all horses we'll assign
       const { data: horsesData, error: horsesError } = await supabase
         .from('event_horses')
-        .select('id, horse_number, name')
+        .select('id, number, name')
         .eq('event_id', eventId)
-        .in('horse_number', shuffledHorses.slice(0, waitingParticipants.length))
+        .in('number', shuffledHorses.slice(0, waitingParticipants.length))
 
       if (horsesError) throw horsesError
 
       // Create horse number to ID mapping
       const horseMap = new Map()
       horsesData.forEach(horse => {
-        horseMap.set(horse.horse_number, horse.id)
+        horseMap.set(horse.number, horse.id)
       })
 
       // Create assignments
