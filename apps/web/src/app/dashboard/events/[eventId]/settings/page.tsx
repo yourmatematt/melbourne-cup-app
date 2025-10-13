@@ -27,11 +27,6 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog'
 import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from '@/components/ui/collapsible'
-import {
   ArrowLeft,
   Settings,
   Save,
@@ -138,7 +133,7 @@ export default function EventSettingsPage() {
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
 
   // Accordion state
-  const [openSections, setOpenSections] = useState<string[]>(['general'])
+  const [openSection, setOpenSection] = useState<string | null>('general')
 
   const [formData, setFormData] = useState<FormData>({
     name: '',
@@ -405,11 +400,7 @@ export default function EventSettingsPage() {
   }
 
   function toggleSection(sectionId: string) {
-    setOpenSections(prev =>
-      prev.includes(sectionId)
-        ? prev.filter(id => id !== sectionId)
-        : [...prev, sectionId]
-    )
+    setOpenSection(prev => prev === sectionId ? null : sectionId)
   }
 
   if (loading) {
@@ -543,19 +534,23 @@ export default function EventSettingsPage() {
               <div className="bg-white border border-[rgba(0,0,0,0.08)] rounded-[20px] overflow-hidden">
 
                 {/* General Details Section */}
-                <Collapsible open={openSections.includes('general')} onOpenChange={() => toggleSection('general')}>
+                <div>
                   <div className="border-b border-[rgba(0,0,0,0.08)]">
-                    <CollapsibleTrigger className="w-full p-6 text-left hover:bg-gray-50 transition-colors">
+                    <button
+                      onClick={() => toggleSection('general')}
+                      className="w-full p-6 text-left hover:bg-gray-50 transition-colors"
+                    >
                       <div className="flex items-center justify-between">
                         <div>
                           <h3 className="font-['Arial:Regular',_sans-serif] text-[18px] text-slate-900 mb-1">General Details</h3>
                           <p className="font-['Arial:Regular',_sans-serif] text-[14px] text-slate-600">Basic event information and descriptions</p>
                         </div>
-                        <ChevronDown className={`w-4 h-4 transition-transform ${openSections.includes('general') ? 'rotate-180' : ''}`} />
+                        <ChevronDown className={`w-4 h-4 transition-transform ${openSection === 'general' ? 'rotate-180' : ''}`} />
                       </div>
-                    </CollapsibleTrigger>
+                    </button>
                   </div>
-                  <CollapsibleContent className="p-6 space-y-6">
+                  {openSection === 'general' && (
+                    <div className="p-6 space-y-6">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div>
                         <Label htmlFor="name">Event Name *</Label>
@@ -644,23 +639,27 @@ export default function EventSettingsPage() {
                         className="mt-1"
                       />
                     </div>
-                  </CollapsibleContent>
-                </Collapsible>
+                  )}
+                </div>
 
                 {/* Configuration Section */}
-                <Collapsible open={openSections.includes('configuration')} onOpenChange={() => toggleSection('configuration')}>
+                <div>
                   <div className="border-b border-[rgba(0,0,0,0.08)]">
-                    <CollapsibleTrigger className="w-full p-6 text-left hover:bg-gray-50 transition-colors">
+                    <button
+                      onClick={() => toggleSection('configuration')}
+                      className="w-full p-6 text-left hover:bg-gray-50 transition-colors"
+                    >
                       <div className="flex items-center justify-between">
                         <div>
                           <h3 className="font-['Arial:Regular',_sans-serif] text-[18px] text-slate-900 mb-1">Configuration</h3>
                           <p className="font-['Arial:Regular',_sans-serif] text-[14px] text-slate-600">Participant limits and data collection settings</p>
                         </div>
-                        <ChevronDown className={`w-4 h-4 transition-transform ${openSections.includes('configuration') ? 'rotate-180' : ''}`} />
+                        <ChevronDown className={`w-4 h-4 transition-transform ${openSection === 'configuration' ? 'rotate-180' : ''}`} />
                       </div>
-                    </CollapsibleTrigger>
+                    </button>
                   </div>
-                  <CollapsibleContent className="p-6 space-y-6">
+                  {openSection === 'configuration' && (
+                    <div className="p-6 space-y-6">
                     <div>
                       <div className="flex items-center justify-between">
                         <div>
@@ -779,23 +778,27 @@ export default function EventSettingsPage() {
                         </div>
                       </div>
                     )}
-                  </CollapsibleContent>
-                </Collapsible>
+                  )}
+                </div>
 
                 {/* Status & Sharing Section */}
-                <Collapsible open={openSections.includes('status')} onOpenChange={() => toggleSection('status')}>
+                <div>
                   <div className="border-b border-[rgba(0,0,0,0.08)]">
-                    <CollapsibleTrigger className="w-full p-6 text-left hover:bg-gray-50 transition-colors">
+                    <button
+                      onClick={() => toggleSection('status')}
+                      className="w-full p-6 text-left hover:bg-gray-50 transition-colors"
+                    >
                       <div className="flex items-center justify-between">
                         <div>
                           <h3 className="font-['Arial:Regular',_sans-serif] text-[18px] text-slate-900 mb-1">Status & Sharing</h3>
                           <p className="font-['Arial:Regular',_sans-serif] text-[14px] text-slate-600">Event lifecycle and sharing options</p>
                         </div>
-                        <ChevronDown className={`w-4 h-4 transition-transform ${openSections.includes('status') ? 'rotate-180' : ''}`} />
+                        <ChevronDown className={`w-4 h-4 transition-transform ${openSection === 'status' ? 'rotate-180' : ''}`} />
                       </div>
-                    </CollapsibleTrigger>
+                    </button>
                   </div>
-                  <CollapsibleContent className="p-6 space-y-6">
+                  {openSection === 'status' && (
+                    <div className="p-6 space-y-6">
                     <div className="flex items-center justify-between">
                       <div>
                         <Label>Current Status</Label>
@@ -881,21 +884,25 @@ export default function EventSettingsPage() {
                         </Link>
                       </Button>
                     </div>
-                  </CollapsibleContent>
-                </Collapsible>
+                  )}
+                </div>
 
                 {/* Danger Zone Section */}
-                <Collapsible open={openSections.includes('danger')} onOpenChange={() => toggleSection('danger')}>
-                  <CollapsibleTrigger className="w-full p-6 text-left hover:bg-gray-50 transition-colors">
+                <div>
+                  <button
+                    onClick={() => toggleSection('danger')}
+                    className="w-full p-6 text-left hover:bg-gray-50 transition-colors"
+                  >
                     <div className="flex items-center justify-between">
                       <div>
                         <h3 className="font-['Arial:Regular',_sans-serif] text-[18px] text-red-600 mb-1">Danger Zone</h3>
                         <p className="font-['Arial:Regular',_sans-serif] text-[14px] text-slate-600">Irreversible actions that will permanently affect your event</p>
                       </div>
-                      <ChevronDown className={`w-4 h-4 transition-transform ${openSections.includes('danger') ? 'rotate-180' : ''}`} />
+                      <ChevronDown className={`w-4 h-4 transition-transform ${openSection === 'danger' ? 'rotate-180' : ''}`} />
                     </div>
-                  </CollapsibleTrigger>
-                  <CollapsibleContent className="p-6">
+                  </button>
+                  {openSection === 'danger' && (
+                    <div className="p-6">
                     <div className="bg-red-50 border border-red-200 rounded-lg p-4">
                       <h4 className="font-semibold text-red-900 mb-2">Delete Event</h4>
                       <p className="text-sm text-red-700 mb-4">
@@ -970,8 +977,8 @@ export default function EventSettingsPage() {
                         </div>
                       )}
                     </div>
-                  </CollapsibleContent>
-                </Collapsible>
+                  )}
+                </div>
 
               </div>
 
