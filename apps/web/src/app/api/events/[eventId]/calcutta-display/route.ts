@@ -6,7 +6,7 @@ interface CalcuttaDisplayData {
     id: string
     name: string
     starts_at: string
-    status: 'draft' | 'active' | 'drawing' | 'racing' | 'completed' | 'cancelled'
+    status: 'active' | 'drawing' | 'racing' | 'completed' | 'cancelled'
     mode: 'calcutta' | 'sweep'
     tenants?: {
       id: string

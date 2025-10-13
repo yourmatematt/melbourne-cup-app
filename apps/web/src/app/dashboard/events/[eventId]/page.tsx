@@ -77,7 +77,7 @@ type Event = {
   id: string
   name: string
   starts_at: string
-  status: 'draft' | 'active' | 'drawing' | 'completed' | 'cancelled'
+  status: 'active' | 'drawing' | 'completed' | 'cancelled'
   capacity: number
   mode: 'sweep' | 'calcutta'
   entry_fee?: number
@@ -125,7 +125,6 @@ function getInitials(name: string): string {
 
 function getStatusIcon(status: string) {
   switch (status) {
-    case 'draft': return Clock
     case 'active': return Play
     case 'drawing': return Clock
     case 'completed': return Trophy
@@ -1429,13 +1428,42 @@ function EventOverviewContent() {
 
   function getStatusColor(status: string) {
     switch (status) {
-      case 'draft': return 'bg-gray-100 text-gray-800'
       case 'active': return 'bg-green-100 text-green-800'
       case 'drawing': return 'bg-violet-100 text-violet-700 border-violet-500'
       case 'completed': return 'bg-blue-100 text-blue-800'
       case 'cancelled': return 'bg-red-100 text-red-800'
       default: return 'bg-gray-100 text-gray-800'
     }
+  }
+
+  function getAvailableStatusTransitions() {
+    if (!event) return []
+
+    const currentStatus = event.status
+    const transitions: any[] = []
+
+    switch (currentStatus) {
+      case 'active':
+        transitions.push(
+          { from: 'active', to: 'drawing', label: 'Start Drawing', description: 'Begin the draw process', variant: 'default' },
+          { from: 'active', to: 'completed', label: 'Complete Event', description: 'Mark event as completed', variant: 'secondary' },
+          { from: 'active', to: 'cancelled', label: 'Cancel Event', description: 'Cancel this event', variant: 'destructive' }
+        )
+        break
+      case 'drawing':
+        transitions.push(
+          { from: 'drawing', to: 'completed', label: 'Complete Event', description: 'Finish the event', variant: 'default' },
+          { from: 'drawing', to: 'active', label: 'Return to Active', description: 'Go back to active status', variant: 'secondary' }
+        )
+        break
+      case 'cancelled':
+        transitions.push(
+          { from: 'cancelled', to: 'active', label: 'Reactivate', description: 'Restore to active status', variant: 'default' }
+        )
+        break
+    }
+
+    return transitions
   }
 
   // Tab content renderer
@@ -1925,7 +1953,7 @@ function EventOverviewContent() {
                 <div className="flex items-center gap-3">
                   <StatusPill
                     label={event.status === 'completed' ? 'Results Final' : 'Pending Results'}
-                    variant={event.status === 'completed' ? 'completed' : 'draft'}
+                    variant={event.status === 'completed' ? 'completed' : 'active'}
                     icon={event.status === 'completed' ? CheckCircle2 : Clock}
                   />
                 </div>
@@ -2409,9 +2437,32 @@ function EventOverviewContent() {
                         <Label>Current Status</Label>
                         <p className="text-xs text-gray-500">Event is currently {event?.status}</p>
                       </div>
-                      <Badge className={getStatusColor(event?.status || 'draft')}>
+                      <Badge className={getStatusColor(event?.status || 'active')}>
                         {event?.status?.charAt(0).toUpperCase() + event?.status?.slice(1)}
                       </Badge>
+                    </div>
+
+                    <div>
+                      <Label>Status Actions</Label>
+                      <p className="text-xs text-gray-500 mb-3">Available status transitions</p>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        {getAvailableStatusTransitions().map((transition: any) => (
+                          <Button
+                            key={transition.to}
+                            variant={transition.variant}
+                            onClick={() => handleStatusChange(transition.to)}
+                            disabled={settingsStatusChanging}
+                            className="justify-start"
+                          >
+                            {settingsStatusChanging ? (
+                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            ) : (
+                              <CheckCircle className="h-4 w-4 mr-2" />
+                            )}
+                            {transition.label}
+                          </Button>
+                        ))}
+                      </div>
                     </div>
 
                     <div>

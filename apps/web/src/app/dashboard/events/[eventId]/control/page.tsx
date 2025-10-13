@@ -20,7 +20,7 @@ type Event = {
   id: string
   name: string
   starts_at: string
-  status: 'draft' | 'active' | 'drawing' | 'completed' | 'cancelled'
+  status: 'active' | 'drawing' | 'completed' | 'cancelled'
   capacity: number
   mode: 'sweep' | 'calcutta'
   created_at: string
@@ -551,19 +551,6 @@ function DrawControlsContent() {
         </div>
 
         {/* Event Status Transition Cards */}
-        {event.status === 'draft' && (
-          <StatusTransitionCard
-            currentStatus={event.status}
-            title="Start Event"
-            description="Open registrations and allow participants to join via QR code"
-            buttonText="Activate Event"
-            icon={Rocket}
-            onButtonClick={() => handleStatusTransition('active')}
-            participantCount={participants.length}
-            allAssigned={allAssigned}
-          />
-        )}
-
         {event.status === 'active' && (
           <StatusTransitionCard
             currentStatus={event.status}

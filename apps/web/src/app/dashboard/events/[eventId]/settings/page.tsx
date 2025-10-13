@@ -66,7 +66,7 @@ interface EventSettings {
     timezone: string
     capacity: number
     mode: 'sweep' | 'calcutta'
-    status: 'draft' | 'active' | 'drawing' | 'completed' | 'cancelled'
+    status: 'active' | 'drawing' | 'completed' | 'cancelled'
     lead_capture: boolean
     requires_payment: boolean
     entry_fee?: number
@@ -354,7 +354,6 @@ export default function EventSettingsPage() {
 
   function getStatusColor(status: string) {
     switch (status) {
-      case 'draft': return 'bg-gray-100 text-gray-800'
       case 'active': return 'bg-green-100 text-green-800'
       case 'drawing': return 'bg-violet-100 text-violet-700 border-violet-500'
       case 'completed': return 'bg-purple-100 text-purple-800'
@@ -370,12 +369,6 @@ export default function EventSettingsPage() {
     const transitions: StatusTransition[] = []
 
     switch (currentStatus) {
-      case 'draft':
-        transitions.push(
-          { from: 'draft', to: 'active', label: 'Activate Event', description: 'Make event live for participants', variant: 'default' },
-          { from: 'draft', to: 'cancelled', label: 'Cancel Event', description: 'Cancel this event', variant: 'destructive' }
-        )
-        break
       case 'active':
         transitions.push(
           { from: 'active', to: 'drawing', label: 'Start Drawing', description: 'Begin the draw process', variant: 'default' },
@@ -391,7 +384,7 @@ export default function EventSettingsPage() {
         break
       case 'cancelled':
         transitions.push(
-          { from: 'cancelled', to: 'draft', label: 'Reactivate', description: 'Restore to draft status', variant: 'default' }
+          { from: 'cancelled', to: 'active', label: 'Reactivate', description: 'Restore to active status', variant: 'default' }
         )
         break
     }

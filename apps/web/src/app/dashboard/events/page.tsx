@@ -56,7 +56,7 @@ import Link from 'next/link'
 interface Event {
   id: string
   name: string
-  status: 'draft' | 'active' | 'drawing' | 'completed' | 'cancelled'
+  status: 'active' | 'drawing' | 'completed' | 'cancelled'
   starts_at: string
   capacity: number
   created_at: string
@@ -133,8 +133,6 @@ export default function EventsPage() {
 
   function getStatusBadge(status: string) {
     switch (status) {
-      case 'draft':
-        return <Badge variant="secondary" className="gap-1"><Clock className="h-3 w-3" />Draft</Badge>
       case 'active':
         return <Badge variant="default" className="gap-1 bg-green-500"><Play className="h-3 w-3" />Active</Badge>
       case 'completed':

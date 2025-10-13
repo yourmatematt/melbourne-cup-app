@@ -21,7 +21,7 @@ interface EventUpdateRequest {
 }
 
 interface StatusUpdateRequest {
-  status: 'draft' | 'active' | 'drawing' | 'completed' | 'cancelled'
+  status: 'active' | 'drawing' | 'completed' | 'cancelled'
   reason?: string
 }
 
@@ -528,11 +528,10 @@ async function validateStatusTransition(
 ): Promise<string | null> {
   // Define allowed transitions
   const allowedTransitions: Record<string, string[]> = {
-    draft: ['active', 'cancelled'],
     active: ['drawing', 'completed', 'cancelled'],
     drawing: ['completed', 'active'],
     completed: [], // Completed events can't change status
-    cancelled: ['draft'] // Can reactivate cancelled events
+    cancelled: ['active'] // Can reactivate cancelled events to active
   }
 
   if (!allowedTransitions[currentStatus]?.includes(newStatus)) {

@@ -864,7 +864,7 @@ export function EventCreationWizard() {
         first_place_percentage: data.firstPlacePercentage || 60,
         second_place_percentage: data.secondPlacePercentage || 30,
         third_place_percentage: data.thirdPlacePercentage || 10,
-        status: 'draft'
+        status: 'active'
       }
 
       // Prepare horses data for API

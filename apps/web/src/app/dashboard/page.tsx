@@ -31,7 +31,7 @@ type Event = {
   id: string
   name: string
   starts_at: string
-  status: 'draft' | 'active' | 'drawing' | 'completed' | 'cancelled'
+  status: 'active' | 'drawing' | 'completed' | 'cancelled'
   capacity: number
   mode: string
   entry_fee?: number
@@ -234,7 +234,6 @@ function DashboardContent() {
 
   function getStatusIcon(status: string) {
     switch (status) {
-      case 'draft': return Clock
       case 'active': return Play
       case 'drawing': return Clock
       case 'completed': return Trophy
@@ -277,7 +276,7 @@ function DashboardContent() {
   // Calculate event counts by status
   const eventCounts = {
     active: events.filter(e => e.status === 'active').length,
-    draft: events.filter(e => e.status === 'draft').length,
+    readyForDrawing: events.filter(e => e.status === 'active' && e.participant_count === e.capacity && e.paid_count === e.capacity).length,
     drawing: events.filter(e => e.status === 'drawing').length,
     completed: events.filter(e => e.status === 'completed').length
   }
@@ -356,10 +355,10 @@ function DashboardContent() {
             icon={Radio}
           />
           <StatCard
-            title="Draft Events"
-            value={eventCounts.draft}
-            subtitle="Not started"
-            icon={Clipboard}
+            title="Ready for Drawing"
+            value={eventCounts.readyForDrawing}
+            subtitle="Full capacity & paid"
+            icon={CheckCircle}
           />
           <StatCard
             title="Drawing"
@@ -432,13 +431,15 @@ function DashboardContent() {
                     {/* Status and Price */}
                     <div className="flex items-center justify-between mb-4">
                       <div className={`px-3 py-1 rounded-full text-xs font-medium uppercase ${
+                        event.status === 'active' && event.participant_count === event.capacity && event.paid_count === event.capacity ? 'bg-orange-100 text-orange-700' :
                         event.status === 'active' ? 'bg-green-100 text-green-700' :
-                        event.status === 'draft' ? 'bg-yellow-100 text-yellow-700' :
                         event.status === 'drawing' ? 'bg-purple-100 text-purple-700' :
                         event.status === 'completed' ? 'bg-blue-100 text-blue-700' :
                         'bg-gray-100 text-gray-700'
                       }`}>
-                        {event.status}
+                        {event.status === 'active' && event.participant_count === event.capacity && event.paid_count === event.capacity
+                          ? 'Ready for Drawing'
+                          : event.status}
                       </div>
                       <div className="text-right">
                         <div className="text-[12px] leading-[16px] font-['Arial:Regular',_sans-serif] text-slate-600">Pool</div>
@@ -497,9 +498,9 @@ function DashboardContent() {
 
                     {/* Action Button based on status */}
                     <div className="mt-4">
-                      {event.status === 'draft' && (
+                      {event.status === 'active' && event.participant_count === event.capacity && event.paid_count === event.capacity && (
                         <button className="w-full bg-gradient-to-r from-[#ff6b35] to-[#a855f7] text-white py-2.5 rounded-lg text-[14px] font-['Arial:Bold',_sans-serif] font-bold hover:opacity-90 transition-opacity">
-                          Start Event
+                          Start Drawing
                         </button>
                       )}
                       {event.status === 'drawing' && (
