@@ -856,6 +856,7 @@ export function EventCreationWizard() {
         timezone: 'Australia/Melbourne',
         capacity: data.capacity,
         mode: data.mode,
+        entry_fee: data.entryFee || 0,
         lead_capture: data.leadCapture ?? false,
         promo_enabled: data.promoEnabled ?? false,
         promo_message: data.promoEnabled ? data.promoMessage : null,
