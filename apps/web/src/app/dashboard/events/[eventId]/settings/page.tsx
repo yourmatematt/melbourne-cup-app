@@ -639,6 +639,7 @@ export default function EventSettingsPage() {
                         className="mt-1"
                       />
                     </div>
+                    </div>
                   )}
                 </div>
 
@@ -778,6 +779,7 @@ export default function EventSettingsPage() {
                         </div>
                       </div>
                     )}
+                    </div>
                   )}
                 </div>
 
@@ -884,6 +886,7 @@ export default function EventSettingsPage() {
                         </Link>
                       </Button>
                     </div>
+                    </div>
                   )}
                 </div>
 
@@ -976,6 +979,7 @@ export default function EventSettingsPage() {
                           </p>
                         </div>
                       )}
+                    </div>
                     </div>
                   )}
                 </div>
