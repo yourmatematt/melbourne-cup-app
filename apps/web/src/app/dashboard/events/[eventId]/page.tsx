@@ -53,6 +53,10 @@ type Event = {
   status: 'draft' | 'active' | 'drawing' | 'completed' | 'cancelled'
   capacity: number
   mode: 'sweep' | 'calcutta'
+  entry_fee?: number
+  first_place_percentage?: number
+  second_place_percentage?: number
+  third_place_percentage?: number
   created_at: string
 }
 
@@ -100,6 +104,25 @@ function getStatusIcon(status: string) {
     case 'completed': return Trophy
     default: return Calendar
   }
+}
+
+function calculatePoolAmount(event: Event | null): number {
+  if (!event || !event.entry_fee || event.entry_fee === 0) {
+    return 0
+  }
+  return event.entry_fee * event.capacity
+}
+
+function formatCurrency(amount: number): string {
+  if (amount === 0) {
+    return 'Free Event'
+  }
+  return new Intl.NumberFormat('en-AU', {
+    style: 'currency',
+    currency: 'AUD',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2
+  }).format(amount)
 }
 
 function GradientProgressBar({ percentage, className }: { percentage: number, className?: string }) {
@@ -1565,7 +1588,9 @@ function EventOverviewContent() {
                   </div>
                   <h4 className="font-semibold text-slate-900 mb-1">Revenue Generated</h4>
                   <p className="text-sm text-slate-600">
-                    ${participants.filter(p => p.payment_status === 'paid').length * 20} collected
+                    {event?.entry_fee && event.entry_fee > 0
+                      ? `${formatCurrency(participants.filter(p => p.payment_status === 'paid').length * event.entry_fee)} collected`
+                      : 'Free Event'}
                   </p>
                 </div>
                 <div className="text-center">
@@ -1632,7 +1657,7 @@ function EventOverviewContent() {
                     <div className="flex items-center justify-between">
                       <span className="text-sm text-slate-600">Total Prize Pool</span>
                       <span className="text-sm font-medium text-slate-900">
-                        ${participants.filter(p => p.payment_status === 'paid').length * 20}
+                        {formatCurrency(calculatePoolAmount(event))}
                       </span>
                     </div>
                     <div className="flex items-center justify-between">
@@ -1654,7 +1679,7 @@ function EventOverviewContent() {
                         <span className="text-sm font-medium text-slate-900">1st Place</span>
                       </div>
                       <span className="text-sm font-bold text-yellow-700">
-                        ${Math.round(participants.filter(p => p.payment_status === 'paid').length * 20 * 0.6)}
+                        {formatCurrency(Math.round(calculatePoolAmount(event) * ((event?.first_place_percentage || 60) / 100)))}
                       </span>
                     </div>
                     <div className="flex items-center justify-between p-3 bg-gray-50 border border-gray-200 rounded-lg">
@@ -1663,7 +1688,7 @@ function EventOverviewContent() {
                         <span className="text-sm font-medium text-slate-900">2nd Place</span>
                       </div>
                       <span className="text-sm font-bold text-gray-600">
-                        ${Math.round(participants.filter(p => p.payment_status === 'paid').length * 20 * 0.3)}
+                        {formatCurrency(Math.round(calculatePoolAmount(event) * ((event?.second_place_percentage || 30) / 100)))}
                       </span>
                     </div>
                     <div className="flex items-center justify-between p-3 bg-orange-50 border border-orange-200 rounded-lg">
@@ -1672,7 +1697,7 @@ function EventOverviewContent() {
                         <span className="text-sm font-medium text-slate-900">3rd Place</span>
                       </div>
                       <span className="text-sm font-bold text-orange-600">
-                        ${Math.round(participants.filter(p => p.payment_status === 'paid').length * 20 * 0.1)}
+                        {formatCurrency(Math.round(calculatePoolAmount(event) * ((event?.third_place_percentage || 10) / 100)))}
                       </span>
                     </div>
                   </div>
@@ -1694,7 +1719,7 @@ function EventOverviewContent() {
                       <p className="text-sm text-slate-600 mb-2">Horse #3 - Exemplar</p>
                       <p className="text-sm font-medium text-slate-900">Sarah Johnson</p>
                       <p className="text-lg font-bold text-yellow-700 mt-2">
-                        ${Math.round(participants.filter(p => p.payment_status === 'paid').length * 20 * 0.6)}
+                        {formatCurrency(Math.round(calculatePoolAmount(event) * ((event?.first_place_percentage || 60) / 100)))}
                       </p>
                     </div>
 
@@ -1707,7 +1732,7 @@ function EventOverviewContent() {
                       <p className="text-sm text-slate-600 mb-2">Horse #12 - Knight's Choice</p>
                       <p className="text-sm font-medium text-slate-900">Michael Chen</p>
                       <p className="text-lg font-bold text-gray-700 mt-2">
-                        ${Math.round(participants.filter(p => p.payment_status === 'paid').length * 20 * 0.3)}
+                        {formatCurrency(Math.round(calculatePoolAmount(event) * ((event?.second_place_percentage || 30) / 100)))}
                       </p>
                     </div>
 
@@ -1720,7 +1745,7 @@ function EventOverviewContent() {
                       <p className="text-sm text-slate-600 mb-2">Horse #7 - Onesmoothoperator</p>
                       <p className="text-sm font-medium text-slate-900">David Wilson</p>
                       <p className="text-lg font-bold text-orange-700 mt-2">
-                        ${Math.round(participants.filter(p => p.payment_status === 'paid').length * 20 * 0.1)}
+                        {formatCurrency(Math.round(calculatePoolAmount(event) * ((event?.third_place_percentage || 10) / 100)))}
                       </p>
                     </div>
                   </div>
@@ -1745,7 +1770,7 @@ function EventOverviewContent() {
                           <td className="py-3 px-2 text-sm text-slate-900">#3 Exemplar</td>
                           <td className="py-3 px-2 text-sm text-slate-900">Sarah Johnson</td>
                           <td className="py-3 px-2 text-sm font-bold text-right text-yellow-600">
-                            ${Math.round(participants.filter(p => p.payment_status === 'paid').length * 20 * 0.6)}
+                            {formatCurrency(Math.round(calculatePoolAmount(event) * ((event?.first_place_percentage || 60) / 100)))}
                           </td>
                         </tr>
                         <tr className="border-b border-gray-100">
@@ -1753,7 +1778,7 @@ function EventOverviewContent() {
                           <td className="py-3 px-2 text-sm text-slate-900">#12 Knight's Choice</td>
                           <td className="py-3 px-2 text-sm text-slate-900">Michael Chen</td>
                           <td className="py-3 px-2 text-sm font-bold text-right text-gray-600">
-                            ${Math.round(participants.filter(p => p.payment_status === 'paid').length * 20 * 0.3)}
+                            {formatCurrency(Math.round(calculatePoolAmount(event) * ((event?.second_place_percentage || 30) / 100)))}
                           </td>
                         </tr>
                         <tr className="border-b border-gray-100">
@@ -1761,7 +1786,7 @@ function EventOverviewContent() {
                           <td className="py-3 px-2 text-sm text-slate-900">#7 Onesmoothoperator</td>
                           <td className="py-3 px-2 text-sm text-slate-900">David Wilson</td>
                           <td className="py-3 px-2 text-sm font-bold text-right text-orange-600">
-                            ${Math.round(participants.filter(p => p.payment_status === 'paid').length * 20 * 0.1)}
+                            {formatCurrency(Math.round(calculatePoolAmount(event) * ((event?.third_place_percentage || 10) / 100)))}
                           </td>
                         </tr>
                         {participants.slice(3).map((participant, index) => (

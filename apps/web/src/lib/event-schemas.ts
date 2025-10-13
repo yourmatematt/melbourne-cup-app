@@ -18,7 +18,12 @@ export const newEventSchema = z.object({
   // Promotional offer fields
   promoEnabled: z.boolean().default(false),
   promoMessage: z.string().max(500, 'Promotional message too long').optional(),
-  promoDuration: z.number().int().min(1, 'Duration must be at least 1 minute').max(60, 'Duration cannot exceed 60 minutes').optional()
+  promoDuration: z.number().int().min(1, 'Duration must be at least 1 minute').max(60, 'Duration cannot exceed 60 minutes').optional(),
+  // Prize distribution fields
+  prizeDistribution: z.enum(['traditional', 'winner_takes_all', 'top_two', 'equal_split', 'custom']).default('traditional'),
+  firstPlacePercentage: z.number().min(0).max(100).default(60),
+  secondPlacePercentage: z.number().min(0).max(100).default(30),
+  thirdPlacePercentage: z.number().min(0).max(100).default(10)
 })
 
 export const horseSchema = z.object({
@@ -46,6 +51,9 @@ export const apiEventSchema = z.object({
   promo_enabled: z.boolean(),
   promo_message: z.string().nullable().optional(),
   promo_duration: z.number().int().nullable().optional(),
+  first_place_percentage: z.number().default(60),
+  second_place_percentage: z.number().default(30),
+  third_place_percentage: z.number().default(10),
   results_status: z.string().nullable().optional(),
   results_entered_by: z.string().nullable().optional(),
   results_entered_at: z.string().nullable().optional()

@@ -203,32 +203,26 @@ function EventTypeStep({ formData, setFormData }: {
           )}
         </div>
 
-        {/* Calcutta Option */}
+        {/* Calcutta Option - Disabled */}
         <div
-          className={`relative border-2 rounded-[16px] p-6 cursor-pointer transition-all ${
-            formData.mode === 'calcutta'
-              ? 'border-[#ff8a00] bg-gradient-to-r from-orange-50 to-pink-50'
-              : 'border-[rgba(0,0,0,0.08)] bg-white hover:border-[rgba(0,0,0,0.16)] hover:shadow-sm'
-          }`}
-          onClick={() => setFormData({ mode: 'calcutta' })}
+          className={`relative border-2 rounded-[16px] p-6 transition-all opacity-60 cursor-not-allowed bg-gray-50 border-gray-200`}
+          title="Calcutta features coming in future release"
         >
           <div className="flex items-start gap-4">
-            {/* Radio Button */}
-            <div className={`w-6 h-6 rounded-full border-2 mt-1 flex items-center justify-center ${
-              formData.mode === 'calcutta'
-                ? 'border-[#ff8a00] bg-[#ff8a00]'
-                : 'border-slate-300'
-            }`}>
-              {formData.mode === 'calcutta' && (
-                <div className="w-3 h-3 bg-white rounded-full"></div>
-              )}
+            {/* Radio Button - Disabled */}
+            <div className="w-6 h-6 rounded-full border-2 mt-1 flex items-center justify-center border-gray-300 bg-gray-100">
             </div>
 
             <div className="flex-1">
-              <h3 className="text-[18px] leading-[28px] font-['Arial:Bold',_sans-serif] font-bold text-slate-900 mb-2">
-                Melbourne Cup Calcutta
-              </h3>
-              <p className="text-[14px] leading-[20px] font-['Arial:Regular',_sans-serif] text-slate-600 mb-4">
+              <div className="flex items-center gap-2 mb-2">
+                <h3 className="text-[18px] leading-[28px] font-['Arial:Bold',_sans-serif] font-bold text-slate-900">
+                  Melbourne Cup Calcutta
+                </h3>
+                <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded-full text-[10px] font-['Arial:Bold',_sans-serif] font-bold uppercase tracking-wide">
+                  Coming Soon
+                </span>
+              </div>
+              <p className="text-[14px] leading-[20px] font-['Arial:Regular',_sans-serif] text-gray-400 mb-4">
                 Auction-style event where participants bid on horses. More strategic and interactive with higher potential prizes.
               </p>
 
@@ -442,6 +436,291 @@ function SettingsStep({ formData, setFormData }: {
             </div>
           )}
         </div>
+
+        {/* Prize Distribution Section */}
+        <div className="bg-white border border-[rgba(0,0,0,0.08)] rounded-[16px] p-6">
+          <div className="flex items-start justify-between mb-4">
+            <div className="flex-1">
+              <h3 className="text-[16px] leading-[24px] font-['Arial:Bold',_sans-serif] font-bold text-slate-900 mb-2">
+                Prize Distribution
+              </h3>
+              <p className="text-[14px] leading-[20px] font-['Arial:Regular',_sans-serif] text-slate-600">
+                Configure how the prize pool is split between winners
+              </p>
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            {/* Preset Options */}
+            <div className="grid grid-cols-1 gap-3">
+              {/* Traditional Sweep */}
+              <div
+                className={`border-2 rounded-[12px] p-4 cursor-pointer transition-all ${
+                  formData.prizeDistribution === 'traditional'
+                    ? 'border-[#ff8a00] bg-gradient-to-r from-orange-50 to-pink-50'
+                    : 'border-[rgba(0,0,0,0.08)] bg-white hover:border-[rgba(0,0,0,0.16)]'
+                }`}
+                onClick={() => setFormData({
+                  prizeDistribution: 'traditional',
+                  firstPlacePercentage: 60,
+                  secondPlacePercentage: 30,
+                  thirdPlacePercentage: 10
+                })}
+              >
+                <div className="flex items-start gap-3">
+                  <div className={`w-4 h-4 rounded-full border-2 mt-0.5 flex items-center justify-center ${
+                    formData.prizeDistribution === 'traditional'
+                      ? 'border-[#ff8a00] bg-[#ff8a00]'
+                      : 'border-slate-300'
+                  }`}>
+                    {formData.prizeDistribution === 'traditional' && (
+                      <div className="w-2 h-2 bg-white rounded-full"></div>
+                    )}
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[14px] font-['Arial:Bold',_sans-serif] font-bold text-slate-900">
+                        Traditional Sweep
+                      </span>
+                      <span className="text-[12px] font-['Arial:Regular',_sans-serif] text-slate-600">
+                        60% / 30% / 10%
+                      </span>
+                    </div>
+                    <p className="text-[12px] leading-[16px] font-['Arial:Regular',_sans-serif] text-slate-500 mt-1">
+                      Standard sweep prize distribution (1st/2nd/3rd)
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Winner Takes All */}
+              <div
+                className={`border-2 rounded-[12px] p-4 cursor-pointer transition-all ${
+                  formData.prizeDistribution === 'winner_takes_all'
+                    ? 'border-[#ff8a00] bg-gradient-to-r from-orange-50 to-pink-50'
+                    : 'border-[rgba(0,0,0,0.08)] bg-white hover:border-[rgba(0,0,0,0.16)]'
+                }`}
+                onClick={() => setFormData({
+                  prizeDistribution: 'winner_takes_all',
+                  firstPlacePercentage: 100,
+                  secondPlacePercentage: 0,
+                  thirdPlacePercentage: 0
+                })}
+              >
+                <div className="flex items-start gap-3">
+                  <div className={`w-4 h-4 rounded-full border-2 mt-0.5 flex items-center justify-center ${
+                    formData.prizeDistribution === 'winner_takes_all'
+                      ? 'border-[#ff8a00] bg-[#ff8a00]'
+                      : 'border-slate-300'
+                  }`}>
+                    {formData.prizeDistribution === 'winner_takes_all' && (
+                      <div className="w-2 h-2 bg-white rounded-full"></div>
+                    )}
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[14px] font-['Arial:Bold',_sans-serif] font-bold text-slate-900">
+                        Winner Takes All
+                      </span>
+                      <span className="text-[12px] font-['Arial:Regular',_sans-serif] text-slate-600">
+                        100% to 1st
+                      </span>
+                    </div>
+                    <p className="text-[12px] leading-[16px] font-['Arial:Regular',_sans-serif] text-slate-500 mt-1">
+                      All prize money goes to the winner
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Top Two */}
+              <div
+                className={`border-2 rounded-[12px] p-4 cursor-pointer transition-all ${
+                  formData.prizeDistribution === 'top_two'
+                    ? 'border-[#ff8a00] bg-gradient-to-r from-orange-50 to-pink-50'
+                    : 'border-[rgba(0,0,0,0.08)] bg-white hover:border-[rgba(0,0,0,0.16)]'
+                }`}
+                onClick={() => setFormData({
+                  prizeDistribution: 'top_two',
+                  firstPlacePercentage: 70,
+                  secondPlacePercentage: 30,
+                  thirdPlacePercentage: 0
+                })}
+              >
+                <div className="flex items-start gap-3">
+                  <div className={`w-4 h-4 rounded-full border-2 mt-0.5 flex items-center justify-center ${
+                    formData.prizeDistribution === 'top_two'
+                      ? 'border-[#ff8a00] bg-[#ff8a00]'
+                      : 'border-slate-300'
+                  }`}>
+                    {formData.prizeDistribution === 'top_two' && (
+                      <div className="w-2 h-2 bg-white rounded-full"></div>
+                    )}
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[14px] font-['Arial:Bold',_sans-serif] font-bold text-slate-900">
+                        Top Two
+                      </span>
+                      <span className="text-[12px] font-['Arial:Regular',_sans-serif] text-slate-600">
+                        70% / 30%
+                      </span>
+                    </div>
+                    <p className="text-[12px] leading-[16px] font-['Arial:Regular',_sans-serif] text-slate-500 mt-1">
+                      Prize split between 1st and 2nd place only
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Equal Split */}
+              <div
+                className={`border-2 rounded-[12px] p-4 cursor-pointer transition-all ${
+                  formData.prizeDistribution === 'equal_split'
+                    ? 'border-[#ff8a00] bg-gradient-to-r from-orange-50 to-pink-50'
+                    : 'border-[rgba(0,0,0,0.08)] bg-white hover:border-[rgba(0,0,0,0.16)]'
+                }`}
+                onClick={() => setFormData({
+                  prizeDistribution: 'equal_split',
+                  firstPlacePercentage: 33.33,
+                  secondPlacePercentage: 33.33,
+                  thirdPlacePercentage: 33.34
+                })}
+              >
+                <div className="flex items-start gap-3">
+                  <div className={`w-4 h-4 rounded-full border-2 mt-0.5 flex items-center justify-center ${
+                    formData.prizeDistribution === 'equal_split'
+                      ? 'border-[#ff8a00] bg-[#ff8a00]'
+                      : 'border-slate-300'
+                  }`}>
+                    {formData.prizeDistribution === 'equal_split' && (
+                      <div className="w-2 h-2 bg-white rounded-full"></div>
+                    )}
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[14px] font-['Arial:Bold',_sans-serif] font-bold text-slate-900">
+                        Equal Split
+                      </span>
+                      <span className="text-[12px] font-['Arial:Regular',_sans-serif] text-slate-600">
+                        33.3% each
+                      </span>
+                    </div>
+                    <p className="text-[12px] leading-[16px] font-['Arial:Regular',_sans-serif] text-slate-500 mt-1">
+                      Prize money split equally between top 3
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Custom */}
+              <div
+                className={`border-2 rounded-[12px] p-4 cursor-pointer transition-all ${
+                  formData.prizeDistribution === 'custom'
+                    ? 'border-[#ff8a00] bg-gradient-to-r from-orange-50 to-pink-50'
+                    : 'border-[rgba(0,0,0,0.08)] bg-white hover:border-[rgba(0,0,0,0.16)]'
+                }`}
+                onClick={() => setFormData({ prizeDistribution: 'custom' })}
+              >
+                <div className="flex items-start gap-3">
+                  <div className={`w-4 h-4 rounded-full border-2 mt-0.5 flex items-center justify-center ${
+                    formData.prizeDistribution === 'custom'
+                      ? 'border-[#ff8a00] bg-[#ff8a00]'
+                      : 'border-slate-300'
+                  }`}>
+                    {formData.prizeDistribution === 'custom' && (
+                      <div className="w-2 h-2 bg-white rounded-full"></div>
+                    )}
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[14px] font-['Arial:Bold',_sans-serif] font-bold text-slate-900">
+                        Custom
+                      </span>
+                      <span className="text-[12px] font-['Arial:Regular',_sans-serif] text-slate-600">
+                        Manual %
+                      </span>
+                    </div>
+                    <p className="text-[12px] leading-[16px] font-['Arial:Regular',_sans-serif] text-slate-500 mt-1">
+                      Set your own percentage split
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Custom Percentage Inputs */}
+            {formData.prizeDistribution === 'custom' && (
+              <div className="mt-6 pt-6 border-t border-[rgba(0,0,0,0.08)] space-y-4">
+                <div className="grid grid-cols-3 gap-4">
+                  <div>
+                    <Label className="text-[12px] leading-[16px] font-['Arial:Bold',_sans-serif] font-bold text-slate-900 mb-2 block">
+                      1st Place %
+                    </Label>
+                    <Input
+                      type="number"
+                      min="0"
+                      max="100"
+                      value={formData.firstPlacePercentage || ''}
+                      onChange={(e) => setFormData({ firstPlacePercentage: parseFloat(e.target.value) || 0 })}
+                      className="bg-white border border-[rgba(0,0,0,0.08)] rounded-[8px] h-[40px] px-3 text-[14px] font-['Arial:Regular',_sans-serif] focus:border-[#ff8a00] focus:ring-1 focus:ring-[#ff8a00]"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-[12px] leading-[16px] font-['Arial:Bold',_sans-serif] font-bold text-slate-900 mb-2 block">
+                      2nd Place %
+                    </Label>
+                    <Input
+                      type="number"
+                      min="0"
+                      max="100"
+                      value={formData.secondPlacePercentage || ''}
+                      onChange={(e) => setFormData({ secondPlacePercentage: parseFloat(e.target.value) || 0 })}
+                      className="bg-white border border-[rgba(0,0,0,0.08)] rounded-[8px] h-[40px] px-3 text-[14px] font-['Arial:Regular',_sans-serif] focus:border-[#ff8a00] focus:ring-1 focus:ring-[#ff8a00]"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-[12px] leading-[16px] font-['Arial:Bold',_sans-serif] font-bold text-slate-900 mb-2 block">
+                      3rd Place %
+                    </Label>
+                    <Input
+                      type="number"
+                      min="0"
+                      max="100"
+                      value={formData.thirdPlacePercentage || ''}
+                      onChange={(e) => setFormData({ thirdPlacePercentage: parseFloat(e.target.value) || 0 })}
+                      className="bg-white border border-[rgba(0,0,0,0.08)] rounded-[8px] h-[40px] px-3 text-[14px] font-['Arial:Regular',_sans-serif] focus:border-[#ff8a00] focus:ring-1 focus:ring-[#ff8a00]"
+                    />
+                  </div>
+                </div>
+
+                {/* Validation */}
+                {(() => {
+                  const total = (formData.firstPlacePercentage || 0) + (formData.secondPlacePercentage || 0) + (formData.thirdPlacePercentage || 0)
+                  return total !== 100 && (
+                    <p className="text-[12px] leading-[16px] font-['Arial:Regular',_sans-serif] text-red-600">
+                      Percentages must add up to 100% (currently {total.toFixed(1)}%)
+                    </p>
+                  )
+                })()}
+
+                {/* Prize Pool Preview */}
+                {formData.entryFee && formData.capacity && (
+                  <div className="bg-blue-50 border border-blue-200 rounded-[8px] p-3">
+                    <h4 className="text-[12px] font-['Arial:Bold',_sans-serif] font-bold text-blue-900 mb-2">
+                      Prize Pool Preview ({formData.capacity} × ${formData.entryFee} = ${formData.capacity * formData.entryFee})
+                    </h4>
+                    <div className="text-[11px] font-['Arial:Regular',_sans-serif] text-blue-700 space-y-1">
+                      <div>1st: ${Math.round((formData.capacity * formData.entryFee) * (formData.firstPlacePercentage || 0) / 100)}</div>
+                      <div>2nd: ${Math.round((formData.capacity * formData.entryFee) * (formData.secondPlacePercentage || 0) / 100)}</div>
+                      <div>3rd: ${Math.round((formData.capacity * formData.entryFee) * (formData.thirdPlacePercentage || 0) / 100)}</div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   )
@@ -477,6 +756,10 @@ export function EventCreationWizard() {
       promoEnabled: false,
       promoMessage: '',
       promoDuration: 10,
+      prizeDistribution: 'traditional',
+      firstPlacePercentage: 60,
+      secondPlacePercentage: 30,
+      thirdPlacePercentage: 10,
       entryFee: undefined
     }
   })
@@ -577,6 +860,9 @@ export function EventCreationWizard() {
         promo_enabled: data.promoEnabled ?? false,
         promo_message: data.promoEnabled ? data.promoMessage : null,
         promo_duration: data.promoEnabled ? data.promoDuration : null,
+        first_place_percentage: data.firstPlacePercentage || 60,
+        second_place_percentage: data.secondPlacePercentage || 30,
+        third_place_percentage: data.thirdPlacePercentage || 10,
         status: 'draft'
       }
 
