@@ -106,13 +106,17 @@ export async function POST(
     console.log('🐎 Selected horse:', randomHorse.number, randomHorse.name)
 
     // Create the assignment
-    const { error: assignmentError } = await supabaseAdmin
+    const { data: assignment, error: assignmentError } = await supabaseAdmin
       .from('assignments')
       .insert({
         event_id: eventId,
+        event_horse_id: randomHorse.id,
         patron_entry_id: nextParticipant.id,
-        event_horse_id: randomHorse.id
+        horse_number: randomHorse.number,
+        assigned_by: null
       })
+      .select()
+      .single()
 
     if (assignmentError) {
       console.error('❌ Error creating assignment:', assignmentError)
