@@ -35,7 +35,8 @@ import {
   Activity,
   Medal,
   CheckCircle2,
-  Podium
+  Podium,
+  LayoutDashboard
 } from 'lucide-react'
 
 type Event = {
@@ -67,11 +68,12 @@ type DrawStats = {
 }
 
 const TABS = [
-  { id: 0, label: 'Event Control', icon: Play },
-  { id: 1, label: 'QR & Links', icon: QrCode },
-  { id: 2, label: 'Analytics', icon: BarChart3 },
-  { id: 3, label: 'Race Results', icon: Trophy },
-  { id: 4, label: 'Event Settings', icon: Settings }
+  { id: 0, label: 'Overview', icon: LayoutDashboard },
+  { id: 1, label: 'Event Control', icon: Play },
+  { id: 2, label: 'QR & Links', icon: QrCode },
+  { id: 3, label: 'Analytics', icon: BarChart3 },
+  { id: 4, label: 'Race Results', icon: Trophy },
+  { id: 5, label: 'Event Settings', icon: Settings }
 ]
 
 function getInitials(name: string): string {
@@ -616,7 +618,7 @@ function EventOverviewContent() {
   // Tab content renderer
   const renderTabContent = () => {
     switch (activeTab) {
-      case 0: // Event Control
+      case 0: // Overview
         return (
           <div className="space-y-8">
             {/* Stats Cards - Figma Design */}
@@ -643,74 +645,6 @@ function EventOverviewContent() {
                 className="h-[134px]"
               />
             </div>
-
-            {/* Draw Controls - Only show when participants exist */}
-            {participants.length > 0 && (
-              <div className="bg-[#f8f7f4] rounded-[20px] p-6 mb-8">
-                <h3 className="text-lg font-bold text-slate-900 mb-6">Draw Progress</h3>
-
-                <div className="space-y-2 mb-4">
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-slate-600">Progress</span>
-                    <span className="text-slate-900 font-medium">{drawStats.progressPercentage}%</span>
-                  </div>
-                  <GradientProgressBar percentage={drawStats.progressPercentage} />
-                </div>
-
-                <div className="flex items-center justify-between text-sm mb-6">
-                  <span className="text-slate-600">
-                    {drawStats.assigned} of 24 horses assigned
-                  </span>
-                  <span className="text-slate-900 font-medium">
-                    {drawStats.waiting} participants waiting
-                  </span>
-                </div>
-
-                {/* All Assigned Message */}
-                {allAssigned && (
-                  <div className="bg-green-50 border border-green-200 rounded-[20px] p-6 text-center mb-6">
-                    <CheckCircle className="h-8 w-8 text-green-600 mx-auto mb-2" />
-                    <h3 className="text-lg font-bold text-green-900 mb-1">All participants assigned!</h3>
-                    <p className="text-green-700">Every participant has been assigned a horse. The draw is complete.</p>
-                  </div>
-                )}
-
-                {/* Action Cards */}
-                {!allAssigned && (
-                  <div className="grid grid-cols-2 gap-6">
-                    <ActionCard
-                      title="Draw Next"
-                      description="Draw a random horse for the next waiting participant"
-                      bulletPoints={[
-                        "Perfect for building suspense during your event",
-                        "Results appear live on the QR code display",
-                        "Creates an exciting reveal moment"
-                      ]}
-                      buttonText={isDrawing ? "Drawing..." : "Draw Next Participant"}
-                      buttonIcon={Shuffle}
-                      onButtonClick={handleDrawNext}
-                      disabled={isDrawing || drawStats.waiting === 0}
-                      buttonVariant="primary"
-                    />
-
-                    <ActionCard
-                      title="Draw All"
-                      description="Instantly assign all remaining participants to horses"
-                      bulletPoints={[
-                        "Fast and convenient for quick setup",
-                        "Participants can check results via QR code",
-                        "Great for online or async sweeps"
-                      ]}
-                      buttonText={isDrawing ? "Drawing..." : "Draw All Remaining"}
-                      buttonIcon={Zap}
-                      onButtonClick={handleDrawAll}
-                      disabled={isDrawing || drawStats.waiting === 0}
-                      buttonVariant="secondary"
-                    />
-                  </div>
-                )}
-              </div>
-            )}
 
             {/* Two-column layout */}
             <div className="grid grid-cols-2 gap-6">
@@ -800,7 +734,94 @@ function EventOverviewContent() {
           </div>
         )
 
-      case 1: // QR & Links
+      case 1: // Event Control
+        return (
+          <div className="space-y-8">
+            {/* Draw Controls - Only show when participants exist */}
+            {participants.length > 0 ? (
+              <div className="bg-[#f8f7f4] rounded-[20px] p-6">
+                <h3 className="text-lg font-bold text-slate-900 mb-6">Draw Progress</h3>
+
+                <div className="space-y-2 mb-4">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-slate-600">Progress</span>
+                    <span className="text-slate-900 font-medium">{drawStats.progressPercentage}%</span>
+                  </div>
+                  <GradientProgressBar percentage={drawStats.progressPercentage} />
+                </div>
+
+                <div className="flex items-center justify-between text-sm mb-6">
+                  <span className="text-slate-600">
+                    {drawStats.assigned} of 24 horses assigned
+                  </span>
+                  <span className="text-slate-900 font-medium">
+                    {drawStats.waiting} participants waiting
+                  </span>
+                </div>
+
+                {/* All Assigned Message */}
+                {allAssigned && (
+                  <div className="bg-green-50 border border-green-200 rounded-[20px] p-6 text-center mb-6">
+                    <CheckCircle className="h-8 w-8 text-green-600 mx-auto mb-2" />
+                    <h3 className="text-lg font-bold text-green-900 mb-1">All participants assigned!</h3>
+                    <p className="text-green-700">Every participant has been assigned a horse. The draw is complete.</p>
+                  </div>
+                )}
+
+                {/* Action Cards */}
+                {!allAssigned && (
+                  <div className="grid grid-cols-2 gap-6">
+                    <ActionCard
+                      title="Draw Next"
+                      description="Draw a random horse for the next waiting participant"
+                      bulletPoints={[
+                        "Perfect for building suspense during your event",
+                        "Results appear live on the QR code display",
+                        "Creates an exciting reveal moment"
+                      ]}
+                      buttonText={isDrawing ? "Drawing..." : "Draw Next Participant"}
+                      buttonIcon={Shuffle}
+                      onButtonClick={handleDrawNext}
+                      disabled={isDrawing || drawStats.waiting === 0}
+                      buttonVariant="primary"
+                    />
+
+                    <ActionCard
+                      title="Draw All"
+                      description="Instantly assign all remaining participants to horses"
+                      bulletPoints={[
+                        "Fast and convenient for quick setup",
+                        "Participants can check results via QR code",
+                        "Great for online or async sweeps"
+                      ]}
+                      buttonText={isDrawing ? "Drawing..." : "Draw All Remaining"}
+                      buttonIcon={Zap}
+                      onButtonClick={handleDrawAll}
+                      disabled={isDrawing || drawStats.waiting === 0}
+                      buttonVariant="secondary"
+                    />
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="bg-white border border-gray-200/50 rounded-[20px] p-8 text-center">
+                <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Play className="h-8 w-8 text-gray-400" />
+                </div>
+                <h3 className="text-lg font-bold text-slate-900 mb-2">No participants to draw</h3>
+                <p className="text-slate-600 mb-4">Add participants first to start drawing horses</p>
+                <button
+                  onClick={() => setShowAddParticipantModal(true)}
+                  className="bg-gradient-to-r from-[#ff6b35] to-[#a855f7] text-white px-4 py-2.5 rounded-lg text-sm font-medium hover:opacity-90 transition-opacity"
+                >
+                  Add Participant
+                </button>
+              </div>
+            )}
+          </div>
+        )
+
+      case 2: // QR & Links
         return (
           <div className="grid grid-cols-2 gap-6">
             {/* Left Column - Participant Signup QR Code */}
@@ -892,7 +913,7 @@ function EventOverviewContent() {
           </div>
         )
 
-      case 2: // Analytics
+      case 3: // Analytics
         return (
           <div className="space-y-6">
             {/* Analytics Header */}
@@ -1030,7 +1051,7 @@ function EventOverviewContent() {
           </div>
         )
 
-      case 3: // Race Results
+      case 4: // Race Results
         return (
           <div className="space-y-6">
             {/* Race Results Header */}
@@ -1247,7 +1268,7 @@ function EventOverviewContent() {
           </div>
         )
 
-      case 4: // Event Settings
+      case 5: // Event Settings
         return (
           <div className="bg-white border border-gray-200/50 rounded-[20px] p-8">
             <h2 className="text-2xl font-bold text-slate-900 mb-4">Event Settings</h2>
