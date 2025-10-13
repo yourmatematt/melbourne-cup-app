@@ -104,17 +104,30 @@ function EventDetailsStep({ formData, setFormData, errors }: {
             <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-5 h-5" />
             <Input
               type="number"
-              step="0.01"
-              min="0"
-              placeholder="0.00"
-              value={formData.entryFee || 0}
-              onChange={(e) => setFormData({ entryFee: parseFloat(e.target.value) || 0 })}
+              step="1"
+              min="1"
+              placeholder="20"
+              value={formData.entryFee || ''}
+              onFocus={(e) => {
+                if (e.target.value === '0') {
+                  e.target.value = ''
+                }
+              }}
+              onChange={(e) => {
+                const value = parseFloat(e.target.value)
+                setFormData({ entryFee: value || undefined })
+              }}
               className="bg-white border border-[rgba(0,0,0,0.08)] rounded-[12px] h-[48px] pl-12 pr-4 text-[16px] font-['Arial:Regular',_sans-serif] focus:border-[#ff8a00] focus:ring-1 focus:ring-[#ff8a00]"
             />
           </div>
           <p className="text-[12px] leading-[16px] font-['Arial:Regular',_sans-serif] text-slate-600 mt-2">
-            Amount each participant pays to enter (set to $0 for free events)
+            Amount each participant pays to enter (minimum $1, leave empty for free events)
           </p>
+          {errors.entryFee && (
+            <p className="text-[12px] leading-[16px] font-['Arial:Regular',_sans-serif] text-red-600 mt-2">
+              {errors.entryFee.message}
+            </p>
+          )}
         </div>
       </div>
     </div>
@@ -464,7 +477,7 @@ export function EventCreationWizard() {
       promoEnabled: false,
       promoMessage: '',
       promoDuration: 10,
-      entryFee: 0
+      entryFee: undefined
     }
   })
 
@@ -506,7 +519,7 @@ export function EventCreationWizard() {
   const validateCurrentStep = async () => {
     switch (currentStep) {
       case 1:
-        return await form.trigger(['name', 'startsAt'])
+        return await form.trigger(['name', 'startsAt', 'entryFee'])
       case 2:
         return await form.trigger(['mode'])
       case 3:
