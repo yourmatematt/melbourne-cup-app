@@ -44,6 +44,7 @@ export const apiEventSchema = z.object({
   }),
   status: z.string().default('draft'),
   capacity: z.number().int().min(2, 'Minimum capacity is 2').max(200, 'Maximum capacity is 200'),
+  entry_fee: z.number().min(0, 'Entry fee cannot be negative').max(999.99, 'Entry fee too high').default(0),
   lead_capture: z.boolean(),
   // Optional database fields that may not be set during creation
   payment_timeout_minutes: z.number().int().nullable().optional(),

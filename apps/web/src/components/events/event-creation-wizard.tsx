@@ -114,8 +114,8 @@ function EventDetailsStep({ formData, setFormData, errors }: {
                 }
               }}
               onChange={(e) => {
-                const value = parseFloat(e.target.value)
-                setFormData({ entryFee: value || undefined })
+                const value = e.target.value === '' ? undefined : parseFloat(e.target.value) || 0
+                setFormData({ entryFee: value })
               }}
               className="bg-white border border-[rgba(0,0,0,0.08)] rounded-[12px] h-[48px] pl-12 pr-4 text-[16px] font-['Arial:Regular',_sans-serif] focus:border-[#ff8a00] focus:ring-1 focus:ring-[#ff8a00]"
             />
@@ -760,7 +760,7 @@ export function EventCreationWizard() {
       firstPlacePercentage: 60,
       secondPlacePercentage: 30,
       thirdPlacePercentage: 10,
-      entryFee: 0
+      entryFee: undefined
     }
   })
 
@@ -856,7 +856,7 @@ export function EventCreationWizard() {
         timezone: 'Australia/Melbourne',
         capacity: data.capacity,
         mode: data.mode,
-        entry_fee: data.entryFee || 0,
+        entry_fee: data.entryFee ?? 0,
         lead_capture: data.leadCapture ?? false,
         promo_enabled: data.promoEnabled ?? false,
         promo_message: data.promoEnabled ? data.promoMessage : null,
