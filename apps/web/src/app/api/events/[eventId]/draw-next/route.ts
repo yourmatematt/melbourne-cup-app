@@ -15,6 +15,17 @@ export async function POST(
     const eventId = params.eventId
     console.log('🎲 Draw Next API called for event:', eventId)
 
+    // Validate eventId
+    if (!eventId || typeof eventId !== 'string' || eventId.trim() === '') {
+      console.error('❌ Invalid or missing eventId:', eventId)
+      return NextResponse.json(
+        { error: 'Valid Event ID is required' },
+        { status: 400 }
+      )
+    }
+
+    console.log('✅ EventId validated:', eventId)
+
     // Get participants who haven't been assigned horses yet
     const { data: participantsData, error: participantsError } = await supabaseAdmin
       .from('patron_entries')
@@ -98,6 +109,7 @@ export async function POST(
     const { error: assignmentError } = await supabaseAdmin
       .from('assignments')
       .insert({
+        event_id: eventId,
         patron_entry_id: nextParticipant.id,
         event_horse_id: randomHorse.id
       })
