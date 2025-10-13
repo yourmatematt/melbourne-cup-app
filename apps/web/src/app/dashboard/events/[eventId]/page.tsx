@@ -735,15 +735,30 @@ function EventOverviewContent() {
                       />
                     ))
                   ) : (
-                    <div className="text-center py-8">
-                      <Users className="h-8 w-8 text-slate-400 mx-auto mb-2" />
-                      <p className="text-slate-600">No participants yet</p>
-                      <button
-                        onClick={() => setShowAddParticipantModal(true)}
-                        className="mt-2 text-blue-600 text-sm hover:text-blue-700"
-                      >
-                        Add the first participant
-                      </button>
+                    <div className="flex flex-col items-center justify-center py-12 px-4">
+                      <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mb-4">
+                        <Users className="h-8 w-8 text-purple-600" />
+                      </div>
+                      <h4 className="text-lg font-semibold text-slate-900 mb-2">No Participants Yet</h4>
+                      <p className="text-sm text-slate-600 text-center mb-6 max-w-xs">
+                        Get started by sharing your event QR code or join link with participants
+                      </p>
+                      <div className="flex flex-col gap-3 w-full max-w-xs">
+                        <button className="bg-gradient-to-r from-[#ff6b35] to-[#a855f7] text-white px-4 py-2.5 rounded-lg text-sm font-medium hover:opacity-90 transition-opacity flex items-center justify-center gap-2">
+                          <QrCode className="h-4 w-4" />
+                          Print QR Code
+                        </button>
+                        <button
+                          onClick={() => setShowAddParticipantModal(true)}
+                          className="bg-[#f8f7f4] border border-gray-200 text-slate-900 px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors flex items-center justify-center gap-2"
+                        >
+                          <Share2 className="h-4 w-4" />
+                          Share Join Link
+                        </button>
+                      </div>
+                      <p className="text-xs text-slate-500 text-center mt-4">
+                        Participants can also join by scanning the QR code
+                      </p>
                     </div>
                   )}
                 </div>
