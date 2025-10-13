@@ -11,7 +11,7 @@ export const newEventSchema = z.object({
   mode: z.enum(['sweep', 'calcutta'], {
     required_error: 'Please select an event mode'
   }),
-  entryFee: z.number().min(0, 'Entry fee cannot be negative').max(999.99, 'Entry fee too high').optional(),
+  entryFee: z.number().min(1, 'Entry fee must be at least $1 (leave empty for free events)').max(999.99, 'Entry fee too high').optional(),
   leadCapture: z.boolean().default(false),
   customTerms: z.string().optional(),
   customRules: z.string().optional(),
