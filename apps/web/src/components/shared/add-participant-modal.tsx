@@ -44,6 +44,7 @@ export function AddParticipantModal({
   onParticipantAdded
 }: AddParticipantModalProps) {
   const [isLoading, setIsLoading] = useState(false)
+  const [markAsPaid, setMarkAsPaid] = useState(false)
   const [newParticipant, setNewParticipant] = useState<NewParticipant>({
     displayName: '',
     email: '',
@@ -60,6 +61,7 @@ export function AddParticipantModal({
       phone: '',
       marketingConsent: false
     })
+    setMarkAsPaid(false)
   }
 
   const handleClose = () => {
@@ -73,6 +75,19 @@ export function AddParticipantModal({
       return
     }
 
+    // Email is now required
+    const email = newParticipant.email.trim()
+    if (!email) {
+      toast.error('Email is required')
+      return
+    }
+
+    // Validate email format
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      toast.error('Please enter a valid email address')
+      return
+    }
+
     setIsLoading(true)
     try {
       const supabase = createClient()
@@ -82,14 +97,7 @@ export function AddParticipantModal({
         return
       }
 
-      // Validate email format if provided
-      const email = newParticipant.email.trim()
-      if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-        toast.error('Please enter a valid email address.')
-        return
-      }
-
-      // Check for duplicate email if provided
+      // Check for duplicate email
       if (email) {
         const existingParticipant = participants.find(p =>
           p.email?.toLowerCase() === email.toLowerCase()
@@ -108,8 +116,9 @@ export function AddParticipantModal({
   .insert({
     event_id: event.id,
     participant_name: newParticipant.displayName.trim(),
-    email: email || null,
+    email: email, // Email is now required, so no need for || null
     phone: newParticipant.phone.trim() || null,
+    payment_status: markAsPaid ? 'paid' : 'unpaid',
     marketing_consent: newParticipant.marketingConsent,
     join_code: joinCode
   } as any)
@@ -123,7 +132,8 @@ export function AddParticipantModal({
         return
       }
 
-      toast.success(`${newParticipant.displayName.trim()} added successfully!`)
+      const paymentStatusText = markAsPaid ? 'and marked as paid' : '(payment pending)'
+      toast.success(`${newParticipant.displayName.trim()} added successfully ${paymentStatusText}!`)
       resetForm()
       handleClose()
       onParticipantAdded()
@@ -173,7 +183,7 @@ export function AddParticipantModal({
           </div>
 
           <div>
-            <Label htmlFor="email">Email (optional)</Label>
+            <Label htmlFor="email">Email *</Label>
             <Input
               id="email"
               type="email"
@@ -202,6 +212,37 @@ export function AddParticipantModal({
               disabled={isLoading || isEventFull}
               className="mt-1"
             />
+          </div>
+
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <Label htmlFor="payment-status">Payment Status</Label>
+              <div className="flex items-center gap-2">
+                <span className={`text-sm ${!markAsPaid ? 'text-slate-600' : 'text-slate-400'}`}>
+                  Unpaid
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setMarkAsPaid(!markAsPaid)}
+                  disabled={isLoading || isEventFull}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                    markAsPaid ? 'bg-green-500' : 'bg-gray-300'
+                  } ${(isLoading || isEventFull) ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+                >
+                  <span
+                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                      markAsPaid ? 'translate-x-6' : 'translate-x-1'
+                    }`}
+                  />
+                </button>
+                <span className={`text-sm ${markAsPaid ? 'text-green-600 font-bold' : 'text-slate-400'}`}>
+                  Paid
+                </span>
+              </div>
+            </div>
+            <p className="text-xs text-slate-500">
+              Toggle if participant paid at the bar/in person
+            </p>
           </div>
 
           <div className="flex items-start space-x-2">
@@ -241,7 +282,7 @@ export function AddParticipantModal({
           <Button
             variant="gradient"
             onClick={handleAddParticipant}
-            disabled={!newParticipant.displayName.trim() || isLoading || isEventFull}
+            disabled={!newParticipant.displayName.trim() || !newParticipant.email.trim() || isLoading || isEventFull}
           >
             {isLoading ? (
               <>
