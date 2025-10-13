@@ -760,7 +760,7 @@ export function EventCreationWizard() {
       firstPlacePercentage: 60,
       secondPlacePercentage: 30,
       thirdPlacePercentage: 10,
-      entryFee: undefined
+      entryFee: 0
     }
   })
 
