@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
@@ -8,6 +8,7 @@ import { DashboardLayout } from '@/components/layout/dashboard-layout'
 import { StatCard } from '@/components/ui/stat-card'
 import { StatusPill } from '@/components/ui/status-pill'
 import { AddParticipantModal } from '@/components/shared/add-participant-modal'
+import { toast } from 'sonner'
 import {
   ChevronLeft,
   ChevronRight,
@@ -287,6 +288,9 @@ function EventOverviewContent() {
     progressPercentage: 0
   })
   const [isDrawing, setIsDrawing] = useState(false)
+
+  // QR Code ref for copy/download/print functionality
+  const qrCodeRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     fetchEventData()
@@ -583,6 +587,170 @@ function EventOverviewContent() {
 
   const allAssigned = drawStats.waiting === 0
 
+  // QR Code functionality
+  const handleCopyQR = async () => {
+    try {
+      const qrElement = qrCodeRef.current
+      if (!qrElement) return
+
+      // Create a canvas to draw the QR code
+      const canvas = document.createElement('canvas')
+      const ctx = canvas.getContext('2d')
+      if (!ctx) return
+
+      // Set canvas size
+      canvas.width = 250
+      canvas.height = 250
+
+      // Create a white background
+      ctx.fillStyle = '#ffffff'
+      ctx.fillRect(0, 0, 250, 250)
+
+      // For now, we'll create a simple placeholder
+      // In a real implementation, you'd generate the actual QR code
+      ctx.fillStyle = '#000000'
+      ctx.font = '12px Arial'
+      ctx.textAlign = 'center'
+      ctx.fillText('QR Code', 125, 125)
+
+      // Convert canvas to blob
+      canvas.toBlob(async (blob) => {
+        if (blob) {
+          try {
+            await navigator.clipboard.write([
+              new ClipboardItem({ 'image/png': blob })
+            ])
+            toast.success('QR code copied to clipboard', { duration: 2000 })
+          } catch (clipboardError) {
+            console.error('Failed to copy to clipboard:', clipboardError)
+            toast.error('Failed to copy QR code')
+          }
+        }
+      }, 'image/png')
+    } catch (error) {
+      console.error('Error copying QR code:', error)
+      toast.error('Failed to copy QR code')
+    }
+  }
+
+  const handleDownloadQR = () => {
+    try {
+      const canvas = document.createElement('canvas')
+      const ctx = canvas.getContext('2d')
+      if (!ctx) return
+
+      // Set canvas size
+      canvas.width = 250
+      canvas.height = 250
+
+      // Create a white background
+      ctx.fillStyle = '#ffffff'
+      ctx.fillRect(0, 0, 250, 250)
+
+      // For now, we'll create a simple placeholder
+      // In a real implementation, you'd generate the actual QR code
+      ctx.fillStyle = '#000000'
+      ctx.font = '12px Arial'
+      ctx.textAlign = 'center'
+      ctx.fillText('QR Code', 125, 125)
+
+      // Create download link
+      canvas.toBlob((blob) => {
+        if (blob) {
+          const url = URL.createObjectURL(blob)
+          const link = document.createElement('a')
+          link.href = url
+          link.download = `QR Code ${event?.name || 'Event'} - The Royal Hotel.png`
+          document.body.appendChild(link)
+          link.click()
+          document.body.removeChild(link)
+          URL.revokeObjectURL(url)
+          toast.success('QR code downloaded', { duration: 2000 })
+        }
+      }, 'image/png')
+    } catch (error) {
+      console.error('Error downloading QR code:', error)
+      toast.error('Failed to download QR code')
+    }
+  }
+
+  const handlePrintQR = () => {
+    try {
+      // Create a new window for printing
+      const printWindow = window.open('', '_blank')
+      if (!printWindow) {
+        toast.error('Failed to open print window')
+        return
+      }
+
+      const joinUrl = `https://app.melbournecupsweep.com.au/events/${eventId}/join`
+
+      printWindow.document.write(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <title>QR Code - ${event?.name || 'Event'}</title>
+          <style>
+            body {
+              font-family: Arial, sans-serif;
+              text-align: center;
+              padding: 40px;
+              margin: 0;
+            }
+            .qr-container {
+              display: inline-block;
+              padding: 20px;
+              border: 2px solid #000;
+              margin: 20px 0;
+            }
+            .qr-placeholder {
+              width: 250px;
+              height: 250px;
+              border: 1px solid #ccc;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              font-size: 16px;
+              margin: 0 auto 20px;
+            }
+            .url {
+              font-family: monospace;
+              font-size: 14px;
+              word-break: break-all;
+              margin: 10px 0;
+            }
+            @media print {
+              body { margin: 0; }
+            }
+          </style>
+        </head>
+        <body>
+          <h1>${event?.name || 'Event'} - QR Code</h1>
+          <div class="qr-container">
+            <div class="qr-placeholder">QR Code</div>
+            <div class="url">${joinUrl}</div>
+          </div>
+          <p>Scan to join the event</p>
+        </body>
+        </html>
+      `)
+
+      printWindow.document.close()
+      printWindow.focus()
+
+      // Wait for content to load then print
+      setTimeout(() => {
+        printWindow.print()
+        printWindow.close()
+      }, 500)
+
+      toast.success('Print dialog opened', { duration: 2000 })
+    } catch (error) {
+      console.error('Error printing QR code:', error)
+      toast.error('Failed to print QR code')
+    }
+  }
+
   // Tab content renderer
   const renderTabContent = () => {
     switch (activeTab) {
@@ -800,7 +968,10 @@ function EventOverviewContent() {
 
               <div className="flex flex-col items-center gap-4 mb-6">
                 {/* QR Code Placeholder */}
-                <div className="bg-[rgba(248,247,244,0.3)] rounded-[16px] w-[250px] h-[250px] flex items-center justify-center">
+                <div
+                  ref={qrCodeRef}
+                  className="bg-[rgba(248,247,244,0.3)] rounded-[16px] w-[250px] h-[250px] flex items-center justify-center"
+                >
                   <QrCode className="w-20 h-20 text-slate-400" />
                 </div>
 
@@ -813,15 +984,24 @@ function EventOverviewContent() {
 
                 {/* Action Buttons */}
                 <div className="grid grid-cols-3 gap-2 w-full">
-                  <button className="bg-[#f8f7f4] border border-[rgba(0,0,0,0.08)] rounded-[12px] px-4 py-3 flex items-center gap-2 text-sm text-slate-900 hover:bg-gray-100 transition-colors">
+                  <button
+                    onClick={handleCopyQR}
+                    className="bg-[#f8f7f4] border border-[rgba(0,0,0,0.08)] rounded-[12px] px-4 py-3 flex items-center gap-2 text-sm text-slate-900 hover:bg-gray-100 transition-colors"
+                  >
                     <Copy className="w-4 h-4" />
                     Copy
                   </button>
-                  <button className="bg-[#f8f7f4] border border-[rgba(0,0,0,0.08)] rounded-[12px] px-4 py-3 flex items-center gap-2 text-sm text-slate-900 hover:bg-gray-100 transition-colors">
+                  <button
+                    onClick={handleDownloadQR}
+                    className="bg-[#f8f7f4] border border-[rgba(0,0,0,0.08)] rounded-[12px] px-4 py-3 flex items-center gap-2 text-sm text-slate-900 hover:bg-gray-100 transition-colors"
+                  >
                     <Download className="w-4 h-4" />
                     Download
                   </button>
-                  <button className="bg-[#f8f7f4] border border-[rgba(0,0,0,0.08)] rounded-[12px] px-4 py-3 flex items-center gap-2 text-sm text-slate-900 hover:bg-gray-100 transition-colors">
+                  <button
+                    onClick={handlePrintQR}
+                    className="bg-[#f8f7f4] border border-[rgba(0,0,0,0.08)] rounded-[12px] px-4 py-3 flex items-center gap-2 text-sm text-slate-900 hover:bg-gray-100 transition-colors"
+                  >
                     <Printer className="w-4 h-4" />
                     Print
                   </button>
