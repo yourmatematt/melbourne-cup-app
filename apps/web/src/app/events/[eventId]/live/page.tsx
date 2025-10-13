@@ -5,6 +5,7 @@ import { useParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { QRCodeSVG } from 'qrcode.react'
 import {
   Calendar,
   Users,
@@ -122,7 +123,10 @@ function LiveViewPage() {
     console.log('🚨 [CLIENT] LiveViewPage mounted on client')
     setMounted(true)
     setDebugMode(true)
-  }, [])
+
+    // Set join URL for QR code
+    setJoinUrl(`${window.location.origin}/events/${eventId}/enter`)
+  }, [eventId])
 
   useEffect(() => {
     if (mounted) {
@@ -141,6 +145,7 @@ function LiveViewPage() {
   const [pollingActive, setPollingActive] = useState(false)
   const [pollingInterval, setPollingInterval] = useState<NodeJS.Timeout | null>(null)
   const [realtimeFlash, setRealtimeFlash] = useState(false)
+  const [joinUrl, setJoinUrl] = useState('')
 
   // Use the real-time assignments hook with relations
   console.log('🚨 LIVE PAGE - About to call useRealtimeAssignments hook with eventId:', eventId)
@@ -712,10 +717,13 @@ function LiveViewPage() {
   // Calculate prize pool (simple calculation - could be from database)
   const prizePool = participants.filter(p => p.payment_status === 'completed').length * 20 // Assuming $20 per entry
 
-  // Get recent activity for footer
-  const recentActivity = recentAssignments.slice(0, 3).map(assignment =>
-    `${assignment.participant_name} drew Horse #${assignment.horse_number} - ${assignment.horse_name}`
-  )
+  // Get recent activity for footer with correct format
+  const recentActivity = recentAssignments.slice(0, 3).map(assignment => {
+    const participant = participantStatuses.find(p => p.participant_name === assignment.participant_name)
+    const action = participant?.has_paid ? 'paid' : 'joined'
+    const suffix = participant?.has_paid ? 'confirmed!' : `Got Horse #${assignment.horse_number}!`
+    return `${assignment.participant_name} ${action} - Horse #${assignment.horse_number} ${suffix}`
+  })
 
   return (
     <div className="min-h-screen bg-[#f8f7f4] overflow-hidden w-screen h-screen relative" style={{ minWidth: '1920px', minHeight: '1080px' }}>
@@ -757,12 +765,23 @@ function LiveViewPage() {
         {/* Right: QR Code + Join Text */}
         <div className="flex items-center space-x-4">
           {/* QR Code */}
-          <div className="w-[100px] h-[100px] bg-slate-900 rounded-lg flex items-center justify-center">
-            <QrCode className="w-20 h-20 text-white" />
+          <div className="w-[100px] h-[100px] bg-white rounded-lg p-2 border border-gray-200 flex items-center justify-center">
+            {joinUrl ? (
+              <QRCodeSVG
+                value={joinUrl}
+                size={84}
+                level="H"
+                includeMargin={false}
+                fgColor="#000000"
+                bgColor="#ffffff"
+              />
+            ) : (
+              <QrCode className="w-20 h-20 text-gray-400" />
+            )}
           </div>
           <div className="text-right">
             <p className="text-2xl font-bold text-slate-900">Scan to Join</p>
-            <p className="text-lg text-slate-600">/events/{eventId}</p>
+            <p className="text-lg text-slate-600">/events/{eventId}/enter</p>
           </div>
         </div>
       </div>
@@ -775,7 +794,7 @@ function LiveViewPage() {
         }}
       >
         <div className="text-center">
-          <p className="text-5xl font-bold text-white mb-3">
+          <p className="font-bold text-white mb-3" style={{ fontSize: '48px' }}>
             PARTICIPANTS: {participants.length} / {event.capacity} SPOTS FILLED
           </p>
           <div className="w-[600px] h-3 bg-white bg-opacity-30 rounded-full overflow-hidden">
