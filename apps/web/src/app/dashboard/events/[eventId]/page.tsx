@@ -27,7 +27,6 @@ import {
   Download,
   Settings,
   CheckCircle,
-  MoreHorizontal,
   Copy,
   Printer,
   Share2,
@@ -38,7 +37,13 @@ import {
   Medal,
   CheckCircle2,
   Podium,
-  LayoutDashboard
+  LayoutDashboard,
+  ChevronDown,
+  LogOut,
+  Search,
+  Filter,
+  MoreVertical,
+  X
 } from 'lucide-react'
 
 type Event = {
@@ -169,6 +174,213 @@ function ActionCard({
   )
 }
 
+function ViewAllParticipantsModal({
+  isOpen,
+  onClose,
+  participants,
+  onPaymentToggle,
+  onAddParticipant
+}: {
+  isOpen: boolean
+  onClose: () => void
+  participants: Participant[]
+  onPaymentToggle?: (participantId: string, newStatus: 'paid' | 'unpaid') => void
+  onAddParticipant?: () => void
+}) {
+  const [searchTerm, setSearchTerm] = useState('')
+  const [filterType, setFilterType] = useState('all')
+
+  if (!isOpen) return null
+
+  // Filter participants based on search and filter
+  const filteredParticipants = participants.filter(participant => {
+    const matchesSearch = participant.participant_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         participant.email.toLowerCase().includes(searchTerm.toLowerCase())
+
+    if (!matchesSearch) return false
+
+    switch (filterType) {
+      case 'paid':
+        return participant.payment_status === 'paid'
+      case 'unpaid':
+        return participant.payment_status !== 'paid'
+      case 'assigned':
+        return participant.horse_number != null
+      case 'unassigned':
+        return participant.horse_number == null
+      default:
+        return true
+    }
+  })
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-[20px] w-[900px] h-[700px] flex flex-col overflow-hidden">
+        {/* Header */}
+        <div className="flex items-center justify-between p-6 border-b border-gray-200">
+          <div>
+            <h2 className="text-xl font-bold text-slate-900">All Participants</h2>
+            <p className="text-sm text-slate-600">{participants.length} total participants</p>
+          </div>
+
+          <div className="flex items-center gap-3">
+            {/* Search */}
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Search participants..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10 pr-4 py-2 border border-gray-200 rounded-lg text-sm w-64 focus:outline-none focus:ring-2 focus:ring-purple-500"
+              />
+            </div>
+
+            {/* Filter */}
+            <select
+              value={filterType}
+              onChange={(e) => setFilterType(e.target.value)}
+              className="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+            >
+              <option value="all">All</option>
+              <option value="paid">Paid</option>
+              <option value="unpaid">Unpaid</option>
+              <option value="assigned">Assigned</option>
+              <option value="unassigned">Unassigned</option>
+            </select>
+
+            {/* Add Participant Button */}
+            <button
+              onClick={() => {
+                onAddParticipant?.()
+                onClose()
+              }}
+              className="bg-[#f8f7f4] border border-gray-200 px-4 py-2 rounded-lg text-sm font-medium text-slate-900 hover:bg-gray-50 flex items-center gap-2"
+            >
+              <UserPlus className="h-4 w-4" />
+              Add Participant
+            </button>
+
+            {/* Close Button */}
+            <button
+              onClick={onClose}
+              className="p-2 hover:bg-gray-100 rounded-lg"
+            >
+              <X className="h-5 w-5 text-gray-500" />
+            </button>
+          </div>
+        </div>
+
+        {/* Participants List */}
+        <div className="flex-1 overflow-y-auto p-6">
+          <div className="space-y-3">
+            {filteredParticipants.length > 0 ? (
+              filteredParticipants.map((participant) => (
+                <ParticipantRowModal
+                  key={participant.id}
+                  participant={participant}
+                  onPaymentToggle={onPaymentToggle}
+                />
+              ))
+            ) : (
+              <div className="flex flex-col items-center justify-center py-12">
+                <Users className="h-12 w-12 text-gray-300 mb-4" />
+                <p className="text-gray-500">No participants found</p>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function ParticipantRowModal({ participant, onPaymentToggle }: {
+  participant: Participant
+  onPaymentToggle?: (participantId: string, newStatus: 'paid' | 'unpaid') => void
+}) {
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false)
+  const [pendingStatus, setPendingStatus] = useState<'paid' | 'unpaid' | null>(null)
+
+  const handlePaymentToggle = async (newStatus: 'paid' | 'unpaid') => {
+    // Safety confirmation for paid -> unpaid
+    if (participant.payment_status === 'paid' && newStatus === 'unpaid') {
+      setPendingStatus(newStatus)
+      setShowConfirmDialog(true)
+      toast.error('This participant was marked paid. Are you sure you want to move them to unpaid status?', {
+        duration: 5000,
+        action: {
+          label: 'Confirm',
+          onClick: () => {
+            onPaymentToggle?.(participant.id, newStatus)
+            setShowConfirmDialog(false)
+            setPendingStatus(null)
+          }
+        }
+      })
+      return
+    }
+
+    onPaymentToggle?.(participant.id, newStatus)
+  }
+
+  return (
+    <div className="flex items-center justify-between p-4 border border-gray-200 rounded-xl hover:bg-gray-50">
+      <div className="flex items-center gap-3">
+        {/* Avatar */}
+        <div className="w-10 h-10 bg-gradient-to-br from-purple-400 to-pink-400 rounded-full flex items-center justify-center">
+          <span className="text-white font-medium text-sm">
+            {getInitials(participant.participant_name)}
+          </span>
+        </div>
+
+        {/* Details */}
+        <div>
+          <h4 className="font-medium text-slate-900">{participant.participant_name}</h4>
+          <p className="text-sm text-slate-600">{participant.email}</p>
+          <p className="text-xs text-slate-500">
+            {new Date(participant.created_at).toLocaleDateString()} at {new Date(participant.created_at).toLocaleTimeString()}
+          </p>
+        </div>
+      </div>
+
+      <div className="flex items-center gap-3">
+        {/* Horse Badge */}
+        {participant.horse_number ? (
+          <div className="bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-sm font-medium">
+            Horse #{participant.horse_number}
+          </div>
+        ) : (
+          <div className="bg-gray-100 text-gray-600 px-3 py-1 rounded-full text-sm">
+            No horse assigned
+          </div>
+        )}
+
+        {/* Payment Toggle */}
+        <div className="flex flex-col items-center gap-1">
+          <label className="relative inline-flex items-center cursor-pointer">
+            <input
+              type="checkbox"
+              checked={participant.payment_status === 'paid'}
+              onChange={(e) => handlePaymentToggle(e.target.checked ? 'paid' : 'unpaid')}
+              className="sr-only peer"
+            />
+            <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
+          </label>
+          <span className="text-xs text-gray-600">
+            {participant.payment_status === 'paid' ? 'Paid' : 'Unpaid'}
+          </span>
+        </div>
+
+        {/* More Menu */}
+        <button className="p-2 hover:bg-gray-200 rounded-lg">
+          <MoreVertical className="h-4 w-4 text-gray-500" />
+        </button>
+      </div>
+    </div>
+  )
+}
+
 function ParticipantRow({ participant, onPaymentToggle }: {
   participant: Participant
   onPaymentToggle?: (participantId: string, newStatus: 'paid' | 'unpaid') => void
@@ -281,7 +493,12 @@ function EventOverviewContent() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [showAddParticipantModal, setShowAddParticipantModal] = useState(false)
+  const [showViewAllParticipantsModal, setShowViewAllParticipantsModal] = useState(false)
+  const [searchTerm, setSearchTerm] = useState('')
+  const [filterType, setFilterType] = useState('all') // 'all', 'paid', 'unpaid', 'assigned', 'unassigned'
   const [activeTab, setActiveTab] = useState(0)
+  const [showVenueDropdown, setShowVenueDropdown] = useState(false)
+  const venueDropdownRef = useRef<HTMLDivElement>(null)
   const [drawStats, setDrawStats] = useState<DrawStats>({
     assigned: 0,
     waiting: 0,
@@ -301,6 +518,29 @@ function EventOverviewContent() {
   useEffect(() => {
     fetchEventData()
   }, [eventId])
+
+  // Handle click outside venue dropdown
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (venueDropdownRef.current && !venueDropdownRef.current.contains(event.target as Node)) {
+        setShowVenueDropdown(false)
+      }
+    }
+
+    if (showVenueDropdown) {
+      document.addEventListener('mousedown', handleClickOutside)
+      return () => document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [showVenueDropdown])
+
+  async function handleSignOut() {
+    try {
+      await supabase.auth.signOut()
+      router.push('/login')
+    } catch (error) {
+      console.error('Error signing out:', error)
+    }
+  }
 
   async function fetchEventData() {
     try {
@@ -840,7 +1080,7 @@ function EventOverviewContent() {
 
                 <div className="space-y-2 max-h-96 overflow-y-auto">
                   {participants.length > 0 ? (
-                    participants.map((participant) => (
+                    participants.slice(0, 6).map((participant) => (
                       <ParticipantRow
                         key={participant.id}
                         participant={participant}
@@ -878,6 +1118,18 @@ function EventOverviewContent() {
                     </div>
                   )}
                 </div>
+
+                {/* View All Button - Only show when there are participants */}
+                {participants.length > 0 && (
+                  <div className="pt-2 border-t border-gray-100">
+                    <button
+                      onClick={() => setShowViewAllParticipantsModal(true)}
+                      className="w-full bg-[#f8f7f4] border border-gray-200/50 rounded-xl py-2.5 px-4 text-sm font-medium text-slate-900 hover:bg-gray-50 transition-colors"
+                    >
+                      View All ({participants.length})
+                    </button>
+                  </div>
+                )}
               </div>
 
               {/* Horse Field Column */}
@@ -1527,10 +1779,47 @@ function EventOverviewContent() {
               <Download className="h-4 w-4" />
               Export
             </button>
-            <button className="bg-[#f8f7f4] border border-gray-200 h-9 px-4 rounded-xl flex items-center gap-2 text-sm text-slate-900 hover:bg-gray-50 transition-colors">
-              <MoreHorizontal className="h-4 w-4" />
-              More
-            </button>
+
+            {/* Venue Dropdown */}
+            <div className="relative" ref={venueDropdownRef}>
+              <button
+                onClick={() => setShowVenueDropdown(!showVenueDropdown)}
+                className="bg-[rgba(0,0,0,0.04)] border border-[rgba(0,0,0,0.08)] rounded-[8px] px-[17px] py-[1px] flex items-center gap-2 w-[200px] h-[44px] hover:bg-[rgba(0,0,0,0.06)] transition-colors"
+              >
+                <div className="w-6 h-6 bg-gradient-to-b from-[#ff8a00] via-[#ff4d8d] to-[#8b5cf6] rounded-full flex items-center justify-center">
+                  <span className="text-white text-[12px] font-['Arial:Regular',_sans-serif] leading-[16px]">T</span>
+                </div>
+                <span className="text-[14px] leading-[20px] font-['Arial:Regular',_sans-serif] text-gray-800 flex-1 text-left">The Royal Hotel</span>
+                <ChevronDown className={`w-4 h-4 text-gray-600 transition-transform duration-200 ${showVenueDropdown ? 'rotate-180' : ''}`} />
+              </button>
+
+              {/* Dropdown Menu */}
+              {showVenueDropdown && (
+                <div className="absolute top-full right-0 mt-2 w-[280px] bg-white border border-[rgba(0,0,0,0.08)] rounded-[12px] shadow-lg z-50 py-2">
+                  {/* Venue Info */}
+                  <div className="px-4 py-3 border-b border-[rgba(0,0,0,0.08)]">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-gradient-to-b from-[#ff8a00] via-[#ff4d8d] to-[#8b5cf6] rounded-full flex items-center justify-center">
+                        <span className="text-white text-[16px] font-['Arial:Regular',_sans-serif] leading-[20px]">T</span>
+                      </div>
+                      <div>
+                        <div className="text-[14px] font-['Arial:Bold',_sans-serif] font-bold text-slate-900 leading-[20px]">The Royal Hotel</div>
+                        <div className="text-[12px] text-slate-600 leading-[16px]">admin@gmail.com</div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Sign Out */}
+                  <button
+                    onClick={handleSignOut}
+                    className="w-full px-4 py-3 flex items-center gap-3 text-[14px] text-slate-600 hover:bg-gray-50 hover:text-slate-900 transition-colors"
+                  >
+                    <LogOut className="w-4 h-4" />
+                    Sign Out
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
@@ -1551,6 +1840,15 @@ function EventOverviewContent() {
           onParticipantAdded={handleParticipantAdded}
         />
       )}
+
+      {/* View All Participants Modal */}
+      <ViewAllParticipantsModal
+        isOpen={showViewAllParticipantsModal}
+        onClose={() => setShowViewAllParticipantsModal(false)}
+        participants={participants}
+        onPaymentToggle={handlePaymentToggle}
+        onAddParticipant={() => setShowAddParticipantModal(true)}
+      />
     </DashboardLayout>
   )
 }
