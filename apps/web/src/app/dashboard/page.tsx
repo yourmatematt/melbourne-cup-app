@@ -259,7 +259,7 @@ function DashboardContent() {
           <div className="flex gap-3 h-[44px]">
             {/* Create Event Button */}
             <Link href="/dashboard/events/new">
-              <button className="bg-gradient-to-b from-[#ff6b35] to-[#a855f7] text-white px-6 py-0 rounded-[8px] shadow-[0px_2px_8px_0px_rgba(168,85,247,0.3)] h-[44px] w-[153.672px] flex items-center gap-2 hover:opacity-90 transition-opacity">
+              <button className="bg-gradient-to-b from-[#ff6b35] to-[#a855f7] text-white px-6 py-0 rounded-[8px] shadow-[0px_2px_8px_0px_rgba(168,85,247,0.3)] h-[44px] flex items-center gap-2 hover:opacity-90 transition-opacity whitespace-nowrap">
                 <Plus className="w-[18px] h-[18px]" />
                 <span className="text-[14px] font-['Arial:Bold',_sans-serif] font-bold leading-[20px]">Create Event</span>
               </button>
@@ -365,7 +365,7 @@ function DashboardContent() {
 
               {/* Create Button */}
               <Link href="/dashboard/events/new">
-                <button className="absolute left-[190.3px] top-[269px] w-[219.391px] h-[48px] bg-gradient-to-b from-[#ff8a00] via-[#ff4d8d] to-[#8b5cf6] rounded-[12px] flex items-center text-white hover:opacity-90 transition-opacity">
+                <button className="absolute left-[190.3px] top-[269px] w-[219.391px] h-[48px] bg-gradient-to-b from-[#ff8a00] via-[#ff4d8d] to-[#8b5cf6] rounded-[12px] flex items-center text-white hover:opacity-90 transition-opacity whitespace-nowrap">
                   <Plus className="w-4 h-4 ml-3 mr-2" />
                   <span className="text-[16px] leading-[24px] font-['Arial:Regular',_sans-serif]">Create Your First Event</span>
                 </button>
@@ -482,7 +482,7 @@ function DashboardContent() {
               <h3 className="text-[16px] leading-[24px] font-['Arial:Regular',_sans-serif] text-slate-900 mb-2">Ready to create another event?</h3>
               <p className="text-[14px] leading-[20px] font-['Arial:Regular',_sans-serif] text-slate-600 mb-4">Set up a new Melbourne Cup sweep in less than 2 minutes</p>
               <Link href="/dashboard/events/new">
-                <button className="bg-gradient-to-r from-[#ff6b35] to-[#a855f7] text-white px-6 py-2.5 rounded-lg text-[14px] font-['Arial:Bold',_sans-serif] font-bold hover:opacity-90 transition-opacity">
+                <button className="bg-gradient-to-r from-[#ff6b35] to-[#a855f7] text-white px-6 py-2.5 rounded-lg text-[14px] font-['Arial:Bold',_sans-serif] font-bold hover:opacity-90 transition-opacity whitespace-nowrap">
                   Create New Event
                 </button>
               </Link>
