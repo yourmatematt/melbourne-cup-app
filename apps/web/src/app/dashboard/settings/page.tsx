@@ -413,7 +413,7 @@ export default function VenueSettingsPage() {
                           </div>
                           <p className="text-[14px] text-slate-900 mb-1">Click to upload or drag & drop</p>
                           <p className="text-[12px] text-gray-500 mb-4">PNG, JPG, SVG (recommended: 200x200px)</p>
-                          <Button className="bg-[#f8f7f4] border border-[rgba(0,0,0,0.08)] text-slate-900 rounded-[8px] h-[42px] px-6">
+                          <Button className="bg-[#f8f7f4] border border-[rgba(0,0,0,0.08)] text-slate-900 rounded-[8px] h-[42px] px-6 hover:bg-[#f8f7f4] hover:border-2 hover:border-orange-500 transition-all duration-200">
                             <Upload className="w-4 h-4 mr-2" />
                             Upload Logo
                           </Button>
@@ -431,7 +431,7 @@ export default function VenueSettingsPage() {
                           </div>
                           <p className="text-[14px] text-slate-900 mb-1">Click to upload or drag & drop</p>
                           <p className="text-[12px] text-gray-500 mb-4">JPG, PNG (recommended: 1920x1080px)</p>
-                          <Button className="bg-[#f8f7f4] border border-[rgba(0,0,0,0.08)] text-slate-900 rounded-[8px] h-[42px] px-6">
+                          <Button className="bg-[#f8f7f4] border border-[rgba(0,0,0,0.08)] text-slate-900 rounded-[8px] h-[42px] px-6 hover:bg-[#f8f7f4] hover:border-2 hover:border-orange-500 transition-all duration-200">
                             <Upload className="w-4 h-4 mr-2" />
                             Upload Background
                           </Button>
