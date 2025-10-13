@@ -9,6 +9,7 @@ import { StatCard } from '@/components/ui/stat-card'
 import { StatusPill } from '@/components/ui/status-pill'
 import { AddParticipantModal } from '@/components/shared/add-participant-modal'
 import { toast } from 'sonner'
+import { QRCodeSVG } from 'qrcode.react'
 import {
   ChevronLeft,
   ChevronRight,
@@ -291,6 +292,11 @@ function EventOverviewContent() {
 
   // QR Code ref for copy/download/print functionality
   const qrCodeRef = useRef<HTMLDivElement>(null)
+
+  // Join URL for QR code and sharing
+  const joinUrl = typeof window !== 'undefined'
+    ? `${window.location.origin}/events/${eventId}/enter`
+    : `https://app.melbournecupsweep.com.au/events/${eventId}/enter`
 
   useEffect(() => {
     fetchEventData()
@@ -590,43 +596,49 @@ function EventOverviewContent() {
   // QR Code functionality
   const handleCopyQR = async () => {
     try {
-      const qrElement = qrCodeRef.current
-      if (!qrElement) return
+      const qrSvg = document.getElementById('qr-code-canvas')
+      if (!qrSvg) return
 
-      // Create a canvas to draw the QR code
+      // Convert SVG to canvas
       const canvas = document.createElement('canvas')
       const ctx = canvas.getContext('2d')
       if (!ctx) return
 
-      // Set canvas size
-      canvas.width = 250
-      canvas.height = 250
+      // Set canvas size with padding
+      canvas.width = 350
+      canvas.height = 350
 
-      // Create a white background
+      // Create white background
       ctx.fillStyle = '#ffffff'
-      ctx.fillRect(0, 0, 250, 250)
+      ctx.fillRect(0, 0, 350, 350)
 
-      // For now, we'll create a simple placeholder
-      // In a real implementation, you'd generate the actual QR code
-      ctx.fillStyle = '#000000'
-      ctx.font = '12px Arial'
-      ctx.textAlign = 'center'
-      ctx.fillText('QR Code', 125, 125)
+      // Create an image from the SVG
+      const svgData = new XMLSerializer().serializeToString(qrSvg)
+      const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' })
+      const url = URL.createObjectURL(svgBlob)
 
-      // Convert canvas to blob
-      canvas.toBlob(async (blob) => {
-        if (blob) {
-          try {
-            await navigator.clipboard.write([
-              new ClipboardItem({ 'image/png': blob })
-            ])
-            toast.success('QR code copied to clipboard', { duration: 2000 })
-          } catch (clipboardError) {
-            console.error('Failed to copy to clipboard:', clipboardError)
-            toast.error('Failed to copy QR code')
+      const img = new Image()
+      img.onload = () => {
+        // Draw the SVG image centered on canvas
+        ctx.drawImage(img, 50, 50, 250, 250)
+
+        // Convert canvas to blob and copy
+        canvas.toBlob(async (blob) => {
+          if (blob) {
+            try {
+              await navigator.clipboard.write([
+                new ClipboardItem({ 'image/png': blob })
+              ])
+              toast.success('QR code copied to clipboard', { duration: 2000 })
+            } catch (clipboardError) {
+              console.error('Failed to copy to clipboard:', clipboardError)
+              toast.error('Failed to copy QR code')
+            }
           }
-        }
-      }, 'image/png')
+          URL.revokeObjectURL(url)
+        }, 'image/png')
+      }
+      img.src = url
     } catch (error) {
       console.error('Error copying QR code:', error)
       toast.error('Failed to copy QR code')
@@ -635,39 +647,49 @@ function EventOverviewContent() {
 
   const handleDownloadQR = () => {
     try {
+      const qrSvg = document.getElementById('qr-code-canvas')
+      if (!qrSvg) return
+
+      // Convert SVG to canvas
       const canvas = document.createElement('canvas')
       const ctx = canvas.getContext('2d')
       if (!ctx) return
 
-      // Set canvas size
-      canvas.width = 250
-      canvas.height = 250
+      // Set canvas size with padding
+      canvas.width = 350
+      canvas.height = 350
 
-      // Create a white background
+      // Create white background
       ctx.fillStyle = '#ffffff'
-      ctx.fillRect(0, 0, 250, 250)
+      ctx.fillRect(0, 0, 350, 350)
 
-      // For now, we'll create a simple placeholder
-      // In a real implementation, you'd generate the actual QR code
-      ctx.fillStyle = '#000000'
-      ctx.font = '12px Arial'
-      ctx.textAlign = 'center'
-      ctx.fillText('QR Code', 125, 125)
+      // Create an image from the SVG
+      const svgData = new XMLSerializer().serializeToString(qrSvg)
+      const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' })
+      const url = URL.createObjectURL(svgBlob)
 
-      // Create download link
-      canvas.toBlob((blob) => {
-        if (blob) {
-          const url = URL.createObjectURL(blob)
-          const link = document.createElement('a')
-          link.href = url
-          link.download = `QR Code ${event?.name || 'Event'} - The Royal Hotel.png`
-          document.body.appendChild(link)
-          link.click()
-          document.body.removeChild(link)
+      const img = new Image()
+      img.onload = () => {
+        // Draw the SVG image centered on canvas
+        ctx.drawImage(img, 50, 50, 250, 250)
+
+        // Create download link
+        canvas.toBlob((blob) => {
+          if (blob) {
+            const downloadUrl = URL.createObjectURL(blob)
+            const link = document.createElement('a')
+            link.href = downloadUrl
+            link.download = `QR Code ${event?.name || 'Event'}.png`
+            document.body.appendChild(link)
+            link.click()
+            document.body.removeChild(link)
+            URL.revokeObjectURL(downloadUrl)
+            toast.success('QR code downloaded', { duration: 2000 })
+          }
           URL.revokeObjectURL(url)
-          toast.success('QR code downloaded', { duration: 2000 })
-        }
-      }, 'image/png')
+        }, 'image/png')
+      }
+      img.src = url
     } catch (error) {
       console.error('Error downloading QR code:', error)
       toast.error('Failed to download QR code')
@@ -682,8 +704,6 @@ function EventOverviewContent() {
         toast.error('Failed to open print window')
         return
       }
-
-      const joinUrl = `https://app.melbournecupsweep.com.au/events/${eventId}/join`
 
       printWindow.document.write(`
         <!DOCTYPE html>
@@ -764,7 +784,6 @@ function EventOverviewContent() {
 
   const handleShareJoinLink = async () => {
     try {
-      const joinUrl = `https://app.melbournecupsweep.com.au/events/${eventId}/join`
       await navigator.clipboard.writeText(joinUrl)
       toast.success('Join link copied to clipboard', { duration: 2000 })
     } catch (err) {
@@ -992,18 +1011,24 @@ function EventOverviewContent() {
               </h3>
 
               <div className="flex flex-col items-center gap-4 mb-6">
-                {/* QR Code Placeholder */}
+                {/* QR Code */}
                 <div
                   ref={qrCodeRef}
-                  className="bg-[rgba(248,247,244,0.3)] rounded-[16px] w-[250px] h-[250px] flex items-center justify-center"
+                  className="bg-white p-8 rounded-[16px] border-4 border-gray-200"
                 >
-                  <QrCode className="w-20 h-20 text-slate-400" />
+                  <QRCodeSVG
+                    id="qr-code-canvas"
+                    value={joinUrl}
+                    size={250}
+                    level="H"
+                    includeMargin={true}
+                  />
                 </div>
 
                 {/* URL Display */}
                 <div className="bg-[rgba(248,247,244,0.3)] rounded-[12px] p-4 w-full">
                   <p className="font-mono text-sm text-slate-900">
-                    https://app.melbournecupsweep.com.au/events/{eventId}/join
+                    {joinUrl}
                   </p>
                 </div>
 
