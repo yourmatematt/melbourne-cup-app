@@ -44,7 +44,7 @@ export default function EventQRPage() {
 
   const publicUrl = typeof window !== 'undefined'
     ? `${window.location.origin}/events/${eventId || ''}/enter`
-    : `https://melcup.app/events/${eventId || ''}/enter`
+    : `https://app.melbournecupsweep.com.au/events/${eventId || ''}/enter`
 
   useEffect(() => {
     if (eventId) {

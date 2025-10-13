@@ -34,8 +34,10 @@ type Event = {
   status: 'draft' | 'active' | 'drawing' | 'completed' | 'cancelled'
   capacity: number
   mode: string
+  entry_fee?: number
   created_at: string
   participant_count?: number
+  paid_count?: number
 }
 
 
@@ -54,6 +56,26 @@ function DashboardContent() {
   const venueDropdownRef = useRef<HTMLDivElement>(null)
   const router = useRouter()
   const supabase = createClient()
+
+  // Helper functions
+  function calculatePoolAmount(event: Event): number {
+    if (!event.entry_fee || event.entry_fee === 0) {
+      return 0
+    }
+    return event.entry_fee * event.capacity
+  }
+
+  function formatCurrency(amount: number): string {
+    if (amount === 0) {
+      return 'Free Event'
+    }
+    return new Intl.NumberFormat('en-AU', {
+      style: 'currency',
+      currency: 'AUD',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 2
+    }).format(amount)
+  }
 
   useEffect(() => {
     fetchUserAndEvents()
@@ -114,14 +136,23 @@ function DashboardContent() {
         } else {
           const eventsWithCounts = await Promise.all(
             (eventsData || []).map(async (event: any) => {
+              // Get total participant count
               const { count } = await supabase
                 .from('patron_entries')
                 .select('*', { count: 'exact', head: true })
                 .eq('event_id', event.id)
 
+              // Get paid participant count
+              const { count: paidCount } = await supabase
+                .from('patron_entries')
+                .select('*', { count: 'exact', head: true })
+                .eq('event_id', event.id)
+                .eq('payment_status', 'paid')
+
               return {
                 ...event,
-                participant_count: count || 0
+                participant_count: count || 0,
+                paid_count: paidCount || 0
               }
             })
           )
@@ -176,15 +207,23 @@ function DashboardContent() {
 
   async function handleParticipantAdded() {
     if (selectedEvent) {
+      // Get total count
       const { count } = await supabase
         .from('patron_entries')
         .select('*', { count: 'exact', head: true })
         .eq('event_id', selectedEvent.id)
 
+      // Get paid count
+      const { count: paidCount } = await supabase
+        .from('patron_entries')
+        .select('*', { count: 'exact', head: true })
+        .eq('event_id', selectedEvent.id)
+        .eq('payment_status', 'paid')
+
       setEvents(prevEvents =>
         prevEvents.map(event =>
           event.id === selectedEvent.id
-            ? { ...event, participant_count: count || 0 }
+            ? { ...event, participant_count: count || 0, paid_count: paidCount || 0 }
             : event
         )
       )
@@ -403,7 +442,9 @@ function DashboardContent() {
                       </div>
                       <div className="text-right">
                         <div className="text-[12px] leading-[16px] font-['Arial:Regular',_sans-serif] text-slate-600">Pool</div>
-                        <div className="text-[16px] leading-[24px] font-['Arial:Bold',_sans-serif] font-bold text-slate-900">$240</div>
+                        <div className="text-[16px] leading-[24px] font-['Arial:Bold',_sans-serif] font-bold text-slate-900">
+                          {formatCurrency(calculatePoolAmount(event))}
+                        </div>
                       </div>
                     </div>
 
@@ -446,7 +487,7 @@ function DashboardContent() {
                       </div>
                       <div>
                         <div className="text-slate-600">Paid</div>
-                        <div className="font-bold text-green-600">{event.participant_count || 0}/{event.capacity}</div>
+                        <div className="font-bold text-green-600">{event.paid_count || 0}/{event.capacity}</div>
                       </div>
                       <div>
                         <div className="text-slate-600">Assigned</div>
