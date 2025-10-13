@@ -111,6 +111,9 @@ export function AddParticipantModal({
       // Generate join code
       const joinCode = Math.random().toString(36).substring(2, 8).toUpperCase()
 
+      const paymentStatus = markAsPaid ? 'paid' : 'pending'
+      console.log('DEBUG: Adding participant with payment toggle:', markAsPaid, '-> payment_status:', paymentStatus)
+
   const { error } = await supabase
   .from('patron_entries')
   .insert({
@@ -118,7 +121,7 @@ export function AddParticipantModal({
     participant_name: newParticipant.displayName.trim(),
     email: email, // Email is now required, so no need for || null
     phone: newParticipant.phone.trim() || null,
-    payment_status: markAsPaid ? 'paid' : 'unpaid',
+    payment_status: paymentStatus,
     marketing_consent: newParticipant.marketingConsent,
     join_code: joinCode
   } as any)

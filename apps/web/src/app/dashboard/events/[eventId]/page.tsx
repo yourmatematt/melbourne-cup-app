@@ -64,7 +64,7 @@ type Participant = {
   horse_number?: number
   horse_name?: string
   created_at: string
-  payment_status?: 'paid' | 'pending' | 'unpaid'
+  payment_status?: 'paid' | 'pending' | 'expired'
 }
 
 type DrawStats = {
@@ -184,7 +184,7 @@ function ViewAllParticipantsModal({
   isOpen: boolean
   onClose: () => void
   participants: Participant[]
-  onToggleClick?: (participant: Participant, newStatus: 'paid' | 'unpaid') => void
+  onToggleClick?: (participant: Participant, newStatus: 'paid' | 'pending') => void
   onAddParticipant?: () => void
 }) {
   const [searchTerm, setSearchTerm] = useState('')
@@ -203,7 +203,7 @@ function ViewAllParticipantsModal({
       case 'paid':
         return participant.payment_status === 'paid'
       case 'unpaid':
-        return participant.payment_status !== 'paid'
+        return participant.payment_status === 'pending' || participant.payment_status === 'expired'
       case 'assigned':
         return participant.horse_number != null
       case 'unassigned':
@@ -358,7 +358,7 @@ function PaymentConfirmationModal({
 
 function ParticipantRowModal({ participant, onToggleClick }: {
   participant: Participant
-  onToggleClick?: (participant: Participant, newStatus: 'paid' | 'unpaid') => void
+  onToggleClick?: (participant: Participant, newStatus: 'paid' | 'pending') => void
 }) {
 
   return (
@@ -399,7 +399,7 @@ function ParticipantRowModal({ participant, onToggleClick }: {
             <input
               type="checkbox"
               checked={participant.payment_status === 'paid'}
-              onChange={(e) => onToggleClick?.(participant, e.target.checked ? 'paid' : 'unpaid')}
+              onChange={(e) => onToggleClick?.(participant, e.target.checked ? 'paid' : 'pending')}
               className="sr-only peer"
             />
             <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
@@ -420,7 +420,7 @@ function ParticipantRowModal({ participant, onToggleClick }: {
 
 function ParticipantRow({ participant, onToggleClick }: {
   participant: Participant
-  onToggleClick?: (participant: Participant, newStatus: 'paid' | 'unpaid') => void
+  onToggleClick?: (participant: Participant, newStatus: 'paid' | 'pending') => void
 }) {
   const initials = getInitials(participant.participant_name)
   const isPaid = participant.payment_status === 'paid'
@@ -628,7 +628,8 @@ function EventOverviewContent() {
           participant_name,
           email,
           phone,
-          created_at
+          created_at,
+          payment_status
         `)
         .eq('event_id', eventId)
         .order('created_at', { ascending: false })
@@ -673,7 +674,7 @@ function EventOverviewContent() {
           created_at: p.created_at,
           horse_number: assignment?.horse_number,
           horse_name: assignment?.horse_name,
-          payment_status: 'unpaid' as 'paid' | 'pending' | 'unpaid' // TODO: Fetch from database
+          payment_status: p.payment_status as 'paid' | 'pending' | 'expired'
         }
       })
 
@@ -705,9 +706,9 @@ function EventOverviewContent() {
     setShowAddParticipantModal(false)
   }
 
-  function handleToggleClick(participant: Participant, newStatus: 'paid' | 'unpaid') {
+  function handleToggleClick(participant: Participant, newStatus: 'paid' | 'pending') {
     // If changing FROM paid TO unpaid, show confirmation modal
-    if (participant.payment_status === 'paid' && newStatus === 'unpaid') {
+    if (participant.payment_status === 'paid' && newStatus === 'pending') {
       setPendingPaymentChange({
         participantId: participant.id,
         participantName: participant.participant_name,
@@ -1524,7 +1525,7 @@ function EventOverviewContent() {
                     </div>
                     <div className="text-right">
                       <span className="text-sm font-semibold text-slate-900">
-                        {participants.filter(p => p.payment_status === 'unpaid').length}
+                        {participants.filter(p => p.payment_status === 'pending' || p.payment_status === 'expired').length}
                       </span>
                       <span className="text-xs text-slate-600 ml-1">participants</span>
                     </div>
