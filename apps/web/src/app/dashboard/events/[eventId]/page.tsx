@@ -751,6 +751,17 @@ function EventOverviewContent() {
     }
   }
 
+  const handleCopyLiveViewUrl = async () => {
+    try {
+      const liveViewUrl = `https://sweep.app/live/${eventId}`
+      await navigator.clipboard.writeText(liveViewUrl)
+      toast.success('Live view URL copied to clipboard', { duration: 2000 })
+    } catch (err) {
+      console.error('Error copying live view URL:', err)
+      toast.error('Failed to copy URL')
+    }
+  }
+
   // Tab content renderer
   const renderTabContent = () => {
     switch (activeTab) {
@@ -1029,8 +1040,11 @@ function EventOverviewContent() {
                   <p className="font-mono font-bold text-base text-slate-900">
                     sweep.app/live/{eventId}
                   </p>
-                  <button className="w-5 h-5 text-slate-600">
-                    <Download className="w-full h-full" />
+                  <button
+                    onClick={handleCopyLiveViewUrl}
+                    className="w-5 h-5 text-slate-600 hover:text-slate-900 transition-colors cursor-pointer"
+                  >
+                    <Copy className="w-full h-full" />
                   </button>
                 </div>
 
