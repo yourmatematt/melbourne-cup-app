@@ -250,7 +250,7 @@ function HorseButton({ number, isAssigned, onClick }: {
 
 function TabMenu({ activeTab, setActiveTab }: { activeTab: number, setActiveTab: (tab: number) => void }) {
   return (
-    <div className="bg-[#F8F7F4] border border-black/8 rounded-[16px] p-1.5 inline-flex w-[615px] h-[46px]">
+    <div className="bg-[#F8F7F4] border border-black/8 rounded-[16px] p-1.5 inline-flex w-[900px] h-[46px]">
       {TABS.map((tab) => (
         <button
           key={tab.id}
@@ -441,57 +441,25 @@ function EventOverviewContent() {
     try {
       setIsDrawing(true)
 
-      // Find the next waiting participant (oldest first)
-      const nextParticipant = participants
-        .filter(p => !p.horse_number)
-        .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())[0]
+      // Call the API route to handle the draw
+      const response = await fetch(`/api/events/${eventId}/draw-next`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      })
 
-      if (!nextParticipant) {
-        throw new Error('No participants waiting for assignment')
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to draw next participant')
       }
-
-      // Get all assigned horse numbers
-      const assignedNumbers = new Set(
-        participants
-          .filter(p => p.horse_number)
-          .map(p => p.horse_number!)
-      )
-
-      // Get available horse numbers (1-24)
-      const availableNumbers = Array.from({ length: 24 }, (_, i) => i + 1)
-        .filter(num => !assignedNumbers.has(num))
-
-      if (availableNumbers.length === 0) {
-        throw new Error('No horses available for assignment')
-      }
-
-      // Randomly select an available horse
-      const randomHorse = availableNumbers[Math.floor(Math.random() * availableNumbers.length)]
-
-      // Get horse details
-      const { data: horseData, error: horseError } = await supabase
-        .from('event_horses')
-        .select('id, name')
-        .eq('event_id', eventId)
-        .eq('number', randomHorse)
-        .single()
-
-      if (horseError) throw horseError
-
-      // Create the assignment
-      const { error: assignmentError } = await supabase
-        .from('assignments')
-        .insert({
-          patron_entry_id: nextParticipant.id,
-          event_horse_id: horseData.id
-        })
-
-      if (assignmentError) throw assignmentError
 
       // Show success notification
-      console.log(`🎉 ${nextParticipant.participant_name} assigned to Horse #${randomHorse} - ${horseData.name}`)
+      const { assignment } = data
+      console.log(`🎉 ${assignment.participant.name} assigned to Horse #${assignment.horse.number} - ${assignment.horse.name}`)
 
-      // Refresh data
+      // Refresh data to show the new assignment
       await fetchEventData()
 
     } catch (err) {
