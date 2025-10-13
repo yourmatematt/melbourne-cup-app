@@ -84,6 +84,7 @@ export async function POST(
     const { data: assignedHorsesData, error: assignedHorsesError } = await supabaseAdmin
       .from('assignments')
       .select('event_horse_id')
+      .eq('event_id', eventId)
       .not('event_horse_id', 'is', null)
 
     if (assignedHorsesError) {
