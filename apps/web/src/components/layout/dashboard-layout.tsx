@@ -47,11 +47,6 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       label: 'Dashboard'
     },
     {
-      href: '/dashboard/events',
-      icon: Calendar,
-      label: 'Events'
-    },
-    {
       href: '/dashboard/settings',
       icon: Settings,
       label: 'Venue Settings'
