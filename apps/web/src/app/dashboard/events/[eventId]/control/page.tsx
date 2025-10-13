@@ -11,7 +11,9 @@ import {
   Clock,
   Trophy,
   Shuffle,
-  Zap
+  Zap,
+  Rocket,
+  Play
 } from 'lucide-react'
 
 type Event = {
@@ -48,6 +50,54 @@ function GradientProgressBar({ percentage, className }: { percentage: number, cl
         className="h-full bg-gradient-to-r from-orange-500 via-pink-500 to-purple-600 rounded-full transition-all duration-300"
         style={{ width: `${percentage}%` }}
       />
+    </div>
+  )
+}
+
+function StatusTransitionCard({
+  currentStatus,
+  title,
+  description,
+  buttonText,
+  icon: Icon,
+  onButtonClick,
+  disabled = false,
+  participantCount,
+  allAssigned
+}: {
+  currentStatus: string
+  title: string
+  description: string
+  buttonText: string
+  icon: React.ComponentType<{ className?: string }>
+  onButtonClick: () => void
+  disabled?: boolean
+  participantCount: number
+  allAssigned: boolean
+}) {
+  return (
+    <div className="bg-white border border-gray-200/50 rounded-lg p-6 space-y-3">
+      <div className="flex items-center gap-3">
+        <div className="w-9 h-9 bg-gradient-to-r from-orange-500 via-pink-500 to-purple-600 rounded-lg flex items-center justify-center">
+          <Icon className="h-5 w-5 text-white" />
+        </div>
+        <h3 className="text-lg font-bold text-slate-900">{title}</h3>
+      </div>
+
+      <p className="text-sm text-slate-600 leading-relaxed">{description}</p>
+
+      <button
+        onClick={onButtonClick}
+        disabled={disabled}
+        className={`w-full h-11 rounded-lg flex items-center justify-center gap-2 text-sm font-medium transition-all ${
+          disabled
+            ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+            : 'bg-gradient-to-r from-orange-500 via-pink-500 to-purple-600 text-white hover:opacity-90'
+        }`}
+      >
+        <Icon className="h-4 w-4" />
+        {buttonText}
+      </button>
     </div>
   )
 }
@@ -369,6 +419,48 @@ function DrawControlsContent() {
     }
   }
 
+  async function handleStatusTransition(newStatus: 'active' | 'drawing' | 'completed') {
+    if (!event) return
+
+    try {
+      const response = await fetch(`/api/events/${eventId}/settings`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          status: newStatus
+        }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to update event status')
+      }
+
+      // Show success toast
+      const statusMessages = {
+        active: 'Event activated! Participants can now register.',
+        drawing: 'Draw phase started! Registration is now closed.',
+        completed: 'Event completed! The draw is finalized.'
+      }
+
+      toast.success(statusMessages[newStatus], {
+        duration: 3000,
+      })
+
+      // Refresh event data
+      await fetchEventData()
+
+    } catch (err) {
+      console.error('Error updating event status:', err)
+      toast.error(err instanceof Error ? err.message : 'Failed to update event status', {
+        duration: 4000,
+      })
+    }
+  }
+
   if (loading) {
     return (
       <DashboardLayout>
@@ -457,6 +549,48 @@ function DrawControlsContent() {
             </span>
           </div>
         </div>
+
+        {/* Event Status Transition Cards */}
+        {event.status === 'draft' && (
+          <StatusTransitionCard
+            currentStatus={event.status}
+            title="Start Event"
+            description="Open registrations and allow participants to join via QR code"
+            buttonText="Activate Event"
+            icon={Rocket}
+            onButtonClick={() => handleStatusTransition('active')}
+            participantCount={participants.length}
+            allAssigned={allAssigned}
+          />
+        )}
+
+        {event.status === 'active' && (
+          <StatusTransitionCard
+            currentStatus={event.status}
+            title="Begin Draw"
+            description="Close registrations and start assigning horses to participants"
+            buttonText="Start Drawing"
+            icon={Shuffle}
+            onButtonClick={() => handleStatusTransition('drawing')}
+            disabled={participants.length === 0}
+            participantCount={participants.length}
+            allAssigned={allAssigned}
+          />
+        )}
+
+        {event.status === 'drawing' && (
+          <StatusTransitionCard
+            currentStatus={event.status}
+            title="Finalize Event"
+            description="Complete the draw and prepare event for race day"
+            buttonText="Complete Draw"
+            icon={Trophy}
+            onButtonClick={() => handleStatusTransition('completed')}
+            disabled={!allAssigned}
+            participantCount={participants.length}
+            allAssigned={allAssigned}
+          />
+        )}
 
         {/* All Assigned Message */}
         {allAssigned && (
