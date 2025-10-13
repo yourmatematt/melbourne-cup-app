@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
@@ -23,7 +23,8 @@ import {
   Mic,
   CheckCircle,
   Plus,
-  ChevronDown
+  ChevronDown,
+  LogOut
 } from 'lucide-react'
 
 type Event = {
@@ -49,12 +50,28 @@ function DashboardContent() {
   const [showAddParticipantModal, setShowAddParticipantModal] = useState(false)
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null)
   const [eventParticipants, setEventParticipants] = useState<any[]>([])
+  const [showVenueDropdown, setShowVenueDropdown] = useState(false)
+  const venueDropdownRef = useRef<HTMLDivElement>(null)
   const router = useRouter()
   const supabase = createClient()
 
   useEffect(() => {
     fetchUserAndEvents()
   }, [])
+
+  // Handle click outside venue dropdown
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (venueDropdownRef.current && !venueDropdownRef.current.contains(event.target as Node)) {
+        setShowVenueDropdown(false)
+      }
+    }
+
+    if (showVenueDropdown) {
+      document.addEventListener('mousedown', handleClickOutside)
+      return () => document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [showVenueDropdown])
 
   async function fetchUserAndEvents() {
     try {
@@ -177,6 +194,15 @@ function DashboardContent() {
     }
   }
 
+  async function handleSignOut() {
+    try {
+      await supabase.auth.signOut()
+      router.push('/login')
+    } catch (error) {
+      console.error('Error signing out:', error)
+    }
+  }
+
   if (loading) {
     return (
       <DashboardLayout>
@@ -231,7 +257,7 @@ function DashboardContent() {
           {/* Header Actions */}
           <div className="flex gap-4 h-[44px] w-[356.984px]">
             {/* Create Event Button */}
-            <Link href="/dashboard/events/create">
+            <Link href="/dashboard/events/new">
               <button className="bg-gradient-to-b from-[#ff6b35] to-[#a855f7] text-white px-6 py-0 rounded-[8px] shadow-[0px_2px_8px_0px_rgba(168,85,247,0.3)] h-[44px] w-[153.672px] flex items-center gap-2 hover:opacity-90 transition-opacity">
                 <Plus className="w-[18px] h-[18px]" />
                 <span className="text-[14px] font-['Arial:Bold',_sans-serif] font-bold leading-[20px]">Create Event</span>
@@ -239,12 +265,44 @@ function DashboardContent() {
             </Link>
 
             {/* Venue Dropdown */}
-            <div className="bg-[rgba(0,0,0,0.04)] border border-[rgba(0,0,0,0.08)] rounded-[8px] px-[17px] py-[1px] flex items-center gap-2 flex-1 h-[44px]">
-              <div className="w-6 h-6 bg-gradient-to-b from-[#ff8a00] via-[#ff4d8d] to-[#8b5cf6] rounded-full flex items-center justify-center">
-                <span className="text-white text-[12px] font-['Arial:Regular',_sans-serif] leading-[16px]">T</span>
-              </div>
-              <span className="text-[14px] leading-[20px] font-['Arial:Regular',_sans-serif] text-gray-800 flex-1">The Royal Hotel</span>
-              <ChevronDown className="w-4 h-4 text-gray-600" />
+            <div className="relative flex-1" ref={venueDropdownRef}>
+              <button
+                onClick={() => setShowVenueDropdown(!showVenueDropdown)}
+                className="bg-[rgba(0,0,0,0.04)] border border-[rgba(0,0,0,0.08)] rounded-[8px] px-[17px] py-[1px] flex items-center gap-2 w-full h-[44px] hover:bg-[rgba(0,0,0,0.06)] transition-colors"
+              >
+                <div className="w-6 h-6 bg-gradient-to-b from-[#ff8a00] via-[#ff4d8d] to-[#8b5cf6] rounded-full flex items-center justify-center">
+                  <span className="text-white text-[12px] font-['Arial:Regular',_sans-serif] leading-[16px]">T</span>
+                </div>
+                <span className="text-[14px] leading-[20px] font-['Arial:Regular',_sans-serif] text-gray-800 flex-1 text-left">The Royal Hotel</span>
+                <ChevronDown className={`w-4 h-4 text-gray-600 transition-transform duration-200 ${showVenueDropdown ? 'rotate-180' : ''}`} />
+              </button>
+
+              {/* Dropdown Menu */}
+              {showVenueDropdown && (
+                <div className="absolute top-full right-0 mt-2 w-[280px] bg-white border border-[rgba(0,0,0,0.08)] rounded-[12px] shadow-lg z-50 py-2">
+                  {/* Venue Info */}
+                  <div className="px-4 py-3 border-b border-[rgba(0,0,0,0.08)]">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-gradient-to-b from-[#ff8a00] via-[#ff4d8d] to-[#8b5cf6] rounded-full flex items-center justify-center">
+                        <span className="text-white text-[16px] font-['Arial:Regular',_sans-serif] leading-[20px]">T</span>
+                      </div>
+                      <div>
+                        <div className="text-[14px] font-['Arial:Bold',_sans-serif] font-bold text-slate-900 leading-[20px]">The Royal Hotel</div>
+                        <div className="text-[12px] text-slate-600 leading-[16px]">admin@gmail.com</div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Sign Out */}
+                  <button
+                    onClick={handleSignOut}
+                    className="w-full px-4 py-3 flex items-center gap-3 text-[14px] text-slate-600 hover:bg-gray-50 hover:text-slate-900 transition-colors"
+                  >
+                    <LogOut className="w-4 h-4" />
+                    Sign Out
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -305,7 +363,7 @@ function DashboardContent() {
               </div>
 
               {/* Create Button */}
-              <Link href="/dashboard/events/create">
+              <Link href="/dashboard/events/new">
                 <button className="absolute left-[190.3px] top-[269px] w-[219.391px] h-[48px] bg-gradient-to-b from-[#ff8a00] via-[#ff4d8d] to-[#8b5cf6] rounded-[12px] flex items-center text-white hover:opacity-90 transition-opacity">
                   <Plus className="w-4 h-4 ml-3 mr-2" />
                   <span className="text-[16px] leading-[24px] font-['Arial:Regular',_sans-serif]">Create Your First Event</span>
@@ -422,7 +480,7 @@ function DashboardContent() {
             <div className="mt-8 bg-gray-50 rounded-[20px] p-6 text-center">
               <h3 className="text-[16px] leading-[24px] font-['Arial:Regular',_sans-serif] text-slate-900 mb-2">Ready to create another event?</h3>
               <p className="text-[14px] leading-[20px] font-['Arial:Regular',_sans-serif] text-slate-600 mb-4">Set up a new Melbourne Cup sweep in less than 2 minutes</p>
-              <Link href="/dashboard/events/create">
+              <Link href="/dashboard/events/new">
                 <button className="bg-gradient-to-r from-[#ff6b35] to-[#a855f7] text-white px-6 py-2.5 rounded-lg text-[14px] font-['Arial:Bold',_sans-serif] font-bold hover:opacity-90 transition-opacity">
                   Create New Event
                 </button>
