@@ -7,10 +7,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Switch } from '@/components/ui/switch'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Separator } from '@/components/ui/separator'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
   Select,
   SelectContent,
@@ -30,14 +27,10 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog'
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog'
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/components/ui/collapsible'
 import {
   ArrowLeft,
   Settings,
@@ -59,7 +52,12 @@ import {
   MessageSquare,
   Shield,
   ExternalLink,
-  Download
+  Download,
+  ChevronDown,
+  ChevronUp,
+  MoreHorizontal,
+  LayoutDashboard,
+  Building
 } from 'lucide-react'
 import Link from 'next/link'
 import { toast } from 'sonner'
@@ -138,6 +136,9 @@ export default function EventSettingsPage() {
   const [error, setError] = useState<string | null>(null)
   const [deleteConfirmName, setDeleteConfirmName] = useState('')
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
+
+  // Accordion state
+  const [openSections, setOpenSections] = useState<string[]>(['general'])
 
   const [formData, setFormData] = useState<FormData>({
     name: '',
@@ -360,7 +361,7 @@ export default function EventSettingsPage() {
     switch (status) {
       case 'draft': return 'bg-gray-100 text-gray-800'
       case 'active': return 'bg-green-100 text-green-800'
-      case 'drawing': return 'bg-blue-100 text-blue-800'
+      case 'drawing': return 'bg-violet-100 text-violet-700 border-violet-500'
       case 'completed': return 'bg-purple-100 text-purple-800'
       case 'cancelled': return 'bg-red-100 text-red-800'
       default: return 'bg-gray-100 text-gray-800'
@@ -403,21 +404,17 @@ export default function EventSettingsPage() {
     return transitions
   }
 
-  function formatDateTime(dateString: string) {
-    return new Date(dateString).toLocaleDateString('en-AU', {
-      weekday: 'long',
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-      timeZone: 'Australia/Melbourne'
-    })
+  function toggleSection(sectionId: string) {
+    setOpenSections(prev =>
+      prev.includes(sectionId)
+        ? prev.filter(id => id !== sectionId)
+        : [...prev, sectionId]
+    )
   }
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-[#f8f7f4] flex items-center justify-center">
         <div className="text-center">
           <Loader2 className="h-8 w-8 animate-spin text-blue-600 mx-auto mb-4" />
           <p className="text-gray-600">Loading event settings...</p>
@@ -428,18 +425,16 @@ export default function EventSettingsPage() {
 
   if (error || !eventSettings) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <Card className="w-full max-w-md">
-          <CardHeader className="text-center">
-            <CardTitle className="text-red-600">Error</CardTitle>
-            <CardDescription>{error || 'Event not found'}</CardDescription>
-          </CardHeader>
-          <CardContent className="text-center">
+      <div className="min-h-screen bg-[#f8f7f4] flex items-center justify-center">
+        <div className="bg-white border border-[rgba(0,0,0,0.08)] rounded-lg p-6 w-full max-w-md">
+          <div className="text-center">
+            <h2 className="text-lg font-semibold text-red-600 mb-2">Error</h2>
+            <p className="text-gray-600 mb-4">{error || 'Event not found'}</p>
             <Link href="/dashboard">
               <Button>Back to Dashboard</Button>
             </Link>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       </div>
     )
   }
@@ -448,636 +443,540 @@ export default function EventSettingsPage() {
   const stats = eventSettings.stats
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-white border-b">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
-              <Link href={`/dashboard/events/${eventId}`}>
-                <Button variant="outline" size="sm">
-                  <ArrowLeft className="h-4 w-4 mr-2" />
-                  Back to Event
-                </Button>
-              </Link>
-              <div>
-                <h1 className="text-2xl font-bold text-gray-900">Event Settings</h1>
-                <p className="text-gray-600">{event.name}</p>
-              </div>
-            </div>
-            <div className="flex items-center space-x-3">
-              {hasUnsavedChanges && (
-                <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">
-                  Unsaved Changes
-                </Badge>
-              )}
-              <Badge className={getStatusColor(event.status)}>
-                {event.status.charAt(0).toUpperCase() + event.status.slice(1)}
-              </Badge>
+    <div className="bg-[#f8f7f4] min-h-screen flex">
+      {/* Left Sidebar */}
+      <div className="bg-white border-r border-[rgba(0,0,0,0.08)] w-[256px] h-screen flex flex-col">
+        {/* Logo Section */}
+        <div className="border-b border-[rgba(0,0,0,0.08)] h-[89px] px-6 py-6">
+          <div className="flex items-center gap-2">
+            <div className="bg-gradient-to-b from-[#ff8a00] via-[#ff4d8d] to-[#8b5cf6] w-8 h-8 rounded-lg"></div>
+            <div>
+              <h2 className="font-['Arial:Bold',_sans-serif] text-[16px] text-slate-900">MelbourneCupSweep</h2>
+              <p className="font-['Arial:Regular',_sans-serif] text-[12px] text-slate-600">Admin Dashboard</p>
             </div>
           </div>
+        </div>
+
+        {/* Navigation */}
+        <div className="flex-1 px-4 py-4">
+          <div className="space-y-2">
+            <Link href="/dashboard">
+              <Button variant="ghost" className="w-full justify-start h-12 px-4 text-slate-600 hover:bg-gray-50">
+                <LayoutDashboard className="w-5 h-5 mr-3" />
+                Dashboard
+              </Button>
+            </Link>
+            <Button variant="ghost" className="w-full justify-start h-12 px-4 text-slate-600 hover:bg-gray-50">
+              <Building className="w-5 h-5 mr-3" />
+              Venue Settings
+            </Button>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="border-t border-[rgba(0,0,0,0.08)] px-4 py-4">
+          <p className="font-['Arial:Regular',_sans-serif] text-[12px] text-slate-600">© 2025 MelbourneCupSweep</p>
         </div>
       </div>
 
       {/* Main Content */}
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <Tabs defaultValue="general" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="general" className="flex items-center space-x-2">
-              <FileText className="h-4 w-4" />
-              <span>General</span>
-            </TabsTrigger>
-            <TabsTrigger value="config" className="flex items-center space-x-2">
-              <Settings className="h-4 w-4" />
-              <span>Configuration</span>
-            </TabsTrigger>
-            <TabsTrigger value="status" className="flex items-center space-x-2">
-              <Share2 className="h-4 w-4" />
-              <span>Status & Sharing</span>
-            </TabsTrigger>
-            <TabsTrigger value="danger" className="flex items-center space-x-2">
-              <Shield className="h-4 w-4" />
-              <span>Danger Zone</span>
-            </TabsTrigger>
-          </TabsList>
-
-          {/* GENERAL DETAILS TAB */}
-          <TabsContent value="general" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center space-x-2">
-                  <FileText className="h-5 w-5" />
-                  <span>General Details</span>
-                </CardTitle>
-                <CardDescription>
-                  Basic event information and descriptions
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <Label htmlFor="name">Event Name *</Label>
-                    <Input
-                      id="name"
-                      value={formData.name}
-                      onChange={(e) => updateFormData('name', e.target.value)}
-                      placeholder="Melbourne Cup 2025"
-                      className="mt-1"
-                    />
-                  </div>
-
-                  <div>
-                    <Label htmlFor="mode">Event Mode</Label>
-                    <Select value={formData.mode} onValueChange={(value) => updateFormData('mode', value)}>
-                      <SelectTrigger className="mt-1">
-                        <SelectValue placeholder="Select mode" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="sweep">Sweep</SelectItem>
-                        <SelectItem value="calcutta">Calcutta</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
+      <div className="flex-1 overflow-hidden">
+        <div className="h-full p-8 space-y-8">
+          {/* Header */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <Link href={`/dashboard/events/${eventId}`}>
+                <Button variant="ghost" size="sm" className="w-9 h-8 p-0 rounded-[18px]">
+                  <ArrowLeft className="w-4 h-4" />
+                </Button>
+              </Link>
+              <div>
+                <div className="flex items-center gap-3 mb-2">
+                  <h1 className="font-['Arial:Regular',_sans-serif] text-[32px] text-slate-900 leading-[48px]">
+                    {event.name}
+                  </h1>
+                  <Badge className={`rounded-full px-3 py-1 text-[11px] font-['Arial:Bold',_sans-serif] uppercase tracking-[0.5px] ${getStatusColor(event.status)}`}>
+                    {event.status}
+                  </Badge>
                 </div>
+                <p className="font-['Arial:Regular',_sans-serif] text-[14px] text-slate-600">
+                  {formatDateTime(event.starts_at)}
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button variant="outline" className="bg-[#f8f7f4] border-[rgba(0,0,0,0.08)] h-8 px-3 rounded-[12px] text-sm text-slate-900">
+                Export
+                <Download className="w-4 h-4 ml-2" />
+              </Button>
+              <Button variant="ghost" size="sm" className="w-9 h-8 p-0 rounded-[18px]">
+                <MoreHorizontal className="w-4 h-4" />
+              </Button>
+            </div>
+          </div>
 
-                <div>
-                  <Label htmlFor="description">Event Description</Label>
-                  <Textarea
-                    id="description"
-                    value={formData.description}
-                    onChange={(e) => updateFormData('description', e.target.value)}
-                    placeholder="Event description for participants..."
-                    rows={3}
-                    className="mt-1"
-                  />
-                </div>
+          {/* Tab Navigation */}
+          <div className="bg-[#f8f7f4] border border-[rgba(0,0,0,0.08)] rounded-[16px] p-1 w-[615px]">
+            <div className="grid grid-cols-5 gap-0">
+              <Button variant="ghost" className="h-9 rounded-[10px] text-slate-900 opacity-70 hover:opacity-100">
+                Event Control
+              </Button>
+              <Button variant="ghost" className="h-9 rounded-[10px] text-slate-900 opacity-70 hover:opacity-100">
+                QR & Links
+              </Button>
+              <Button variant="ghost" className="h-9 rounded-[10px] text-slate-900 opacity-70 hover:opacity-100">
+                Analytics
+              </Button>
+              <Button variant="ghost" className="h-9 rounded-[10px] text-slate-900 opacity-70 hover:opacity-100">
+                Race Results
+              </Button>
+              <Button className="h-9 rounded-[10px] bg-gradient-to-b from-[#ff8a00] via-[#ff4d8d] to-[#8b5cf6] text-white hover:opacity-90">
+                Event Settings
+              </Button>
+            </div>
+          </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <Label htmlFor="starts_at">Start Date & Time</Label>
-                    <Input
-                      id="starts_at"
-                      type="datetime-local"
-                      value={formData.starts_at}
-                      onChange={(e) => updateFormData('starts_at', e.target.value)}
-                      className="mt-1"
-                    />
-                    {event.starts_at && (
-                      <p className="text-xs text-gray-500 mt-1">
-                        Current: {formatDateTime(event.starts_at)}
-                      </p>
-                    )}
+          {/* Settings Content */}
+          <div className="flex justify-center">
+            <div className="w-[896px] space-y-6">
+              {/* Accordion Container */}
+              <div className="bg-white border border-[rgba(0,0,0,0.08)] rounded-[20px] overflow-hidden">
+
+                {/* General Details Section */}
+                <Collapsible open={openSections.includes('general')} onOpenChange={() => toggleSection('general')}>
+                  <div className="border-b border-[rgba(0,0,0,0.08)]">
+                    <CollapsibleTrigger className="w-full p-6 text-left hover:bg-gray-50 transition-colors">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <h3 className="font-['Arial:Regular',_sans-serif] text-[18px] text-slate-900 mb-1">General Details</h3>
+                          <p className="font-['Arial:Regular',_sans-serif] text-[14px] text-slate-600">Basic event information and descriptions</p>
+                        </div>
+                        <ChevronDown className={`w-4 h-4 transition-transform ${openSections.includes('general') ? 'rotate-180' : ''}`} />
+                      </div>
+                    </CollapsibleTrigger>
                   </div>
-
-                  <div>
-                    <Label htmlFor="timezone">Timezone</Label>
-                    <Select value={formData.timezone} onValueChange={(value) => updateFormData('timezone', value)}>
-                      <SelectTrigger className="mt-1">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Australia/Melbourne">Australia/Melbourne</SelectItem>
-                        <SelectItem value="Australia/Sydney">Australia/Sydney</SelectItem>
-                        <SelectItem value="Australia/Brisbane">Australia/Brisbane</SelectItem>
-                        <SelectItem value="Australia/Adelaide">Australia/Adelaide</SelectItem>
-                        <SelectItem value="Australia/Perth">Australia/Perth</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Custom Content</CardTitle>
-                <CardDescription>
-                  Additional terms and rules for participants
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div>
-                  <Label htmlFor="custom_terms">Custom Terms & Conditions</Label>
-                  <Textarea
-                    id="custom_terms"
-                    value={formData.custom_terms}
-                    onChange={(e) => updateFormData('custom_terms', e.target.value)}
-                    placeholder="Additional terms and conditions..."
-                    rows={4}
-                    className="mt-1"
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="custom_rules">Custom Rules</Label>
-                  <Textarea
-                    id="custom_rules"
-                    value={formData.custom_rules}
-                    onChange={(e) => updateFormData('custom_rules', e.target.value)}
-                    placeholder="Event-specific rules..."
-                    rows={4}
-                    className="mt-1"
-                  />
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          {/* CONFIGURATION TAB */}
-          <TabsContent value="config" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center space-x-2">
-                  <Users className="h-5 w-5" />
-                  <span>Participation Settings</span>
-                </CardTitle>
-                <CardDescription>
-                  Manage participant limits and data collection
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div>
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <Label htmlFor="capacity">Participant Limit</Label>
-                      <p className="text-xs text-gray-500">Maximum number of participants allowed</p>
-                    </div>
-                    <div className="text-right">
-                      <Input
-                        id="capacity"
-                        type="number"
-                        min="1"
-                        max="500"
-                        value={formData.capacity}
-                        onChange={(e) => updateFormData('capacity', e.target.value === '' ? 100 : parseInt(e.target.value) || 100)}
-                        placeholder="100"
-                        className="w-24 text-center"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="mt-2 flex items-center space-x-4 text-sm">
-                    <span className="text-gray-500">
-                      Current participants: <span className="font-medium">{stats?.participantCount || 0}</span>
-                    </span>
-                    {!stats.canReduceCapacity && (
-                      <span className="text-amber-600 flex items-center space-x-1">
-                        <AlertTriangle className="h-3 w-3" />
-                        <span>Cannot reduce below current participants</span>
-                      </span>
-                    )}
-                  </div>
-                </div>
-
-                <Separator />
-
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Label>Lead Capture</Label>
-                    <p className="text-xs text-gray-500">Collect email addresses for marketing</p>
-                  </div>
-                  <Switch
-                    checked={formData.lead_capture}
-                    onCheckedChange={(checked) => updateFormData('lead_capture', checked)}
-                  />
-                </div>
-
-                {formData.lead_capture && (
-                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                    <p className="text-sm text-blue-700">
-                      When enabled, participants can opt-in to receive marketing communications during registration.
-                    </p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center space-x-2">
-                  <DollarSign className="h-5 w-5" />
-                  <span>Payment Settings</span>
-                </CardTitle>
-                <CardDescription>
-                  Configure entry fees and payment options
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Label>Require Payment</Label>
-                    <p className="text-xs text-gray-500">Collect entry fees from participants</p>
-                  </div>
-                  <Switch
-                    checked={formData.requires_payment}
-                    onCheckedChange={(checked) => updateFormData('requires_payment', checked)}
-                  />
-                </div>
-
-                {formData.requires_payment && (
-                  <div className="space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <CollapsibleContent className="p-6 space-y-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div>
-                        <Label htmlFor="entry_fee">Entry Fee ($)</Label>
+                        <Label htmlFor="name">Event Name *</Label>
                         <Input
-                          id="entry_fee"
-                          type="number"
-                          min="0"
-                          step="0.01"
-                          value={formData.entry_fee === 0 ? '' : formData.entry_fee}
-                          onChange={(e) => updateFormData('entry_fee', e.target.value === '' ? 0 : parseFloat(e.target.value) || 0)}
-                          placeholder="0.00"
+                          id="name"
+                          value={formData.name}
+                          onChange={(e) => updateFormData('name', e.target.value)}
+                          placeholder="Melbourne Cup 2025"
                           className="mt-1"
                         />
                       </div>
-
                       <div>
-                        <Label htmlFor="payment_timeout">Payment Timeout (minutes)</Label>
-                        <Input
-                          id="payment_timeout"
-                          type="number"
-                          min="5"
-                          max="120"
-                          value={formData.payment_timeout_minutes === 30 && formData.payment_timeout_minutes === 0 ? '' : formData.payment_timeout_minutes}
-                          onChange={(e) => updateFormData('payment_timeout_minutes', e.target.value === '' ? 30 : parseInt(e.target.value) || 30)}
-                          placeholder="30"
-                          className="mt-1"
-                        />
+                        <Label htmlFor="mode">Event Mode</Label>
+                        <Select value={formData.mode} onValueChange={(value) => updateFormData('mode', value)}>
+                          <SelectTrigger className="mt-1">
+                            <SelectValue placeholder="Select mode" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="sweep">Sweep</SelectItem>
+                            <SelectItem value="calcutta">Calcutta</SelectItem>
+                          </SelectContent>
+                        </Select>
                       </div>
                     </div>
 
-                    <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
-                      <p className="text-sm text-amber-700">
-                        Payment processing requires additional setup and compliance. Contact support for more information.
-                      </p>
-                    </div>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center space-x-2">
-                  <MessageSquare className="h-5 w-5" />
-                  <span>Promotional Messages</span>
-                </CardTitle>
-                <CardDescription>
-                  Display promotional content to participants
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Label>Enable Promotional Messages</Label>
-                    <p className="text-xs text-gray-500">Show promotional content during event</p>
-                  </div>
-                  <Switch
-                    checked={formData.promo_enabled}
-                    onCheckedChange={(checked) => updateFormData('promo_enabled', checked)}
-                  />
-                </div>
-
-                {formData.promo_enabled && (
-                  <div className="space-y-4">
                     <div>
-                      <Label htmlFor="promo_message">Promotional Message</Label>
+                      <Label htmlFor="description">Event Description</Label>
                       <Textarea
-                        id="promo_message"
-                        value={formData.promo_message}
-                        onChange={(e) => updateFormData('promo_message', e.target.value)}
-                        placeholder="Your promotional message..."
+                        id="description"
+                        value={formData.description}
+                        onChange={(e) => updateFormData('description', e.target.value)}
+                        placeholder="Event description for participants..."
                         rows={3}
                         className="mt-1"
                       />
                     </div>
 
-                    <div>
-                      <Label htmlFor="promo_duration">Display Duration (seconds)</Label>
-                      <Input
-                        id="promo_duration"
-                        type="number"
-                        min="0"
-                        max="300"
-                        value={formData.promo_duration === 0 ? '' : formData.promo_duration}
-                        onChange={(e) => updateFormData('promo_duration', e.target.value === '' ? 0 : parseInt(e.target.value) || 0)}
-                        placeholder="0"
-                        className="mt-1"
-                      />
-                      <p className="text-xs text-gray-500 mt-1">
-                        Set to 0 to show until manually dismissed
-                      </p>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div>
+                        <Label htmlFor="starts_at">Start Date & Time</Label>
+                        <Input
+                          id="starts_at"
+                          type="datetime-local"
+                          value={formData.starts_at}
+                          onChange={(e) => updateFormData('starts_at', e.target.value)}
+                          className="mt-1"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="timezone">Timezone</Label>
+                        <Select value={formData.timezone} onValueChange={(value) => updateFormData('timezone', value)}>
+                          <SelectTrigger className="mt-1">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Australia/Melbourne">Australia/Melbourne</SelectItem>
+                            <SelectItem value="Australia/Sydney">Australia/Sydney</SelectItem>
+                            <SelectItem value="Australia/Brisbane">Australia/Brisbane</SelectItem>
+                            <SelectItem value="Australia/Adelaide">Australia/Adelaide</SelectItem>
+                            <SelectItem value="Australia/Perth">Australia/Perth</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
                     </div>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
 
-          {/* STATUS & SHARING TAB */}
-          <TabsContent value="status" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center space-x-2">
-                  <Eye className="h-5 w-5" />
-                  <span>Event Status</span>
-                </CardTitle>
-                <CardDescription>
-                  Manage event lifecycle and status transitions
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Label>Current Status</Label>
-                    <p className="text-xs text-gray-500">Event is currently {event.status}</p>
-                  </div>
-                  <Badge className={getStatusColor(event.status)}>
-                    {event.status.charAt(0).toUpperCase() + event.status.slice(1)}
-                  </Badge>
-                </div>
-
-                <Separator />
-
-                <div>
-                  <Label>Status Actions</Label>
-                  <p className="text-xs text-gray-500 mb-3">Available status transitions</p>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    {getAvailableStatusTransitions().map((transition) => (
-                      <Button
-                        key={transition.to}
-                        variant={transition.variant}
-                        onClick={() => handleStatusChange(transition.to)}
-                        disabled={statusChanging}
-                        className="justify-start"
-                      >
-                        {statusChanging ? (
-                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                        ) : (
-                          <CheckCircle className="h-4 w-4 mr-2" />
-                        )}
-                        {transition.label}
-                      </Button>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                  <h4 className="font-medium text-blue-900 mb-2">Event Statistics</h4>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                     <div>
-                      <div className="text-2xl font-bold text-blue-600">{stats?.participantCount || 0}</div>
-                      <div className="text-blue-700">Participants</div>
-                    </div>
-                    <div>
-                      <div className="text-2xl font-bold text-green-600">{stats.paidParticipants}</div>
-                      <div className="text-green-700">Paid</div>
-                    </div>
-                    <div>
-                      <div className="text-2xl font-bold text-purple-600">{stats.assignmentCount}</div>
-                      <div className="text-purple-700">Assignments</div>
-                    </div>
-                    <div>
-                      <div className="text-2xl font-bold text-orange-600">{stats.hasResults ? 'Yes' : 'No'}</div>
-                      <div className="text-orange-700">Results</div>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center space-x-2">
-                  <Share2 className="h-5 w-5" />
-                  <span>Sharing & URLs</span>
-                </CardTitle>
-                <CardDescription>
-                  Event URLs for participants and public access
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div>
-                  <Label>Join URL</Label>
-                  <p className="text-xs text-gray-500 mb-2">Direct link for participants to join</p>
-                  <div className="flex space-x-2">
-                    <Input
-                      value={getJoinUrl()}
-                      readOnly
-                      className="font-mono text-sm"
-                    />
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => copyToClipboard(getJoinUrl(), 'Join URL')}
-                    >
-                      <Copy className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      asChild
-                    >
-                      <Link href={getJoinUrl()} target="_blank">
-                        <ExternalLink className="h-4 w-4" />
-                      </Link>
-                    </Button>
-                  </div>
-                </div>
-
-                <div>
-                  <Label>Results URL</Label>
-                  <p className="text-xs text-gray-500 mb-2">Public results page</p>
-                  <div className="flex space-x-2">
-                    <Input
-                      value={getResultsUrl()}
-                      readOnly
-                      className="font-mono text-sm"
-                    />
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => copyToClipboard(getResultsUrl(), 'Results URL')}
-                    >
-                      <Copy className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      asChild
-                    >
-                      <Link href={getResultsUrl()} target="_blank">
-                        <ExternalLink className="h-4 w-4" />
-                      </Link>
-                    </Button>
-                  </div>
-                </div>
-
-                <Separator />
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <Button variant="outline" className="justify-start" asChild>
-                    <Link href={`/dashboard/events/${eventId}/qr`}>
-                      <QrCode className="h-4 w-4 mr-2" />
-                      Generate QR Code
-                    </Link>
-                  </Button>
-                  <Button variant="outline" className="justify-start" asChild>
-                    <Link href={`/dashboard/events/${eventId}/print/participants`}>
-                      <Download className="h-4 w-4 mr-2" />
-                      Export Participants
-                    </Link>
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          {/* DANGER ZONE TAB */}
-          <TabsContent value="danger" className="space-y-6">
-            <Card className="border-red-200 bg-red-50">
-              <CardHeader>
-                <CardTitle className="flex items-center space-x-2 text-red-700">
-                  <AlertTriangle className="h-5 w-5" />
-                  <span>Danger Zone</span>
-                </CardTitle>
-                <CardDescription className="text-red-600">
-                  Irreversible actions that will permanently affect your event
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="bg-white border border-red-200 rounded-lg p-4">
-                  <h3 className="font-semibold text-red-900 mb-2">Delete Event</h3>
-                  <p className="text-sm text-red-700 mb-4">
-                    Permanently delete this event and all associated data. This action cannot be undone.
-                  </p>
-
-                  <div className="space-y-4">
-                    <div>
-                      <Label htmlFor="delete_confirm">Type event name to confirm deletion:</Label>
-                      <Input
-                        id="delete_confirm"
-                        value={deleteConfirmName}
-                        onChange={(e) => setDeleteConfirmName(e.target.value)}
-                        placeholder={event.name}
+                      <Label htmlFor="custom_terms">Custom Terms & Conditions</Label>
+                      <Textarea
+                        id="custom_terms"
+                        value={formData.custom_terms}
+                        onChange={(e) => updateFormData('custom_terms', e.target.value)}
+                        placeholder="Additional terms and conditions..."
+                        rows={4}
                         className="mt-1"
                       />
                     </div>
 
-                    <AlertDialog>
-                      <AlertDialogTrigger asChild>
-                        <Button
-                          variant="destructive"
-                          disabled={deleteConfirmName !== event.name || deleting}
-                          className="w-full"
-                        >
-                          <Trash2 className="h-4 w-4 mr-2" />
-                          Delete Event Permanently
-                        </Button>
-                      </AlertDialogTrigger>
-                      <AlertDialogContent>
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>Delete Event: {event.name}</AlertDialogTitle>
-                          <AlertDialogDescription>
-                            This will permanently delete:
-                            <ul className="list-disc list-inside mt-2 space-y-1">
-                              <li>All participant entries ({stats?.participantCount || 0} participants)</li>
-                              <li>All horse assignments and draw results</li>
-                              <li>All event data and settings</li>
-                              <li>All results and winner information</li>
-                            </ul>
-                            <p className="mt-3 font-semibold text-red-600">
-                              This action cannot be undone.
-                            </p>
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel>Cancel</AlertDialogCancel>
-                          <AlertDialogAction
-                            onClick={handleDelete}
-                            className="bg-red-600 hover:bg-red-700"
-                            disabled={deleting}
+                    <div>
+                      <Label htmlFor="custom_rules">Custom Rules</Label>
+                      <Textarea
+                        id="custom_rules"
+                        value={formData.custom_rules}
+                        onChange={(e) => updateFormData('custom_rules', e.target.value)}
+                        placeholder="Event-specific rules..."
+                        rows={4}
+                        className="mt-1"
+                      />
+                    </div>
+                  </CollapsibleContent>
+                </Collapsible>
+
+                {/* Configuration Section */}
+                <Collapsible open={openSections.includes('configuration')} onOpenChange={() => toggleSection('configuration')}>
+                  <div className="border-b border-[rgba(0,0,0,0.08)]">
+                    <CollapsibleTrigger className="w-full p-6 text-left hover:bg-gray-50 transition-colors">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <h3 className="font-['Arial:Regular',_sans-serif] text-[18px] text-slate-900 mb-1">Configuration</h3>
+                          <p className="font-['Arial:Regular',_sans-serif] text-[14px] text-slate-600">Participant limits and data collection settings</p>
+                        </div>
+                        <ChevronDown className={`w-4 h-4 transition-transform ${openSections.includes('configuration') ? 'rotate-180' : ''}`} />
+                      </div>
+                    </CollapsibleTrigger>
+                  </div>
+                  <CollapsibleContent className="p-6 space-y-6">
+                    <div>
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <Label htmlFor="capacity">Participant Limit</Label>
+                          <p className="text-xs text-gray-500">Maximum number of participants allowed</p>
+                        </div>
+                        <div className="text-right">
+                          <Input
+                            id="capacity"
+                            type="number"
+                            min="1"
+                            max="500"
+                            value={formData.capacity}
+                            onChange={(e) => updateFormData('capacity', e.target.value === '' ? 100 : parseInt(e.target.value) || 100)}
+                            placeholder="100"
+                            className="w-24 text-center"
+                          />
+                        </div>
+                      </div>
+                      <div className="mt-2 text-sm text-gray-500">
+                        Current participants: <span className="font-medium">{stats?.participantCount || 0}</span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <Label>Lead Capture</Label>
+                        <p className="text-xs text-gray-500">Collect email addresses for marketing</p>
+                      </div>
+                      <Switch
+                        checked={formData.lead_capture}
+                        onCheckedChange={(checked) => updateFormData('lead_capture', checked)}
+                      />
+                    </div>
+
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <Label>Require Payment</Label>
+                        <p className="text-xs text-gray-500">Collect entry fees from participants</p>
+                      </div>
+                      <Switch
+                        checked={formData.requires_payment}
+                        onCheckedChange={(checked) => updateFormData('requires_payment', checked)}
+                      />
+                    </div>
+
+                    {formData.requires_payment && (
+                      <div className="space-y-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div>
+                            <Label htmlFor="entry_fee">Entry Fee ($)</Label>
+                            <Input
+                              id="entry_fee"
+                              type="number"
+                              min="0"
+                              step="0.01"
+                              value={formData.entry_fee === 0 ? '' : formData.entry_fee}
+                              onChange={(e) => updateFormData('entry_fee', e.target.value === '' ? 0 : parseFloat(e.target.value) || 0)}
+                              placeholder="0.00"
+                              className="mt-1"
+                            />
+                          </div>
+                          <div>
+                            <Label htmlFor="payment_timeout">Payment Timeout (minutes)</Label>
+                            <Input
+                              id="payment_timeout"
+                              type="number"
+                              min="5"
+                              max="120"
+                              value={formData.payment_timeout_minutes === 30 && formData.payment_timeout_minutes === 0 ? '' : formData.payment_timeout_minutes}
+                              onChange={(e) => updateFormData('payment_timeout_minutes', e.target.value === '' ? 30 : parseInt(e.target.value) || 30)}
+                              placeholder="30"
+                              className="mt-1"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <Label>Enable Promotional Messages</Label>
+                        <p className="text-xs text-gray-500">Show promotional content during event</p>
+                      </div>
+                      <Switch
+                        checked={formData.promo_enabled}
+                        onCheckedChange={(checked) => updateFormData('promo_enabled', checked)}
+                      />
+                    </div>
+
+                    {formData.promo_enabled && (
+                      <div className="space-y-4">
+                        <div>
+                          <Label htmlFor="promo_message">Promotional Message</Label>
+                          <Textarea
+                            id="promo_message"
+                            value={formData.promo_message}
+                            onChange={(e) => updateFormData('promo_message', e.target.value)}
+                            placeholder="Your promotional message..."
+                            rows={3}
+                            className="mt-1"
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor="promo_duration">Display Duration (seconds)</Label>
+                          <Input
+                            id="promo_duration"
+                            type="number"
+                            min="0"
+                            max="300"
+                            value={formData.promo_duration === 0 ? '' : formData.promo_duration}
+                            onChange={(e) => updateFormData('promo_duration', e.target.value === '' ? 0 : parseInt(e.target.value) || 0)}
+                            placeholder="0"
+                            className="mt-1"
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </CollapsibleContent>
+                </Collapsible>
+
+                {/* Status & Sharing Section */}
+                <Collapsible open={openSections.includes('status')} onOpenChange={() => toggleSection('status')}>
+                  <div className="border-b border-[rgba(0,0,0,0.08)]">
+                    <CollapsibleTrigger className="w-full p-6 text-left hover:bg-gray-50 transition-colors">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <h3 className="font-['Arial:Regular',_sans-serif] text-[18px] text-slate-900 mb-1">Status & Sharing</h3>
+                          <p className="font-['Arial:Regular',_sans-serif] text-[14px] text-slate-600">Event lifecycle and sharing options</p>
+                        </div>
+                        <ChevronDown className={`w-4 h-4 transition-transform ${openSections.includes('status') ? 'rotate-180' : ''}`} />
+                      </div>
+                    </CollapsibleTrigger>
+                  </div>
+                  <CollapsibleContent className="p-6 space-y-6">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <Label>Current Status</Label>
+                        <p className="text-xs text-gray-500">Event is currently {event.status}</p>
+                      </div>
+                      <Badge className={getStatusColor(event.status)}>
+                        {event.status.charAt(0).toUpperCase() + event.status.slice(1)}
+                      </Badge>
+                    </div>
+
+                    <div>
+                      <Label>Status Actions</Label>
+                      <p className="text-xs text-gray-500 mb-3">Available status transitions</p>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        {getAvailableStatusTransitions().map((transition) => (
+                          <Button
+                            key={transition.to}
+                            variant={transition.variant}
+                            onClick={() => handleStatusChange(transition.to)}
+                            disabled={statusChanging}
+                            className="justify-start"
                           >
-                            {deleting ? (
-                              <>
-                                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                Deleting...
-                              </>
+                            {statusChanging ? (
+                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                             ) : (
-                              'Yes, Delete Permanently'
+                              <CheckCircle className="h-4 w-4 mr-2" />
                             )}
-                          </AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
-                  </div>
-
-                  {!stats.canDelete && (
-                    <div className="mt-3 p-3 bg-amber-100 border border-amber-300 rounded-lg">
-                      <p className="text-sm text-amber-800">
-                        This event cannot be deleted because it has participants or processed payments.
-                      </p>
+                            {transition.label}
+                          </Button>
+                        ))}
+                      </div>
                     </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
 
-          {/* Save Actions Bar */}
-          <div className="sticky bottom-0 bg-white border-t border-gray-200 p-4 rounded-lg shadow-lg">
-            <div className="flex justify-between items-center">
-              <div className="flex items-center space-x-4">
-                {hasUnsavedChanges && (
-                  <div className="flex items-center space-x-2 text-amber-600">
-                    <AlertTriangle className="h-4 w-4" />
-                    <span className="text-sm">You have unsaved changes</span>
-                  </div>
-                )}
+                    <div>
+                      <Label>Join URL</Label>
+                      <p className="text-xs text-gray-500 mb-2">Direct link for participants to join</p>
+                      <div className="flex space-x-2">
+                        <Input
+                          value={getJoinUrl()}
+                          readOnly
+                          className="font-mono text-sm"
+                        />
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => copyToClipboard(getJoinUrl(), 'Join URL')}
+                        >
+                          <Copy className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+
+                    <div>
+                      <Label>Results URL</Label>
+                      <p className="text-xs text-gray-500 mb-2">Public results page</p>
+                      <div className="flex space-x-2">
+                        <Input
+                          value={getResultsUrl()}
+                          readOnly
+                          className="font-mono text-sm"
+                        />
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => copyToClipboard(getResultsUrl(), 'Results URL')}
+                        >
+                          <Copy className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <Button variant="outline" className="justify-start" asChild>
+                        <Link href={`/dashboard/events/${eventId}/qr`}>
+                          <QrCode className="h-4 w-4 mr-2" />
+                          Generate QR Code
+                        </Link>
+                      </Button>
+                      <Button variant="outline" className="justify-start" asChild>
+                        <Link href={`/dashboard/events/${eventId}/print/participants`}>
+                          <Download className="h-4 w-4 mr-2" />
+                          Export Participants
+                        </Link>
+                      </Button>
+                    </div>
+                  </CollapsibleContent>
+                </Collapsible>
+
+                {/* Danger Zone Section */}
+                <Collapsible open={openSections.includes('danger')} onOpenChange={() => toggleSection('danger')}>
+                  <CollapsibleTrigger className="w-full p-6 text-left hover:bg-gray-50 transition-colors">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h3 className="font-['Arial:Regular',_sans-serif] text-[18px] text-red-600 mb-1">Danger Zone</h3>
+                        <p className="font-['Arial:Regular',_sans-serif] text-[14px] text-slate-600">Irreversible actions that will permanently affect your event</p>
+                      </div>
+                      <ChevronDown className={`w-4 h-4 transition-transform ${openSections.includes('danger') ? 'rotate-180' : ''}`} />
+                    </div>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent className="p-6">
+                    <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                      <h4 className="font-semibold text-red-900 mb-2">Delete Event</h4>
+                      <p className="text-sm text-red-700 mb-4">
+                        Permanently delete this event and all associated data. This action cannot be undone.
+                      </p>
+
+                      <div className="space-y-4">
+                        <div>
+                          <Label htmlFor="delete_confirm">Type event name to confirm deletion:</Label>
+                          <Input
+                            id="delete_confirm"
+                            value={deleteConfirmName}
+                            onChange={(e) => setDeleteConfirmName(e.target.value)}
+                            placeholder={event.name}
+                            className="mt-1"
+                          />
+                        </div>
+
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button
+                              variant="destructive"
+                              disabled={deleteConfirmName !== event.name || deleting}
+                              className="w-full"
+                            >
+                              <Trash2 className="h-4 w-4 mr-2" />
+                              Delete Event Permanently
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Delete Event: {event.name}</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                This will permanently delete:
+                                <ul className="list-disc list-inside mt-2 space-y-1">
+                                  <li>All participant entries ({stats?.participantCount || 0} participants)</li>
+                                  <li>All horse assignments and draw results</li>
+                                  <li>All event data and settings</li>
+                                  <li>All results and winner information</li>
+                                </ul>
+                                <p className="mt-3 font-semibold text-red-600">
+                                  This action cannot be undone.
+                                </p>
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogAction
+                                onClick={handleDelete}
+                                className="bg-red-600 hover:bg-red-700"
+                                disabled={deleting}
+                              >
+                                {deleting ? (
+                                  <>
+                                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                    Deleting...
+                                  </>
+                                ) : (
+                                  'Yes, Delete Permanently'
+                                )}
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      </div>
+
+                      {!stats.canDelete && (
+                        <div className="mt-3 p-3 bg-amber-100 border border-amber-300 rounded-lg">
+                          <p className="text-sm text-amber-800">
+                            This event cannot be deleted because it has participants or processed payments.
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </CollapsibleContent>
+                </Collapsible>
+
               </div>
 
-              <div className="flex space-x-3">
+              {/* Bottom Action Buttons */}
+              <div className="flex justify-end gap-3">
                 <Button
                   variant="outline"
                   onClick={() => {
@@ -1086,14 +985,15 @@ export default function EventSettingsPage() {
                     }
                   }}
                   disabled={saving || !hasUnsavedChanges}
+                  className="bg-[#f8f7f4] border-[rgba(0,0,0,0.08)] h-11 px-4 rounded-[12px] text-slate-900"
                 >
-                  {hasUnsavedChanges ? 'Discard Changes' : 'Cancel'}
+                  Discard Changes
                 </Button>
 
                 <Button
                   onClick={handleSave}
-                  disabled={saving || !formData.name.trim() || !stats.canReduceCapacity}
-                  size="lg"
+                  disabled={saving || !formData.name.trim()}
+                  className="bg-gradient-to-b from-[#ff8a00] via-[#ff4d8d] to-[#8b5cf6] text-white h-11 px-4 rounded-[12px] hover:opacity-90"
                 >
                   {saving ? (
                     <>
@@ -1101,16 +1001,13 @@ export default function EventSettingsPage() {
                       Saving...
                     </>
                   ) : (
-                    <>
-                      <Save className="h-4 w-4 mr-2" />
-                      Save Changes
-                    </>
+                    'Save Changes'
                   )}
                 </Button>
               </div>
             </div>
           </div>
-        </Tabs>
+        </div>
       </div>
     </div>
   )
