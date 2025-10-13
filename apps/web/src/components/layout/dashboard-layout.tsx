@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
 import {
   Home,
+  Calendar,
   Settings
 } from 'lucide-react'
 
@@ -46,6 +47,11 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       label: 'Dashboard'
     },
     {
+      href: '/dashboard/events',
+      icon: Calendar,
+      label: 'Events'
+    },
+    {
       href: '/dashboard/settings',
       icon: Settings,
       label: 'Venue Settings'
@@ -76,16 +82,28 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
 
         {/* Navigation */}
         <div className="flex-1 p-4 space-y-2">
-          {navigationItems.map((item, index) => (
-            <Link
-              key={`nav-${index}-${item.href}`}
-              href={item.href}
-              className="flex items-center gap-3 px-4 py-3 rounded-xl text-base text-slate-600 hover:text-slate-900 transition-all"
-            >
-              <item.icon className="h-5 w-5" />
-              {item.label}
-            </Link>
-          ))}
+          {navigationItems.map((item, index) => {
+            const isActive = pathname === item.href
+
+            return (
+              <Link
+                key={`nav-${index}-${item.href}`}
+                href={item.href}
+                className={`
+                  flex items-center gap-3 px-4 py-3 rounded-xl text-base transition-all duration-200 relative
+                  ${isActive
+                    ? 'bg-gradient-to-r from-orange-50 to-pink-50 text-slate-900 font-semibold shadow-sm border-l-4 border-[#ff8a00]'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50 hover:shadow-sm'
+                  }
+                `}
+              >
+                <item.icon className={`h-5 w-5 transition-colors duration-200 ${
+                  isActive ? 'text-[#ff8a00]' : 'text-slate-500'
+                }`} />
+                {item.label}
+              </Link>
+            )
+          })}
         </div>
 
         {/* Footer */}
