@@ -5,6 +5,7 @@ import { useRouter, useParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { DashboardLayout } from '@/components/layout/dashboard-layout'
 import { StatCard } from '@/components/ui/stat-card'
+import { toast } from 'sonner'
 import {
   CheckCircle,
   Clock,
@@ -254,64 +255,39 @@ function DrawControlsContent() {
     try {
       setIsDrawing(true)
 
-      // Find the next waiting participant (oldest first)
-      const nextParticipant = participants
-        .filter(p => !p.horse_number)
-        .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())[0]
+      // Call the draw-next API
+      const response = await fetch(`/api/events/${eventId}/draw-next`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      })
 
-      if (!nextParticipant) {
-        throw new Error('No participants waiting for assignment')
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to draw next participant')
       }
 
-      // Get all assigned horse numbers
-      const assignedNumbers = new Set(
-        participants
-          .filter(p => p.horse_number)
-          .map(p => p.horse_number!)
-      )
+      if (data.success && data.assignment) {
+        // Show success toast notification
+        const participantName = data.assignment.participant.name
+        const horseNumber = data.assignment.horse.number
+        const horseName = data.assignment.horse.name
 
-      // Get available horse numbers (1-24)
-      const availableNumbers = Array.from({ length: 24 }, (_, i) => i + 1)
-        .filter(num => !assignedNumbers.has(num))
-
-      if (availableNumbers.length === 0) {
-        throw new Error('No horses available for assignment')
-      }
-
-      // Randomly select an available horse
-      const randomHorse = availableNumbers[Math.floor(Math.random() * availableNumbers.length)]
-
-      // Get horse details
-      const { data: horseData, error: horseError } = await supabase
-        .from('event_horses')
-        .select('id, name')
-        .eq('event_id', eventId)
-        .eq('number', randomHorse)
-        .single()
-
-      if (horseError) throw horseError
-
-      // Create the assignment
-      const { error: assignmentError } = await supabase
-        .from('assignments')
-        .insert({
-          patron_entry_id: nextParticipant.id,
-          event_horse_id: horseData.id
+        toast.success(`${participantName} drew Horse #${horseNumber} - ${horseName}`, {
+          duration: 2000,
         })
-
-      if (assignmentError) throw assignmentError
-
-      // Show success notification
-      // TODO: Add proper toast notification
-      console.log(`🎉 ${nextParticipant.participant_name} assigned to Horse #${randomHorse} - ${horseData.name}`)
+      }
 
       // Refresh data
       await fetchEventData()
 
     } catch (err) {
       console.error('Error drawing next participant:', err)
-      // TODO: Add proper error toast
-      alert(err instanceof Error ? err.message : 'Failed to draw next participant')
+      toast.error(err instanceof Error ? err.message : 'Failed to draw next participant', {
+        duration: 3000,
+      })
     } finally {
       setIsDrawing(false)
     }
