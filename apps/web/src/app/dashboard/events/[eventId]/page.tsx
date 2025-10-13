@@ -10,6 +10,29 @@ import { StatusPill } from '@/components/ui/status-pill'
 import { AddParticipantModal } from '@/components/shared/add-participant-modal'
 import { toast } from 'sonner'
 import { QRCodeSVG } from 'qrcode.react'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
+import { Switch } from '@/components/ui/switch'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog'
 import {
   ChevronLeft,
   ChevronRight,
@@ -43,7 +66,11 @@ import {
   Search,
   Filter,
   MoreVertical,
-  X
+  X,
+  Save,
+  Trash2,
+  AlertTriangle,
+  Loader2
 } from 'lucide-react'
 
 type Event = {
@@ -560,12 +587,6 @@ function EventOverviewContent() {
   const [showVenueDropdown, setShowVenueDropdown] = useState(false)
   const venueDropdownRef = useRef<HTMLDivElement>(null)
 
-  // Handle navigation to settings page when Settings tab is selected
-  useEffect(() => {
-    if (activeTab === 5) {
-      router.push(`/dashboard/events/${eventId}/settings`)
-    }
-  }, [activeTab, router, eventId])
   const [showPaymentConfirmModal, setShowPaymentConfirmModal] = useState(false)
   const [pendingPaymentChange, setPendingPaymentChange] = useState<{
     participantId: string
@@ -582,6 +603,31 @@ function EventOverviewContent() {
 
   // QR Code ref for copy/download/print functionality
   const qrCodeRef = useRef<HTMLDivElement>(null)
+
+  // Settings state
+  const [settingsSaving, setSettingsSaving] = useState(false)
+  const [settingsStatusChanging, setSettingsStatusChanging] = useState(false)
+  const [settingsDeleting, setSettingsDeleting] = useState(false)
+  const [deleteConfirmName, setDeleteConfirmName] = useState('')
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
+  const [openSection, setOpenSection] = useState<string | null>('general')
+  const [settingsFormData, setSettingsFormData] = useState({
+    name: '',
+    description: '',
+    starts_at: '',
+    timezone: 'Australia/Melbourne',
+    capacity: 100,
+    mode: 'sweep' as 'sweep' | 'calcutta',
+    lead_capture: true,
+    requires_payment: false,
+    entry_fee: 0,
+    payment_timeout_minutes: 30,
+    promo_enabled: false,
+    promo_message: '',
+    promo_duration: 0,
+    custom_terms: '',
+    custom_rules: ''
+  })
 
   // Join URL for QR code and sharing
   const joinUrl = typeof window !== 'undefined'
@@ -605,6 +651,13 @@ function EventOverviewContent() {
       return () => document.removeEventListener('mousedown', handleClickOutside)
     }
   }, [showVenueDropdown])
+
+  // Load settings when Settings tab is clicked
+  useEffect(() => {
+    if (activeTab === 5) {
+      loadEventSettings()
+    }
+  }, [activeTab])
 
   async function handleSignOut() {
     try {
@@ -1178,6 +1231,210 @@ function EventOverviewContent() {
     } catch (err) {
       console.error('Error copying join link:', err)
       toast.error('Failed to copy link')
+    }
+  }
+
+  // Settings functions
+  async function loadEventSettings() {
+    try {
+      setSettingsSaving(true)
+      setError(null)
+
+      const response = await fetch(`/api/events/${eventId}/settings`)
+      const data = await response.json()
+
+      if (!response.ok || !data.success) {
+        throw new Error(data.error || 'Failed to load event settings')
+      }
+
+      const settings = data.data
+
+      // Populate form with current values
+      setSettingsFormData({
+        name: settings.event.name || '',
+        description: settings.event.description || '',
+        starts_at: settings.event.starts_at ? new Date(settings.event.starts_at).toISOString().slice(0, 16) : '',
+        timezone: settings.event.timezone || 'Australia/Melbourne',
+        capacity: settings.event.capacity || 100,
+        mode: settings.event.mode || 'sweep',
+        lead_capture: settings.event.lead_capture || false,
+        requires_payment: settings.event.requires_payment || false,
+        entry_fee: settings.event.entry_fee || 0,
+        payment_timeout_minutes: settings.event.payment_timeout_minutes || 30,
+        promo_enabled: settings.event.promo_enabled || false,
+        promo_message: settings.event.promo_message || '',
+        promo_duration: settings.event.promo_duration || 0,
+        custom_terms: settings.event.custom_terms || '',
+        custom_rules: settings.event.custom_rules || ''
+      })
+
+    } catch (err) {
+      console.error('Error loading event settings:', err)
+      setError(err instanceof Error ? err.message : 'Failed to load event settings')
+    } finally {
+      setSettingsSaving(false)
+    }
+  }
+
+  async function handleSettingsSave() {
+    if (!settingsFormData.name.trim()) {
+      toast.error('Event name is required')
+      return
+    }
+
+    setSettingsSaving(true)
+    try {
+      const updateData = {
+        name: settingsFormData.name.trim(),
+        description: settingsFormData.description.trim() || undefined,
+        starts_at: settingsFormData.starts_at ? new Date(settingsFormData.starts_at).toISOString() : undefined,
+        timezone: settingsFormData.timezone,
+        capacity: settingsFormData.capacity,
+        mode: settingsFormData.mode,
+        lead_capture: settingsFormData.lead_capture,
+        requires_payment: settingsFormData.requires_payment,
+        entry_fee: settingsFormData.requires_payment ? settingsFormData.entry_fee : undefined,
+        payment_timeout_minutes: settingsFormData.requires_payment ? settingsFormData.payment_timeout_minutes : undefined,
+        promo_enabled: settingsFormData.promo_enabled,
+        promo_message: settingsFormData.promo_enabled ? settingsFormData.promo_message : undefined,
+        promo_duration: settingsFormData.promo_enabled ? settingsFormData.promo_duration : undefined,
+        custom_terms: settingsFormData.custom_terms.trim() || undefined,
+        custom_rules: settingsFormData.custom_rules.trim() || undefined
+      }
+
+      const response = await fetch(`/api/events/${eventId}/settings`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updateData)
+      })
+
+      const data = await response.json()
+
+      if (!response.ok || !data.success) {
+        throw new Error(data.error || 'Failed to save event settings')
+      }
+
+      toast.success('Event settings saved successfully')
+      await loadEventSettings() // Refresh data
+      await fetchEventData() // Refresh main event data
+
+    } catch (err) {
+      console.error('Error saving event settings:', err)
+      toast.error(err instanceof Error ? err.message : 'Failed to save event settings')
+    } finally {
+      setSettingsSaving(false)
+    }
+  }
+
+  async function handleStatusChange(newStatus: string, reason?: string) {
+    setSettingsStatusChanging(true)
+    try {
+      const response = await fetch(`/api/events/${eventId}/settings`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus, reason })
+      })
+
+      const data = await response.json()
+
+      if (!response.ok || !data.success) {
+        throw new Error(data.error || 'Failed to update event status')
+      }
+
+      toast.success(`Event status changed to ${newStatus}`)
+      await loadEventSettings() // Refresh data
+      await fetchEventData() // Refresh main event data
+
+    } catch (err) {
+      console.error('Error changing status:', err)
+      toast.error(err instanceof Error ? err.message : 'Failed to update status')
+    } finally {
+      setSettingsStatusChanging(false)
+    }
+  }
+
+  async function handleSettingsDelete() {
+    if (settingsDeleteConfirmName !== event?.name) {
+      toast.error('Please type the exact event name to confirm deletion')
+      return
+    }
+
+    setSettingsDeleting(true)
+    try {
+      const response = await fetch(`/api/events/${eventId}/settings?confirm=${encodeURIComponent(settingsDeleteConfirmName)}`, {
+        method: 'DELETE'
+      })
+
+      const data = await response.json()
+
+      if (!response.ok || !data.success) {
+        throw new Error(data.error || 'Failed to delete event')
+      }
+
+      toast.success('Event deleted successfully')
+      router.push('/dashboard')
+
+    } catch (err) {
+      console.error('Error deleting event:', err)
+      toast.error(err instanceof Error ? err.message : 'Failed to delete event')
+    } finally {
+      setSettingsDeleting(false)
+    }
+  }
+
+  function updateSettingsFormData(field: keyof typeof settingsFormData, value: any) {
+    setSettingsFormData(prev => ({ ...prev, [field]: value }))
+  }
+
+  function toggleSection(section: string) {
+    setOpenSection(openSection === section ? null : section)
+  }
+
+  function getSettingsJoinUrl() {
+    if (typeof window !== 'undefined') {
+      const baseUrl = window.location.origin
+      return `${baseUrl}/events/${eventId}/enter`
+    }
+    return ''
+  }
+
+  function getSettingsResultsUrl() {
+    if (typeof window !== 'undefined') {
+      const baseUrl = window.location.origin
+      return `${baseUrl}/events/${eventId}/results`
+    }
+    return ''
+  }
+
+  async function copyToClipboard(text: string, label: string) {
+    try {
+      await navigator.clipboard.writeText(text)
+      toast.success(`${label} copied to clipboard!`)
+    } catch (err) {
+      toast.error('Failed to copy to clipboard')
+    }
+  }
+
+  function formatDateTime(dateString: string) {
+    return new Date(dateString).toLocaleDateString('en-AU', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      timeZone: 'Australia/Melbourne'
+    })
+  }
+
+  function getStatusColor(status: string) {
+    switch (status) {
+      case 'draft': return 'bg-gray-100 text-gray-800'
+      case 'active': return 'bg-green-100 text-green-800'
+      case 'drawing': return 'bg-violet-100 text-violet-700 border-violet-500'
+      case 'completed': return 'bg-blue-100 text-blue-800'
+      case 'cancelled': return 'bg-red-100 text-red-800'
+      default: return 'bg-gray-100 text-gray-800'
     }
   }
 
@@ -1873,8 +2130,459 @@ function EventOverviewContent() {
         )
 
       case 5: // Event Settings
-        // Navigation is handled by useEffect, this case should not normally be rendered
-        return null
+        return (
+          <div className="flex justify-center">
+            <div className="w-[896px] space-y-6">
+              {/* Accordion Container */}
+              <div className="bg-white border border-[rgba(0,0,0,0.08)] rounded-[20px] overflow-hidden">
+
+                {/* General Details Section */}
+                <div>
+                  <div className="border-b border-[rgba(0,0,0,0.08)]">
+                    <button
+                      onClick={() => toggleSection('general')}
+                      className="w-full p-6 text-left hover:bg-gray-50 transition-colors"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <h3 className="font-['Arial:Regular',_sans-serif] text-[18px] text-slate-900 mb-1">General Details</h3>
+                          <p className="font-['Arial:Regular',_sans-serif] text-[14px] text-slate-600">Basic event information and descriptions</p>
+                        </div>
+                        <ChevronDown className={`w-4 h-4 transition-transform ${openSection === 'general' ? 'rotate-180' : ''}`} />
+                      </div>
+                    </button>
+                  </div>
+                  {openSection === 'general' && (
+                    <div className="p-6 space-y-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div>
+                        <Label htmlFor="name">Event Name *</Label>
+                        <Input
+                          id="name"
+                          value={settingsFormData.name}
+                          onChange={(e) => updateSettingsFormData('name', e.target.value)}
+                          placeholder="Melbourne Cup 2025"
+                          className="mt-1"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="mode">Event Mode</Label>
+                        <Select value={settingsFormData.mode} onValueChange={(value) => updateSettingsFormData('mode', value)}>
+                          <SelectTrigger className="mt-1">
+                            <SelectValue placeholder="Select mode" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="sweep">Sweep</SelectItem>
+                            <SelectItem value="calcutta">Calcutta</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+
+                    <div>
+                      <Label htmlFor="description">Event Description</Label>
+                      <Textarea
+                        id="description"
+                        value={settingsFormData.description}
+                        onChange={(e) => updateSettingsFormData('description', e.target.value)}
+                        placeholder="Event description for participants..."
+                        rows={3}
+                        className="mt-1"
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div>
+                        <Label htmlFor="starts_at">Start Date & Time</Label>
+                        <Input
+                          id="starts_at"
+                          type="datetime-local"
+                          value={settingsFormData.starts_at}
+                          onChange={(e) => updateSettingsFormData('starts_at', e.target.value)}
+                          className="mt-1"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="timezone">Timezone</Label>
+                        <Select value={settingsFormData.timezone} onValueChange={(value) => updateSettingsFormData('timezone', value)}>
+                          <SelectTrigger className="mt-1">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Australia/Melbourne">Australia/Melbourne</SelectItem>
+                            <SelectItem value="Australia/Sydney">Australia/Sydney</SelectItem>
+                            <SelectItem value="Australia/Brisbane">Australia/Brisbane</SelectItem>
+                            <SelectItem value="Australia/Adelaide">Australia/Adelaide</SelectItem>
+                            <SelectItem value="Australia/Perth">Australia/Perth</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+
+                    <div>
+                      <Label htmlFor="custom_terms">Custom Terms & Conditions</Label>
+                      <Textarea
+                        id="custom_terms"
+                        value={settingsFormData.custom_terms}
+                        onChange={(e) => updateSettingsFormData('custom_terms', e.target.value)}
+                        placeholder="Additional terms and conditions..."
+                        rows={4}
+                        className="mt-1"
+                      />
+                    </div>
+
+                    <div>
+                      <Label htmlFor="custom_rules">Custom Rules</Label>
+                      <Textarea
+                        id="custom_rules"
+                        value={settingsFormData.custom_rules}
+                        onChange={(e) => updateSettingsFormData('custom_rules', e.target.value)}
+                        placeholder="Event-specific rules..."
+                        rows={4}
+                        className="mt-1"
+                      />
+                    </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Configuration Section */}
+                <div>
+                  <div className="border-b border-[rgba(0,0,0,0.08)]">
+                    <button
+                      onClick={() => toggleSection('configuration')}
+                      className="w-full p-6 text-left hover:bg-gray-50 transition-colors"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <h3 className="font-['Arial:Regular',_sans-serif] text-[18px] text-slate-900 mb-1">Configuration</h3>
+                          <p className="font-['Arial:Regular',_sans-serif] text-[14px] text-slate-600">Participant limits and data collection settings</p>
+                        </div>
+                        <ChevronDown className={`w-4 h-4 transition-transform ${openSection === 'configuration' ? 'rotate-180' : ''}`} />
+                      </div>
+                    </button>
+                  </div>
+                  {openSection === 'configuration' && (
+                    <div className="p-6 space-y-6">
+                    <div>
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <Label htmlFor="capacity">Participant Limit</Label>
+                          <p className="text-xs text-gray-500">Maximum number of participants allowed</p>
+                        </div>
+                        <div className="text-right">
+                          <Input
+                            id="capacity"
+                            type="number"
+                            min="1"
+                            max="500"
+                            value={settingsFormData.capacity}
+                            onChange={(e) => updateSettingsFormData('capacity', e.target.value === '' ? 100 : parseInt(e.target.value) || 100)}
+                            placeholder="100"
+                            className="w-24 text-center"
+                          />
+                        </div>
+                      </div>
+                      <div className="mt-2 text-sm text-gray-500">
+                        Current participants: <span className="font-medium">{participants.length || 0}</span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <Label>Lead Capture</Label>
+                        <p className="text-xs text-gray-500">Collect email addresses for marketing</p>
+                      </div>
+                      <Switch
+                        checked={settingsFormData.lead_capture}
+                        onCheckedChange={(checked) => updateSettingsFormData('lead_capture', checked)}
+                      />
+                    </div>
+
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <Label>Require Payment</Label>
+                        <p className="text-xs text-gray-500">Collect entry fees from participants</p>
+                      </div>
+                      <Switch
+                        checked={settingsFormData.requires_payment}
+                        onCheckedChange={(checked) => updateSettingsFormData('requires_payment', checked)}
+                      />
+                    </div>
+
+                    {settingsFormData.requires_payment && (
+                      <div className="space-y-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div>
+                            <Label htmlFor="entry_fee">Entry Fee ($)</Label>
+                            <Input
+                              id="entry_fee"
+                              type="number"
+                              min="0"
+                              step="0.01"
+                              value={settingsFormData.entry_fee === 0 ? '' : settingsFormData.entry_fee}
+                              onChange={(e) => updateSettingsFormData('entry_fee', e.target.value === '' ? 0 : parseFloat(e.target.value) || 0)}
+                              placeholder="0.00"
+                              className="mt-1"
+                            />
+                          </div>
+                          <div>
+                            <Label htmlFor="payment_timeout">Payment Timeout (minutes)</Label>
+                            <Input
+                              id="payment_timeout"
+                              type="number"
+                              min="5"
+                              max="120"
+                              value={settingsFormData.payment_timeout_minutes === 30 && settingsFormData.payment_timeout_minutes === 0 ? '' : settingsFormData.payment_timeout_minutes}
+                              onChange={(e) => updateSettingsFormData('payment_timeout_minutes', e.target.value === '' ? 30 : parseInt(e.target.value) || 30)}
+                              placeholder="30"
+                              className="mt-1"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <Label>Enable Promotional Messages</Label>
+                        <p className="text-xs text-gray-500">Show promotional content during event</p>
+                      </div>
+                      <Switch
+                        checked={settingsFormData.promo_enabled}
+                        onCheckedChange={(checked) => updateSettingsFormData('promo_enabled', checked)}
+                      />
+                    </div>
+
+                    {settingsFormData.promo_enabled && (
+                      <div className="space-y-4">
+                        <div>
+                          <Label htmlFor="promo_message">Promotional Message</Label>
+                          <Textarea
+                            id="promo_message"
+                            value={settingsFormData.promo_message}
+                            onChange={(e) => updateSettingsFormData('promo_message', e.target.value)}
+                            placeholder="Your promotional message..."
+                            rows={3}
+                            className="mt-1"
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor="promo_duration">Display Duration (seconds)</Label>
+                          <Input
+                            id="promo_duration"
+                            type="number"
+                            min="0"
+                            max="300"
+                            value={settingsFormData.promo_duration === 0 ? '' : settingsFormData.promo_duration}
+                            onChange={(e) => updateSettingsFormData('promo_duration', e.target.value === '' ? 0 : parseInt(e.target.value) || 0)}
+                            placeholder="0"
+                            className="mt-1"
+                          />
+                        </div>
+                      </div>
+                    )}
+                    </div>
+                  )}
+                </div>
+
+                {/* Status & Sharing Section */}
+                <div>
+                  <div className="border-b border-[rgba(0,0,0,0.08)]">
+                    <button
+                      onClick={() => toggleSection('status')}
+                      className="w-full p-6 text-left hover:bg-gray-50 transition-colors"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <h3 className="font-['Arial:Regular',_sans-serif] text-[18px] text-slate-900 mb-1">Status & Sharing</h3>
+                          <p className="font-['Arial:Regular',_sans-serif] text-[14px] text-slate-600">Event lifecycle and sharing options</p>
+                        </div>
+                        <ChevronDown className={`w-4 h-4 transition-transform ${openSection === 'status' ? 'rotate-180' : ''}`} />
+                      </div>
+                    </button>
+                  </div>
+                  {openSection === 'status' && (
+                    <div className="p-6 space-y-6">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <Label>Current Status</Label>
+                        <p className="text-xs text-gray-500">Event is currently {event?.status}</p>
+                      </div>
+                      <Badge className={getStatusColor(event?.status || 'draft')}>
+                        {event?.status?.charAt(0).toUpperCase() + event?.status?.slice(1)}
+                      </Badge>
+                    </div>
+
+                    <div>
+                      <Label>Join URL</Label>
+                      <p className="text-xs text-gray-500 mb-2">Direct link for participants to join</p>
+                      <div className="flex space-x-2">
+                        <Input
+                          value={getSettingsJoinUrl()}
+                          readOnly
+                          className="font-mono text-sm"
+                        />
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => copyToClipboard(getSettingsJoinUrl(), 'Join URL')}
+                        >
+                          <Copy className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+
+                    <div>
+                      <Label>Results URL</Label>
+                      <p className="text-xs text-gray-500 mb-2">Public results page</p>
+                      <div className="flex space-x-2">
+                        <Input
+                          value={getSettingsResultsUrl()}
+                          readOnly
+                          className="font-mono text-sm"
+                        />
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => copyToClipboard(getSettingsResultsUrl(), 'Results URL')}
+                        >
+                          <Copy className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <Button variant="outline" className="justify-start" onClick={() => window.open(`/dashboard/events/${eventId}/qr`, '_blank')}>
+                        <QrCode className="h-4 w-4 mr-2" />
+                        Generate QR Code
+                      </Button>
+                      <Button variant="outline" className="justify-start">
+                        <Download className="h-4 w-4 mr-2" />
+                        Export Participants
+                      </Button>
+                    </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Danger Zone Section */}
+                <div>
+                  <button
+                    onClick={() => toggleSection('danger')}
+                    className="w-full p-6 text-left hover:bg-gray-50 transition-colors"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h3 className="font-['Arial:Regular',_sans-serif] text-[18px] text-red-600 mb-1">Danger Zone</h3>
+                        <p className="font-['Arial:Regular',_sans-serif] text-[14px] text-slate-600">Irreversible actions that will permanently affect your event</p>
+                      </div>
+                      <ChevronDown className={`w-4 h-4 transition-transform ${openSection === 'danger' ? 'rotate-180' : ''}`} />
+                    </div>
+                  </button>
+                  {openSection === 'danger' && (
+                    <div className="p-6">
+                    <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                      <h4 className="font-semibold text-red-900 mb-2">Delete Event</h4>
+                      <p className="text-sm text-red-700 mb-4">
+                        Permanently delete this event and all associated data. This action cannot be undone.
+                      </p>
+
+                      <div className="space-y-4">
+                        <div>
+                          <Label htmlFor="delete_confirm">Type event name to confirm deletion:</Label>
+                          <Input
+                            id="delete_confirm"
+                            value={settingsDeleteConfirmName}
+                            onChange={(e) => setSettingsDeleteConfirmName(e.target.value)}
+                            placeholder={event?.name}
+                            className="mt-1"
+                          />
+                        </div>
+
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button
+                              variant="destructive"
+                              disabled={settingsDeleteConfirmName !== event?.name || settingsDeleting}
+                              className="w-full"
+                            >
+                              <Trash2 className="h-4 w-4 mr-2" />
+                              Delete Event Permanently
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Delete Event: {event?.name}</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                This will permanently delete:
+                                <ul className="list-disc list-inside mt-2 space-y-1">
+                                  <li>All participant entries ({participants.length || 0} participants)</li>
+                                  <li>All horse assignments and draw results</li>
+                                  <li>All event data and settings</li>
+                                  <li>All results and winner information</li>
+                                </ul>
+                                <p className="mt-3 font-semibold text-red-600">
+                                  This action cannot be undone.
+                                </p>
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogAction
+                                onClick={handleSettingsDelete}
+                                className="bg-red-600 hover:bg-red-700"
+                                disabled={settingsDeleting}
+                              >
+                                {settingsDeleting ? (
+                                  <>
+                                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                    Deleting...
+                                  </>
+                                ) : (
+                                  'Yes, Delete Permanently'
+                                )}
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      </div>
+                    </div>
+                    </div>
+                  )}
+                </div>
+
+              </div>
+
+              {/* Bottom Action Buttons */}
+              <div className="flex justify-end gap-3">
+                <Button
+                  variant="outline"
+                  onClick={() => loadEventSettings()}
+                  disabled={settingsSaving}
+                  className="bg-[#f8f7f4] border-[rgba(0,0,0,0.08)] h-11 px-4 rounded-[12px] text-slate-900"
+                >
+                  Discard Changes
+                </Button>
+
+                <Button
+                  onClick={handleSettingsSave}
+                  disabled={settingsSaving || !settingsFormData.name.trim()}
+                  className="bg-gradient-to-b from-[#ff8a00] via-[#ff4d8d] to-[#8b5cf6] text-white h-11 px-4 rounded-[12px] hover:opacity-90"
+                >
+                  {settingsSaving ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Saving...
+                    </>
+                  ) : (
+                    'Save Changes'
+                  )}
+                </Button>
+              </div>
+            </div>
+          </div>
+        )
 
 
       default:
