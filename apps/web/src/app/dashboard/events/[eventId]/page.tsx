@@ -762,6 +762,17 @@ function EventOverviewContent() {
     }
   }
 
+  const handleShareJoinLink = async () => {
+    try {
+      const joinUrl = `https://app.melbournecupsweep.com.au/events/${eventId}/join`
+      await navigator.clipboard.writeText(joinUrl)
+      toast.success('Join link copied to clipboard', { duration: 2000 })
+    } catch (err) {
+      console.error('Error copying join link:', err)
+      toast.error('Failed to copy link')
+    }
+  }
+
   // Tab content renderer
   const renderTabContent = () => {
     switch (activeTab) {
@@ -827,12 +838,15 @@ function EventOverviewContent() {
                         Get started by sharing your event QR code or join link with participants
                       </p>
                       <div className="flex flex-col gap-3 w-full max-w-xs">
-                        <button className="bg-gradient-to-r from-[#ff6b35] to-[#a855f7] text-white px-4 py-2.5 rounded-lg text-sm font-medium hover:opacity-90 transition-opacity flex items-center justify-center gap-2">
+                        <button
+                          onClick={handlePrintQR}
+                          className="bg-gradient-to-r from-[#ff6b35] to-[#a855f7] text-white px-4 py-2.5 rounded-lg text-sm font-medium hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
+                        >
                           <QrCode className="h-4 w-4" />
                           Print QR Code
                         </button>
                         <button
-                          onClick={() => setShowAddParticipantModal(true)}
+                          onClick={handleShareJoinLink}
                           className="bg-[#f8f7f4] border border-gray-200 text-slate-900 px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors flex items-center justify-center gap-2"
                         >
                           <Share2 className="h-4 w-4" />
