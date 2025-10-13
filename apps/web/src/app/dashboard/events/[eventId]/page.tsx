@@ -104,7 +104,7 @@ function getStatusIcon(status: string) {
 
 function GradientProgressBar({ percentage, className }: { percentage: number, className?: string }) {
   return (
-    <div className={`bg-[#f8f7f4] rounded-full h-3 overflow-hidden ${className}`}>
+    <div className={`bg-gray-100 border border-gray-200 rounded-full h-3 overflow-hidden ${className}`}>
       <div
         className="h-full bg-gradient-to-b from-[#FF8A00] via-[#FF4D8D] to-[#8B5CF6] rounded-full transition-all duration-300"
         style={{ width: `${percentage}%` }}

@@ -45,7 +45,7 @@ type DrawStats = {
 
 function GradientProgressBar({ percentage, className }: { percentage: number, className?: string }) {
   return (
-    <div className={`bg-[#f8f7f4] rounded-full h-3 overflow-hidden ${className}`}>
+    <div className={`bg-gray-100 border border-gray-200 rounded-full h-3 overflow-hidden ${className}`}>
       <div
         className="h-full bg-gradient-to-r from-orange-500 via-pink-500 to-purple-600 rounded-full transition-all duration-300"
         style={{ width: `${percentage}%` }}
