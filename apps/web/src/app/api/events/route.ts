@@ -19,7 +19,7 @@ export async function GET(request: Request) {
 
     const { data, error } = await supabase
       .from('events')
-      .select('id,name,starts_at,status,capacity,mode,created_at')
+      .select('id,name,starts_at,status,capacity,mode,entry_fee,first_place_percentage,second_place_percentage,third_place_percentage,created_at')
       .eq('tenant_id', tenantId)
       .order('created_at', { ascending: false })
 
