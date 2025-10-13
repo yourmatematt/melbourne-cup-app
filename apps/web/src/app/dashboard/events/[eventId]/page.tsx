@@ -178,13 +178,13 @@ function ViewAllParticipantsModal({
   isOpen,
   onClose,
   participants,
-  onPaymentToggle,
+  onToggleClick,
   onAddParticipant
 }: {
   isOpen: boolean
   onClose: () => void
   participants: Participant[]
-  onPaymentToggle?: (participantId: string, newStatus: 'paid' | 'unpaid') => void
+  onToggleClick?: (participant: Participant, newStatus: 'paid' | 'unpaid') => void
   onAddParticipant?: () => void
 }) {
   const [searchTerm, setSearchTerm] = useState('')
@@ -279,7 +279,7 @@ function ViewAllParticipantsModal({
                 <ParticipantRowModal
                   key={participant.id}
                   participant={participant}
-                  onPaymentToggle={onPaymentToggle}
+                  onToggleClick={onToggleClick}
                 />
               ))
             ) : (
@@ -295,34 +295,71 @@ function ViewAllParticipantsModal({
   )
 }
 
-function ParticipantRowModal({ participant, onPaymentToggle }: {
-  participant: Participant
-  onPaymentToggle?: (participantId: string, newStatus: 'paid' | 'unpaid') => void
+function PaymentConfirmationModal({
+  isOpen,
+  onClose,
+  onConfirm,
+  participantName
+}: {
+  isOpen: boolean
+  onClose: () => void
+  onConfirm: () => void
+  participantName: string
 }) {
-  const [showConfirmDialog, setShowConfirmDialog] = useState(false)
-  const [pendingStatus, setPendingStatus] = useState<'paid' | 'unpaid' | null>(null)
-
-  const handlePaymentToggle = async (newStatus: 'paid' | 'unpaid') => {
-    // Safety confirmation for paid -> unpaid
-    if (participant.payment_status === 'paid' && newStatus === 'unpaid') {
-      setPendingStatus(newStatus)
-      setShowConfirmDialog(true)
-      toast.error('This participant was marked paid. Are you sure you want to move them to unpaid status?', {
-        duration: 5000,
-        action: {
-          label: 'Confirm',
-          onClick: () => {
-            onPaymentToggle?.(participant.id, newStatus)
-            setShowConfirmDialog(false)
-            setPendingStatus(null)
-          }
-        }
-      })
-      return
+  useEffect(() => {
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        onClose()
+      }
     }
 
-    onPaymentToggle?.(participant.id, newStatus)
-  }
+    if (isOpen) {
+      document.addEventListener('keydown', handleEscape)
+      return () => document.removeEventListener('keydown', handleEscape)
+    }
+  }, [isOpen, onClose])
+
+  if (!isOpen) return null
+
+  return (
+    <div
+      className="fixed inset-0 bg-black/60 flex items-center justify-center z-50"
+      onClick={onClose}
+    >
+      <div
+        className="bg-white rounded-xl w-[400px] h-[250px] shadow-2xl p-6 flex flex-col justify-between"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div>
+          <h3 className="text-lg font-bold text-slate-900 mb-4">Confirm Payment Status Change</h3>
+          <p className="text-sm text-gray-600">
+            Are you sure you want to mark <strong>{participantName}</strong> as unpaid? This participant was previously marked as paid.
+          </p>
+        </div>
+
+        <div className="flex gap-3">
+          <button
+            onClick={onClose}
+            className="flex-1 px-4 py-2.5 border border-gray-200 text-slate-700 rounded-lg hover:bg-gray-50 font-medium text-sm"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={onConfirm}
+            className="flex-1 px-4 py-2.5 bg-red-500 text-white rounded-lg hover:bg-red-600 font-medium text-sm"
+          >
+            Confirm Change
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function ParticipantRowModal({ participant, onToggleClick }: {
+  participant: Participant
+  onToggleClick?: (participant: Participant, newStatus: 'paid' | 'unpaid') => void
+}) {
 
   return (
     <div className="flex items-center justify-between p-4 border border-gray-200 rounded-xl hover:bg-gray-50">
@@ -362,7 +399,7 @@ function ParticipantRowModal({ participant, onPaymentToggle }: {
             <input
               type="checkbox"
               checked={participant.payment_status === 'paid'}
-              onChange={(e) => handlePaymentToggle(e.target.checked ? 'paid' : 'unpaid')}
+              onChange={(e) => onToggleClick?.(participant, e.target.checked ? 'paid' : 'unpaid')}
               className="sr-only peer"
             />
             <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
@@ -381,9 +418,9 @@ function ParticipantRowModal({ participant, onPaymentToggle }: {
   )
 }
 
-function ParticipantRow({ participant, onPaymentToggle }: {
+function ParticipantRow({ participant, onToggleClick }: {
   participant: Participant
-  onPaymentToggle?: (participantId: string, newStatus: 'paid' | 'unpaid') => void
+  onToggleClick?: (participant: Participant, newStatus: 'paid' | 'unpaid') => void
 }) {
   const initials = getInitials(participant.participant_name)
   const isPaid = participant.payment_status === 'paid'
@@ -425,7 +462,7 @@ function ParticipantRow({ participant, onPaymentToggle }: {
 
         {/* Payment Toggle */}
         <button
-          onClick={() => onPaymentToggle?.(participant.id, isPaid ? 'unpaid' : 'paid')}
+          onClick={() => onToggleClick?.(participant, isPaid ? 'unpaid' : 'paid')}
           className={`w-12 h-6 rounded-full border-2 transition-all relative shadow-sm ${
             isPaid
               ? 'bg-emerald-500 border-emerald-500'
@@ -499,6 +536,12 @@ function EventOverviewContent() {
   const [activeTab, setActiveTab] = useState(0)
   const [showVenueDropdown, setShowVenueDropdown] = useState(false)
   const venueDropdownRef = useRef<HTMLDivElement>(null)
+  const [showPaymentConfirmModal, setShowPaymentConfirmModal] = useState(false)
+  const [pendingPaymentChange, setPendingPaymentChange] = useState<{
+    participantId: string
+    participantName: string
+    newStatus: 'paid' | 'unpaid'
+  } | null>(null)
   const [drawStats, setDrawStats] = useState<DrawStats>({
     assigned: 0,
     waiting: 0,
@@ -662,6 +705,23 @@ function EventOverviewContent() {
     setShowAddParticipantModal(false)
   }
 
+  function handleToggleClick(participant: Participant, newStatus: 'paid' | 'unpaid') {
+    // If changing FROM paid TO unpaid, show confirmation modal
+    if (participant.payment_status === 'paid' && newStatus === 'unpaid') {
+      setPendingPaymentChange({
+        participantId: participant.id,
+        participantName: participant.participant_name,
+        newStatus: newStatus
+      })
+      setShowPaymentConfirmModal(true)
+      // DO NOT call handlePaymentToggle - wait for confirmation
+      return
+    }
+
+    // All other changes (unpaid→paid) proceed immediately
+    handlePaymentToggle(participant.id, newStatus)
+  }
+
   async function handlePaymentToggle(participantId: string, newStatus: 'paid' | 'unpaid') {
     try {
       // Update local state immediately for responsive UI
@@ -678,6 +738,23 @@ function EventOverviewContent() {
       // Revert local state on error
       await fetchEventData()
     }
+  }
+
+  const confirmPaymentChange = async () => {
+    if (pendingPaymentChange) {
+      await handlePaymentToggle(
+        pendingPaymentChange.participantId,
+        pendingPaymentChange.newStatus
+      )
+      setShowPaymentConfirmModal(false)
+      setPendingPaymentChange(null)
+    }
+  }
+
+  const cancelPaymentChange = () => {
+    // Just close modal, toggle stays in original position
+    setShowPaymentConfirmModal(false)
+    setPendingPaymentChange(null)
   }
 
   function handleHorseClick(horseNumber: number) {
@@ -1084,7 +1161,7 @@ function EventOverviewContent() {
                       <ParticipantRow
                         key={participant.id}
                         participant={participant}
-                        onPaymentToggle={handlePaymentToggle}
+                        onToggleClick={handleToggleClick}
                       />
                     ))
                   ) : (
@@ -1846,8 +1923,16 @@ function EventOverviewContent() {
         isOpen={showViewAllParticipantsModal}
         onClose={() => setShowViewAllParticipantsModal(false)}
         participants={participants}
-        onPaymentToggle={handlePaymentToggle}
+        onToggleClick={handleToggleClick}
         onAddParticipant={() => setShowAddParticipantModal(true)}
+      />
+
+      {/* Payment Confirmation Modal */}
+      <PaymentConfirmationModal
+        isOpen={showPaymentConfirmModal}
+        onClose={cancelPaymentChange}
+        onConfirm={confirmPaymentChange}
+        participantName={pendingPaymentChange?.participantName || ''}
       />
     </DashboardLayout>
   )
