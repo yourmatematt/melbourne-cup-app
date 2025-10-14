@@ -854,6 +854,215 @@ function LiveViewPage() {
     `${activity.participantName} ${activity.action}`
   )
 
+  // Function to get the most recent assignment for drawing display
+  const getMostRecentAssignment = () => {
+    if (!assignments || assignments.length === 0) return null
+
+    // Sort assignments by created_at descending to get the most recent
+    const sortedAssignments = [...assignments].sort((a, b) =>
+      new Date(b.created_at || '').getTime() - new Date(a.created_at || '').getTime()
+    )
+
+    return sortedAssignments[0]
+  }
+
+  // Function to get already drawn participants for the bottom display
+  const getDrawnParticipants = () => {
+    return assignments.slice().reverse() // Show in reverse order (most recent first)
+  }
+
+  // DrawingStateView component
+  const DrawingStateView = () => {
+    const recentAssignment = getMostRecentAssignment()
+    const drawnParticipants = getDrawnParticipants()
+
+    return (
+      <div className="min-h-screen bg-[#f8f7f4] overflow-hidden w-screen h-screen relative" style={{ minWidth: '1920px', minHeight: '1080px' }}>
+        {/* Real-time Flash Indicator */}
+        {realtimeFlash && (
+          <div className="absolute top-0 left-0 right-0 bg-green-500 text-white text-center py-3 z-50 animate-pulse">
+            <p className="text-2xl font-bold">⚡ REAL-TIME UPDATE RECEIVED!</p>
+          </div>
+        )}
+
+        {/* Header Section - Same as ACTIVE state but with DRAWING LIVE badge */}
+        <div className="h-[120px] bg-white border-b border-gray-200 shadow-sm flex items-center justify-between px-8">
+          {/* Left: Venue Avatar + Event Details */}
+          <div className="flex items-center space-x-6">
+            <div
+              className="w-20 h-20 rounded-full flex items-center justify-center text-white text-2xl font-bold"
+              style={{
+                background: 'linear-gradient(180deg, #ff8a00 0%, #ff4d8d 50%, #8b5cf6 100%)'
+              }}
+            >
+              {event.tenant?.name?.charAt(0) || 'V'}
+            </div>
+
+            <div>
+              <div className="flex items-center space-x-4">
+                <h1 className="text-4xl font-bold text-slate-900 font-['Arial']">
+                  {event.name}
+                </h1>
+
+                {/* DRAWING LIVE Badge */}
+                <div
+                  className="px-6 py-3 rounded-full flex items-center space-x-2 shadow-lg"
+                  style={{
+                    background: 'linear-gradient(90deg, #fb2c36 0%, #ff4d8d 100%)'
+                  }}
+                >
+                  <Radio className="h-6 w-6 text-white" />
+                  <span className="text-white font-bold text-2xl font-['Arial']">
+                    🎯 DRAWING LIVE
+                  </span>
+                </div>
+              </div>
+              <p className="text-xl text-slate-600 font-['Arial'] mt-1">
+                {event.tenant?.name || 'Live Event'}
+              </p>
+            </div>
+          </div>
+
+          {/* Right: QR Code */}
+          <div className="flex flex-col items-center">
+            <div className="bg-slate-900 p-5 rounded-3xl flex items-center justify-center">
+              <QRCodeSVG
+                value={`${window.location.origin}/events/${event.id}/join`}
+                size={80}
+                bgColor="transparent"
+                fgColor="white"
+                level="M"
+              />
+            </div>
+            <p className="text-lg text-slate-900 font-['Arial'] mt-2">Scan to Join</p>
+          </div>
+        </div>
+
+        {/* Main Drawing Display Area */}
+        <div className="flex-1 relative" style={{
+          background: 'linear-gradient(180deg, #1f2937 0%, #111827 50%, #0f172a 100%)',
+          height: '780px'
+        }}>
+          {/* Subtle radial gradient overlay */}
+          <div
+            className="absolute inset-0 opacity-30"
+            style={{
+              background: 'radial-gradient(ellipse at center, rgba(168,85,247,0.3) 0%, rgba(84,43,124,0.15) 35%, transparent 70%)'
+            }}
+          />
+
+          {/* Central Drawing Display */}
+          <div className="absolute top-14 left-1/2 transform -translate-x-1/2 w-[500px] h-[752px]">
+            {/* Participant Avatar/Initials */}
+            <div className="flex justify-center mb-6">
+              <div
+                className="w-40 h-40 rounded-full flex items-center justify-center text-white text-6xl font-bold shadow-2xl"
+                style={{
+                  background: 'linear-gradient(180deg, #ff8a00 0%, #ff4d8d 50%, #8b5cf6 100%)'
+                }}
+              >
+                {recentAssignment?.participant_name ?
+                  recentAssignment.participant_name.split(' ').map(n => n[0]).join('').toUpperCase()
+                  : 'MC'
+                }
+              </div>
+            </div>
+
+            {/* Participant Name */}
+            <div className="text-center mb-8">
+              <h1 className="text-6xl font-bold text-white font-['Arial'] mb-4">
+                {recentAssignment?.participant_name?.toUpperCase() || 'NEXT DRAW'}
+              </h1>
+
+              {/* Drawn Confirmation */}
+              {recentAssignment && (
+                <div className="text-5xl font-bold text-[#05df72] font-['Arial']">
+                  ✓ DRAWN!
+                </div>
+              )}
+            </div>
+
+            {/* Horse Card Display */}
+            {recentAssignment && (
+              <div className="relative">
+                <div className="bg-white border-4 border-black/10 rounded-3xl p-1 shadow-2xl">
+                  <div
+                    className="rounded-3xl p-6 h-[300px] flex flex-col items-center justify-center"
+                    style={{
+                      background: 'linear-gradient(180deg, #ff8a00 0%, #ff4d8d 50%, #8b5cf6 100%)'
+                    }}
+                  >
+                    <div className="bg-white rounded-3xl p-8 w-full h-full flex flex-col items-center justify-center">
+                      {/* Horse Number */}
+                      <div
+                        className="text-[120px] font-black leading-none mb-4"
+                        style={{
+                          background: 'linear-gradient(90deg, #ff8a00 0%, #ff4d8d 50%, #8b5cf6 100%)',
+                          WebkitBackgroundClip: 'text',
+                          WebkitTextFillColor: 'transparent',
+                          backgroundClip: 'text'
+                        }}
+                      >
+                        #{recentAssignment.event_horses?.number || '--'}
+                      </div>
+
+                      {/* Horse Name */}
+                      <div className="text-4xl text-slate-600 font-['Arial'] text-center">
+                        {recentAssignment.event_horses?.name || 'HORSE NAME'}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Bottom Section - Already Drawn */}
+        <div className="h-[180px] bg-gray-800 px-8 flex items-center justify-between">
+          {/* Left: Already Drawn List */}
+          <div className="flex-1">
+            <h3 className="text-xl text-white/70 font-['Arial'] mb-4">ALREADY DRAWN:</h3>
+            <div className="flex items-center space-x-4 overflow-x-auto">
+              {drawnParticipants.slice(0, 8).map((assignment, index) => (
+                <div
+                  key={assignment.id}
+                  className="flex-shrink-0 px-6 py-3 rounded-full flex items-center space-x-3 shadow-lg"
+                  style={{
+                    background: 'linear-gradient(180deg, #ff8a00 0%, #ff4d8d 50%, #8b5cf6 100%)'
+                  }}
+                >
+                  <Trophy className="h-5 w-5 text-white" />
+                  <span className="text-white font-['Arial'] text-xl whitespace-nowrap">
+                    {assignment.participant_name?.split(' ')[0] || 'Unknown'} {assignment.participant_name?.split(' ')[1]?.[0] || ''}. → #{assignment.event_horses?.number || '--'}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Right: Prize Pool */}
+          <div
+            className="w-[200px] h-[120px] rounded-2xl flex flex-col items-center justify-center shadow-2xl"
+            style={{
+              background: 'linear-gradient(180deg, #ff8a00 0%, #ff4d8d 50%, #8b5cf6 100%)'
+            }}
+          >
+            <p className="text-white/80 text-base font-['Arial'] mb-1">PRIZE POOL</p>
+            <div className="text-4xl font-bold text-white font-['Arial']">
+              {entryFee === 0 ? 'FREE' : formatCurrency(prizePool)}
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // Conditional rendering based on event status
+  if (event.status === 'drawing') {
+    return <DrawingStateView />
+  }
+
   return (
     <div className="min-h-screen bg-[#f8f7f4] overflow-hidden w-screen h-screen relative" style={{ minWidth: '1920px', minHeight: '1080px' }}>
       {/* Real-time Flash Indicator */}
