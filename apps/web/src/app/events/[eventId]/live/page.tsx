@@ -510,7 +510,7 @@ function LiveViewPage() {
         console.warn('[DEBUG] refreshParticipants function not available')
       }
     } catch (error) {
-      console.error('[DEBUG] Error refreshing participants:', error')
+      console.error('[DEBUG] Error refreshing participants:', error)
     }
   }
 
