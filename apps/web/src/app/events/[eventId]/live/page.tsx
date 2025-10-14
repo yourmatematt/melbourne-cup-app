@@ -183,9 +183,16 @@ function LiveViewPage() {
   // Track which assignments have already been animated to prevent replays
   const animatedAssignmentIds = useRef<Set<string>>(new Set())
 
+  // Track initial assignment IDs that exist on page load
+  const initialAssignmentIds = useRef<Set<string>>(new Set())
+
   // Track initial data load completion to distinguish between initial load and new real-time assignments
   const [initialDataLoaded, setInitialDataLoaded] = useState(false)
+  const [isInitialLoad, setIsInitialLoad] = useState(true)
   const mountTimestamp = useRef<number>(Date.now())
+
+  // Enhanced debugging
+  console.log('[DEBUG] Component render - mountTimestamp:', mountTimestamp.current, 'time now:', Date.now())
 
   // Client-side hydration flag to prevent server/client mismatch
   useEffect(() => {
@@ -286,16 +293,14 @@ function LiveViewPage() {
     connectionType: realtimeConnected ? 'realtime' : pollingActive ? 'polling' : 'disconnected'
   }
 
-  // Track initial data loading completion and mark existing assignments as already animated
+  // Track initial data loading completion and capture initial assignment IDs
   useEffect(() => {
     // Only run once when data is initially loaded
     if (!initialDataLoaded && !assignmentsLoading && !participantsLoading && !loading) {
-      console.log('[INITIAL LOAD] Marking initial data as loaded, existing assignments:', assignments.length)
-
-      // Mark all existing assignments as already animated to prevent animations on page load
+      // Capture all initial assignment IDs to prevent animations for existing assignments
       assignments.forEach(assignment => {
+        initialAssignmentIds.current.add(assignment.id)
         animatedAssignmentIds.current.add(assignment.id)
-        console.log('[INITIAL LOAD] Marking assignment as already animated:', assignment.id)
       })
 
       setInitialDataLoaded(true)
@@ -848,20 +853,15 @@ function LiveViewPage() {
   const startDrawAnimation = useCallback((newAssignment: any) => {
     if (!isClient) return
 
+    // Guard: Check if this assignment was present on initial page load
+    if (initialAssignmentIds.current.has(newAssignment.id)) {
+      return
+    }
+
     // Guard: Check if this assignment has already been animated
     if (animatedAssignmentIds.current.has(newAssignment.id)) {
-      console.log('[DRAW] SKIPPING animation for already animated assignment:', newAssignment.id)
       return
     }
-
-    // Guard: Only animate assignments created AFTER component mount
-    const assignmentTime = new Date(newAssignment.created_at || '').getTime()
-    if (assignmentTime <= mountTimestamp.current) {
-      console.log('[DRAW] SKIPPING animation for assignment created before mount:', newAssignment.id, assignmentTime, 'vs mount:', mountTimestamp.current)
-      return
-    }
-
-    console.log('[DRAW] Starting animation for NEW assignment:', newAssignment?.patron_entries?.participant_name, 'ID:', newAssignment.id)
 
     // Mark this assignment as animated
     animatedAssignmentIds.current.add(newAssignment.id)
@@ -1043,38 +1043,19 @@ function LiveViewPage() {
 
   // Auto-trigger drawing animation when new assignment arrives
   useEffect(() => {
-    // Guard: Only start checking for animations after initial data is loaded
-    if (!initialDataLoaded) {
-      console.log('[ANIMATION] SKIPPING trigger - initial data not loaded yet')
-      return
-    }
+    if (!initialDataLoaded) return
 
     const mostRecentAssignment = getMostRecentAssignment()
-    if (!mostRecentAssignment) {
-      console.log('[ANIMATION] SKIPPING trigger - no recent assignment')
-      return
-    }
+    if (!mostRecentAssignment) return
 
-    // Guard: Only animate in drawing state with idle animation
-    if (event?.status !== 'drawing' || animationState !== 'idle') {
-      console.log('[ANIMATION] SKIPPING trigger - wrong state:', { eventStatus: event?.status, animationState })
-      return
-    }
+    if (event?.status !== 'drawing' || animationState !== 'idle') return
+
+    // Guard: Check if this assignment was present on initial page load
+    if (initialAssignmentIds.current.has(mostRecentAssignment.id)) return
 
     // Guard: Check if this assignment has already been animated
-    if (animatedAssignmentIds.current.has(mostRecentAssignment.id)) {
-      console.log('[ANIMATION] SKIPPING trigger - assignment already animated:', mostRecentAssignment.id)
-      return
-    }
+    if (animatedAssignmentIds.current.has(mostRecentAssignment.id)) return
 
-    // Guard: Only animate assignments created AFTER mount
-    const assignmentTime = new Date(mostRecentAssignment.created_at || '').getTime()
-    if (assignmentTime <= mountTimestamp.current) {
-      console.log('[ANIMATION] SKIPPING trigger - assignment created before mount:', mostRecentAssignment.id)
-      return
-    }
-
-    console.log('[ANIMATION] TRIGGERING animation for new assignment:', mostRecentAssignment.id)
     startDrawAnimation(mostRecentAssignment)
   }, [assignments, event?.status, animationState, initialDataLoaded, getMostRecentAssignment, startDrawAnimation])
 
