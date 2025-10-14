@@ -44,52 +44,123 @@ export default function LiveViewPage() {
   const [currentTime, setCurrentTime] = useState(new Date())
   const supabase = createClient()
 
-  useEffect(() => {
-    const fetchEventData = async () => {
-      try {
-        // Fetch event details
-        const { data: eventData, error: eventError } = await supabase
-          .from('events')
-          .select('*')
-          .eq('id', eventId)
-          .single()
+ useEffect(() => {
+  const fetchEventData = async () => {
+    try {
+      // Fetch event details
+      const { data: eventData, error: eventError } = await supabase
+        .from('events')
+        .select('*')
+        .eq('id', eventId)
+        .single()
 
-        if (eventError) throw eventError
-        setEvent(eventData)
+      if (eventError) throw eventError
+      setEvent(eventData)
 
-        // Fetch participants (mock data for now)
-        setParticipants([
-          { id: '1', name: 'John Smith', horse_number: 1, horse_name: 'Thunder Strike', draw_position: 1 },
-          { id: '2', name: 'Sarah Wilson', horse_number: 5, horse_name: 'Golden Arrow', draw_position: 2 },
-          { id: '3', name: 'Mike Johnson', horse_number: 12, horse_name: 'Royal Champion', draw_position: 3 },
-          // Add more mock participants as needed
-        ])
+      // Fetch REAL participants with horse assignments
+      const { data: participantsData, error: participantsError } = await supabase
+        .from('patron_entries')
+        .select(`
+          id,
+          participant_name,
+          created_at
+        `)
+        .eq('event_id', eventId)
+        .order('created_at', { ascending: true })
 
-        // Mock race results for completed state
-        setRaceResults([
-          { position: 1, horse_number: 5, horse_name: 'Golden Arrow', jockey: 'J. McDonald', odds: '8/1', margin: '' },
-          { position: 2, horse_number: 12, horse_name: 'Royal Champion', jockey: 'D. Lane', odds: '15/1', margin: '1.5L' },
-          { position: 3, horse_number: 1, horse_name: 'Thunder Strike', jockey: 'C. Williams', odds: '5/1', margin: '2L' },
-        ])
+      if (participantsError) throw participantsError
 
-      } catch (error) {
-        console.error('Error fetching event data:', error)
-      } finally {
-        setLoading(false)
+      // Fetch assignments to get horse numbers
+      const { data: assignmentsData, error: assignmentsError } = await supabase
+        .from('assignments')
+        .select(`
+          patron_entry_id,
+          event_horses!inner(
+            number,
+            name
+          )
+        `)
+        .in('patron_entry_id', (participantsData || []).map(p => p.id))
+
+      if (assignmentsError) console.warn('Could not fetch assignments:', assignmentsError)
+
+      // Create a map of participant ID to horse assignment
+      const assignmentMap = new Map()
+      if (assignmentsData) {
+        assignmentsData.forEach(assignment => {
+          assignmentMap.set(assignment.patron_entry_id, {
+            horse_number: assignment.event_horses.number,
+            horse_name: assignment.event_horses.name
+          })
+        })
       }
-    }
 
-    if (eventId) {
-      fetchEventData()
+      // Transform the data
+      const transformedParticipants = (participantsData || []).map((p: any) => {
+        const assignment = assignmentMap.get(p.id)
+        return {
+          id: p.id,
+          name: p.participant_name,
+          horse_number: assignment?.horse_number,
+          horse_name: assignment?.horse_name,
+          draw_position: null
+        }
+      })
+
+      setParticipants(transformedParticipants)
+
+    } catch (error) {
+      console.error('Error fetching event data:', error)
+    } finally {
+      setLoading(false)
     }
+  }
+
+  if (eventId) {
+    fetchEventData()
+
+    // Set up real-time subscription for participant changes
+    const channel = supabase
+      .channel(`event-${eventId}-live`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'patron_entries',
+          filter: `event_id=eq.${eventId}`
+        },
+        () => {
+          // Refetch data when participants change
+          fetchEventData()
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'assignments'
+        },
+        () => {
+          // Refetch data when assignments change (draw happens)
+          fetchEventData()
+        }
+      )
+      .subscribe()
 
     // Update time every second
     const timeInterval = setInterval(() => {
       setCurrentTime(new Date())
     }, 1000)
 
-    return () => clearInterval(timeInterval)
-  }, [eventId, supabase])
+    // Cleanup on unmount
+    return () => {
+      clearInterval(timeInterval)
+      supabase.removeChannel(channel)
+    }
+  }
+}, [eventId, supabase])
 
   if (loading) {
     return (
