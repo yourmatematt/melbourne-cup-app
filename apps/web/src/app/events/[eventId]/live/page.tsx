@@ -109,7 +109,7 @@ interface Result {
 }
 
 function LiveViewPage() {
-  console.log('🚨 LIVE PAGE COMPONENT MOUNTING - LiveViewPage function called')
+  console.log('[COMPONENT] LIVE PAGE COMPONENT MOUNTING - LiveViewPage function called')
 
   // Simple debug state
   const [debugMode, setDebugMode] = useState(false)
@@ -119,24 +119,24 @@ function LiveViewPage() {
   // Get params safely
   const params = useParams()
   const eventId = params.eventId as string
-  console.log('🚨 LIVE PAGE - eventId from params:', eventId, 'params:', params)
+  console.log('[PARAMS] LIVE PAGE - eventId from params:', eventId, 'params:', params)
   const supabase = createClient()
 
   // Client-side only initialization
   useEffect(() => {
     if (typeof window === 'undefined') return
 
-    console.log('🚨 [CLIENT] LiveViewPage mounted on client')
+    console.log('[CLIENT] LiveViewPage mounted on client')
     setMounted(true)
     setDebugMode(true)
 
     // Set join URL for QR code
-    setJoinUrl(`${window.location.origin}/events/${eventId}/enter`)
+    setJoinUrl(`${window.location.origin}/events/${eventId}/join`)
   }, [eventId])
 
   useEffect(() => {
     if (mounted) {
-      console.log('✅ Component fully mounted', { eventId, supabaseReady: !!supabase })
+      console.log('[MOUNT] Component fully mounted', { eventId, supabaseReady: !!supabase })
     }
   }, [mounted, eventId, supabase])
 
@@ -162,14 +162,14 @@ function LiveViewPage() {
   const [previousParticipants, setPreviousParticipants] = useState<ParticipantStatus[]>([])
 
   // Use the real-time assignments hook with relations
-  console.log('🚨 LIVE PAGE - About to call useRealtimeAssignments hook with eventId:', eventId)
+  console.log('[HOOK] LIVE PAGE - About to call useRealtimeAssignments hook with eventId:', eventId)
 
   let assignments, assignmentsLoading, assignmentsRealtimeState, refreshAssignments
   try {
     const hookResult = useRealtimeAssignments(eventId, {
       includeRelations: true,
       onAssignmentAdded: (assignment) => {
-        console.log('🎉 [LIVE VIEW] New assignment added callback triggered:', {
+        console.log('[ASSIGNMENT] New assignment added callback triggered:', {
           assignmentId: assignment.id,
           eventId: assignment.event_id,
           participantName: assignment.patron_entries?.participant_name,
@@ -188,7 +188,7 @@ function LiveViewPage() {
         }, 1000)
 
         setTimeout(() => {
-          console.log('🎉 [LIVE VIEW] Clearing new assignment highlight for:', assignment.id)
+          console.log('[HIGHLIGHT] Clearing new assignment highlight for:', assignment.id)
           setNewAssignmentId(null)
         }, 3000)
       },
@@ -198,7 +198,7 @@ function LiveViewPage() {
       }
     })
 
-    console.log('🚨 LIVE PAGE - useRealtimeAssignments hook returned successfully:', hookResult)
+    console.log('[HOOK] LIVE PAGE - useRealtimeAssignments hook returned successfully:', hookResult)
 
     assignments = hookResult.assignments
     assignmentsLoading = hookResult.loading
@@ -206,7 +206,7 @@ function LiveViewPage() {
     refreshAssignments = hookResult.refresh
 
   } catch (error) {
-    console.error('🚨 LIVE PAGE - ERROR calling useRealtimeAssignments hook:', error)
+    console.error('[ERROR] LIVE PAGE - ERROR calling useRealtimeAssignments hook:', error)
     // Provide fallback values
     assignments = []
     assignmentsLoading = false
@@ -222,7 +222,7 @@ function LiveViewPage() {
     refresh: refreshParticipants
   } = useRealtimeParticipants(eventId, {
     onParticipantAdded: (participant) => {
-      console.log('🆕 New participant added')
+      console.log('[PARTICIPANT] New participant added')
       setLastUpdate(new Date())
 
       setEvent(prev => prev ? {
@@ -231,7 +231,7 @@ function LiveViewPage() {
       } : null)
     },
     onParticipantRemoved: (participantId) => {
-      console.log('🗑️ Participant removed')
+      console.log('[PARTICIPANT] Participant removed')
       setLastUpdate(new Date())
 
       setEvent(prev => prev ? {
@@ -316,7 +316,7 @@ function LiveViewPage() {
     if (previousParticipants.length > 0) {
       const newActivities = generateActivity(participants, previousParticipants)
       if (newActivities.length > 0) {
-        console.log('📢 New activities generated:', newActivities.length)
+        console.log('[ACTIVITY] New activities generated:', newActivities.length)
         setRecentActivity(prev => [...newActivities, ...prev].slice(0, 5))
       }
     } else {
@@ -332,26 +332,33 @@ function LiveViewPage() {
     }
 
     setPreviousParticipants(participants)
-    console.log('👥 Updated participants:', participants.map(p => `${p.participant_name} (${p.payment_status || 'unknown'})`).join(', '))
+    console.log('[PARTICIPANTS] Updated participants:', participants.map(p => `${p.participant_name} (${p.payment_status || 'unknown'})`).join(', '))
   }, [participants, previousParticipants])
 
   useEffect(() => {
     if (!eventId) return
 
-    console.log('🔄 Fetching event data for:', eventId)
+    console.log('[DATA] Fetching event data for:', eventId)
     loadEventData()
 
     // Set up comprehensive real-time subscription for all live view changes
-    console.log('🔗 Setting up real-time subscription for event:', eventId)
+    console.log('[SUBSCRIPTION] Setting up real-time subscription for event:', eventId)
     const channel = supabase
       .channel(`event-${eventId}-live-comprehensive`)
       .on('postgres_changes',
         { event: '*', schema: 'public', table: 'patron_entries', filter: `event_id=eq.${eventId}` },
         (payload) => {
-          console.log('🔔 Patron entry changed:', payload)
-          console.log('Event type:', payload.eventType)
-          console.log('Table:', payload.table)
-          console.log('🔄 Triggering loadEventData() due to patron_entries change')
+          console.log('[SUBSCRIPTION] Patron entry changed:', payload)
+          console.log('[EVENT] Event type:', payload.eventType)
+          console.log('[TABLE] Table:', payload.table)
+          if (payload.eventType === 'UPDATE') {
+            console.log('[UPDATE] Payment status changed:', {
+              old: payload.old?.payment_status,
+              new: payload.new?.payment_status,
+              participant: payload.new?.participant_name
+            })
+          }
+          console.log('[TRIGGER] Triggering loadEventData() due to patron_entries change')
           loadEventData() // THIS MUST BE CALLED
           setLastUpdate(new Date())
 
@@ -365,9 +372,9 @@ function LiveViewPage() {
       .on('postgres_changes',
         { event: '*', schema: 'public', table: 'assignments' },
         (payload) => {
-          console.log('🔔 Assignment changed:', payload)
-          console.log('Event type:', payload.eventType)
-          console.log('🔄 Triggering loadEventData() due to assignments change')
+          console.log('[SUBSCRIPTION] Assignment changed:', payload)
+          console.log('[EVENT] Event type:', payload.eventType)
+          console.log('[TRIGGER] Triggering loadEventData() due to assignments change')
           loadEventData() // THIS MUST BE CALLED
           setLastUpdate(new Date())
 
@@ -386,7 +393,7 @@ function LiveViewPage() {
       .on('postgres_changes',
         { event: '*', schema: 'public', table: 'event_results', filter: `event_id=eq.${eventId}` },
         (payload) => {
-          console.log('🏆 Results updated via real-time')
+          console.log('[RESULTS] Results updated via real-time')
           loadEventData()
           setLastUpdate(new Date())
         }
@@ -394,7 +401,7 @@ function LiveViewPage() {
       .on('postgres_changes',
         { event: 'UPDATE', schema: 'public', table: 'events', filter: `id=eq.${eventId}` },
         (payload) => {
-          console.log('📅 Event status updated:', payload.new?.status)
+          console.log('[STATUS] Event status updated:', payload.new?.status)
           const updatedEvent = payload.new as Event
           setEvent(prev => prev ? {
             ...prev,
@@ -402,7 +409,7 @@ function LiveViewPage() {
           } : null)
 
           if (updatedEvent.status === 'completed') {
-            console.log('🏁 Event completed, reloading data for results')
+            console.log('[COMPLETE] Event completed, reloading data for results')
             loadEventData()
           }
 
@@ -410,40 +417,40 @@ function LiveViewPage() {
         }
       )
       .subscribe((status) => {
-        console.log('📡 Comprehensive subscription status:', status)
+        console.log('[SUBSCRIPTION] Comprehensive subscription status:', status)
       })
 
     return () => {
-      console.log('🧹 Cleaning up comprehensive subscription')
+      console.log('[CLEANUP] Cleaning up comprehensive subscription')
       supabase.removeChannel(channel)
     }
   }, [eventId, supabase])
 
   // Polling functions for demo/fallback mode
   const startPolling = () => {
-    console.log('🔄 [DEBUG] startPolling called')
-    console.log('🔍 [DEBUG] Current polling interval:', pollingInterval)
-    console.log('🔍 [DEBUG] Current pollingActive:', pollingActive)
-    console.log('🔍 [DEBUG] realtimeConnected:', realtimeConnected)
+    console.log('[POLLING] startPolling called')
+    console.log('[DEBUG] Current polling interval:', pollingInterval)
+    console.log('[DEBUG] Current pollingActive:', pollingActive)
+    console.log('[DEBUG] realtimeConnected:', realtimeConnected)
 
     if (pollingInterval) {
-      console.log('🔄 [DEBUG] Clearing existing polling interval')
+      console.log('[DEBUG] Clearing existing polling interval')
       clearInterval(pollingInterval)
     }
 
-    console.log('🔄 Starting polling mode for live updates...')
+    console.log('[POLLING] Starting polling mode for live updates...')
     setPollingActive(true)
 
     const interval = setInterval(async () => {
-      console.log('⏰ [POLLING] Polling interval triggered at:', new Date().toISOString())
-      console.log('⏰ [POLLING] Real-time connected status:', realtimeConnected)
-      console.log('⏰ [POLLING] Assignment realtime state:', assignmentsRealtimeState)
-      console.log('⏰ [POLLING] Participant realtime state:', participantsRealtimeState)
+      console.log('[POLLING] Polling interval triggered at:', new Date().toISOString())
+      console.log('[POLLING] Real-time connected status:', realtimeConnected)
+      console.log('[POLLING] Assignment realtime state:', assignmentsRealtimeState)
+      console.log('[POLLING] Participant realtime state:', participantsRealtimeState)
 
       try {
         // Only poll if real-time isn't working
         if (!realtimeConnected) {
-          console.log('🔄 [POLLING] Real-time not connected, starting polling queries...')
+          console.log('[POLLING] Real-time not connected, starting polling queries...')
           const startTime = Date.now()
           await Promise.all([
             pollAssignments(),
@@ -452,17 +459,17 @@ function LiveViewPage() {
             pollResults()
           ])
           const endTime = Date.now()
-          console.log(`✅ [POLLING] All polling queries completed in ${endTime - startTime}ms`)
+          console.log(`[POLLING] All polling queries completed in ${endTime - startTime}ms`)
           setLastUpdate(new Date())
         } else {
-          console.log('⚡ [POLLING] Real-time is connected, skipping polling')
+          console.log('[POLLING] Real-time is connected, skipping polling')
         }
       } catch (error) {
-        console.error('❌ [POLLING] Polling error:', error)
+        console.error('[POLLING] Polling error:', error)
       }
     }, 2000) // Poll every 2 seconds
 
-    console.log('🔄 [DEBUG] Polling interval created:', interval)
+    console.log('[DEBUG] Polling interval created:', interval)
     setPollingInterval(interval)
   }
 
@@ -472,38 +479,38 @@ function LiveViewPage() {
       setPollingInterval(null)
     }
     setPollingActive(false)
-    console.log('⏹️ Stopped polling mode')
+    console.log('[POLLING] Stopped polling mode')
   }
 
   const pollAssignments = async () => {
-    console.log('🔍 [POLLING] pollAssignments started - calling refreshAssignments hook')
-    console.log('🔍 [POLLING] Current assignments count:', assignments.length)
-    console.log('🔍 [POLLING] refreshAssignments function available:', !!refreshAssignments)
+    console.log('[POLLING] pollAssignments started - calling refreshAssignments hook')
+    console.log('[POLLING] Current assignments count:', assignments.length)
+    console.log('[POLLING] refreshAssignments function available:', !!refreshAssignments)
 
     try {
       if (refreshAssignments) {
         const beforeCount = assignments.length
         await refreshAssignments()
-        console.log(`✅ [POLLING] Assignments refreshed via hook - before: ${beforeCount}, after: ${assignments.length}`)
+        console.log(`[POLLING] Assignments refreshed via hook - before: ${beforeCount}, after: ${assignments.length}`)
       } else {
-        console.warn('⚠️ [POLLING] refreshAssignments function not available')
+        console.warn('[POLLING] refreshAssignments function not available')
       }
     } catch (error) {
-      console.error('❌ [POLLING] Error refreshing assignments:', error)
+      console.error('[POLLING] Error refreshing assignments:', error)
     }
   }
 
   const pollParticipants = async () => {
-    console.log('🔍 [DEBUG] pollParticipants started - calling refreshParticipants hook')
+    console.log('[DEBUG] pollParticipants started - calling refreshParticipants hook')
     try {
       if (refreshParticipants) {
         await refreshParticipants()
-        console.log('✅ [DEBUG] Participants refreshed via hook')
+        console.log('[DEBUG] Participants refreshed via hook')
       } else {
-        console.warn('⚠️ [DEBUG] refreshParticipants function not available')
+        console.warn('[DEBUG] refreshParticipants function not available')
       }
     } catch (error) {
-      console.error('❌ [DEBUG] Error refreshing participants:', error)
+      console.error('[DEBUG] Error refreshing participants:', error')
     }
   }
 
@@ -518,7 +525,7 @@ function LiveViewPage() {
       if (error) throw error
 
       if (data && event && data.status !== event.status) {
-        console.log(`📅 Polling: Event status changed: ${event.status} → ${data.status}`)
+        console.log(`[POLLING] Event status changed: ${event.status} -> ${data.status}`)
         setEvent(prev => prev ? {
           ...prev,
           status: data.status
@@ -563,7 +570,7 @@ function LiveViewPage() {
 
       // Check if results have changed
       if (JSON.stringify(data) !== JSON.stringify(results)) {
-        console.log('🏆 Polling: Results updated')
+        console.log('[POLLING] Results updated')
         setResults(data || [])
       }
     } catch (error) {
@@ -573,7 +580,7 @@ function LiveViewPage() {
 
   // Auto-start polling if real-time isn't connected after initial load
   useEffect(() => {
-    console.log('🔍 [DEBUG] Auto-polling effect triggered:', {
+    console.log('[DEBUG] Auto-polling effect triggered:', {
       loading,
       realtimeConnected,
       pollingActive,
@@ -581,24 +588,24 @@ function LiveViewPage() {
     })
 
     if (!loading && !realtimeConnected && !pollingActive) {
-      console.log('🔄 [DEBUG] Setting up auto-polling timer (5 seconds)')
+      console.log('[DEBUG] Setting up auto-polling timer (5 seconds)')
       // Start polling after a short delay to give real-time a chance
       const timer = setTimeout(() => {
-        console.log('⏰ [DEBUG] Auto-polling timer triggered, checking real-time status...')
+        console.log('[DEBUG] Auto-polling timer triggered, checking real-time status...')
         if (!realtimeConnected) {
-          console.log('🔄 [DEBUG] Real-time still not connected, starting polling')
+          console.log('[DEBUG] Real-time still not connected, starting polling')
           startPolling()
         } else {
-          console.log('⚡ [DEBUG] Real-time connected, skipping auto-polling')
+          console.log('[DEBUG] Real-time connected, skipping auto-polling')
         }
       }, 5000) // Wait 5 seconds before falling back to polling
 
       return () => {
-        console.log('🧹 [DEBUG] Cleaning up auto-polling timer')
+        console.log('[DEBUG] Cleaning up auto-polling timer')
         clearTimeout(timer)
       }
     } else {
-      console.log('⏭️ [DEBUG] Skipping auto-polling setup:', {
+      console.log('[DEBUG] Skipping auto-polling setup:', {
         loading: loading ? 'still loading' : 'loaded',
         realtimeConnected: realtimeConnected ? 'connected' : 'not connected',
         pollingActive: pollingActive ? 'already active' : 'not active'
@@ -623,41 +630,41 @@ function LiveViewPage() {
   }, [pollingInterval])
 
   async function loadEventData() {
-    console.log('🔄 [DEBUG] loadEventData started for eventId:', eventId)
+    console.log('[DEBUG] loadEventData started for eventId:', eventId)
     try {
       setError(null)
 
       // Get event details (public access, bypasses RLS)
-      console.log('🔍 [DEBUG] Fetching event data from API...')
+      console.log('[DEBUG] Fetching event data from API...')
       const response = await fetch(`/api/events/${eventId}/register`, {
         method: 'GET'
       })
 
-      console.log('🔍 [DEBUG] API response status:', response.status, response.ok)
+      console.log('[DEBUG] API response status:', response.status, response.ok)
 
       if (!response.ok) {
-        console.error('❌ [DEBUG] API response not ok:', response.status)
+        console.error('[DEBUG] API response not ok:', response.status)
         setError('Event not found')
         return
       }
 
       const data = await response.json()
-      console.log('🔍 [DEBUG] API response data:', data)
+      console.log('[DEBUG] API response data:', data)
 
       if (!data.success) {
-        console.error('❌ [DEBUG] API response not successful:', data.error)
+        console.error('[DEBUG] API response not successful:', data.error)
         setError(data.error || 'Failed to load event')
         return
       }
 
-      console.log('✅ [DEBUG] Setting event data:', data.data.event)
+      console.log('[DEBUG] Setting event data:', data.data.event)
       setEvent({
         ...data.data.event,
         participant_count: data.data.participantCount
       })
 
       // Fetch horses data
-      console.log('🔍 [DEBUG] Fetching horses data...')
+      console.log('[DEBUG] Fetching horses data...')
       try {
         const { data: horsesData, error: horsesError } = await supabase
           .from('event_horses')
@@ -668,7 +675,7 @@ function LiveViewPage() {
         if (horsesError) {
           console.error('❌ [DEBUG] Horses query error:', horsesError)
         } else {
-          console.log('✅ [DEBUG] Successfully fetched horses:', horsesData?.length || 0)
+          console.log('[DEBUG] Successfully fetched horses:', horsesData?.length || 0)
           setHorses(horsesData || [])
         }
       } catch (horsesErr) {
@@ -676,7 +683,7 @@ function LiveViewPage() {
       }
 
       // Force refresh assignments from Supabase directly
-      console.log('🔍 [DEBUG] Refreshing assignments data...')
+      console.log('[DEBUG] Refreshing assignments data...')
       try {
         const { data: assignmentsData, error: assignmentsError } = await supabase
           .from('assignments')
@@ -688,7 +695,7 @@ function LiveViewPage() {
           .eq('event_id', eventId)
           .order('created_at', { ascending: true })
 
-        console.log('🔍 [DEBUG] Direct assignments query result:', {
+        console.log('[DEBUG] Direct assignments query result:', {
           data: assignmentsData,
           error: assignmentsError,
           count: assignmentsData?.length
@@ -697,7 +704,7 @@ function LiveViewPage() {
         if (assignmentsError) {
           console.error('❌ [DEBUG] Assignments query error:', assignmentsError)
         } else {
-          console.log('✅ [DEBUG] Successfully fetched assignments:', assignmentsData?.length || 0)
+          console.log('[DEBUG] Successfully fetched assignments:', assignmentsData?.length || 0)
           // Note: We can't directly update the assignment state from hooks
           // This will help us see if the query is working
         }
@@ -707,7 +714,7 @@ function LiveViewPage() {
 
       // Get results (if event is completed)
       if (data.data.event.status === 'completed') {
-        console.log('🔍 [DEBUG] Event completed, fetching results...')
+        console.log('[DEBUG] Event completed, fetching results...')
         const { data: resultsData, error: resultsError } = await supabase
           .from('event_results')
           .select(`
@@ -729,14 +736,14 @@ function LiveViewPage() {
           .eq('event_id', eventId)
           .order('place')
 
-        console.log('🔍 [DEBUG] Results query result:', { data: resultsData, error: resultsError })
+        console.log('[DEBUG] Results query result:', { data: resultsData, error: resultsError })
 
         if (!resultsError && resultsData) {
           setResults(resultsData)
         }
       }
 
-      console.log('✅ [DEBUG] loadEventData completed successfully')
+      console.log('[DEBUG] loadEventData completed successfully')
       setLastUpdate(new Date())
     } catch (err) {
       console.error('❌ [DEBUG] Error loading live data:', err)
@@ -918,7 +925,7 @@ function LiveViewPage() {
       >
         <div className="text-center">
           <p className="font-bold text-white mb-3" style={{ fontSize: '48px' }}>
-            PARTICIPANTS: {participants.length} / {event.capacity} SPOTS FILLED
+            {event.capacity - participants.length} / {event.capacity} SPOTS REMAINING
           </p>
           <div className="w-[600px] h-3 bg-white bg-opacity-30 rounded-full overflow-hidden">
             <div
@@ -956,8 +963,16 @@ function LiveViewPage() {
               jockey: '',
               is_scratched: false
             }
-            // Find participant assigned to this horse
-            const assignedParticipant = participantStatuses.find(p => p.horse_number === horse.number)
+
+            // In ACTIVE status, show participants in order even without horse assignments
+            let assignedParticipant = null
+            if (event.status === 'active') {
+              // Show participants in the first available slots (index order)
+              assignedParticipant = participantStatuses[index] || null
+            } else {
+              // In other statuses, find participant assigned to this specific horse
+              assignedParticipant = participantStatuses.find(p => p.horse_number === horse.number)
+            }
 
             // Determine card state
             let cardState: 'paid' | 'pending' | 'available' = 'available'
@@ -1099,7 +1114,7 @@ function LiveViewPage() {
             </div>
             {entryFee > 0 ? (
               <div className="text-sm text-white opacity-70 text-center">
-                <div>1st: {formatCurrency(firstPrize)} | 2nd: {formatCurrency(secondPrize)} | 3rd: {formatCurrency(thirdPrize)}</div>
+                <div>1st: {formatCurrency(firstPrize)} ({event.first_place_percentage}%) | 2nd: {formatCurrency(secondPrize)} ({event.second_place_percentage}%) | 3rd: {formatCurrency(thirdPrize)} ({event.third_place_percentage}%)</div>
                 <div className="mt-1">{event.capacity - participants.length}/{event.capacity} spots remaining</div>
               </div>
             ) : (
@@ -1114,7 +1129,7 @@ function LiveViewPage() {
 
 // Export the component wrapped in an error boundary
 export default function LiveViewPageWithErrorBoundary() {
-  console.log('🚨 WRAPPER COMPONENT - LiveViewPageWithErrorBoundary executing')
+  console.log('[WRAPPER] LiveViewPageWithErrorBoundary executing')
   return (
     <ErrorBoundary>
       <LiveViewPage />
