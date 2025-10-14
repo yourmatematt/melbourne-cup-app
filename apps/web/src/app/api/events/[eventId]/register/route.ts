@@ -176,6 +176,10 @@ export async function GET(
         status,
         capacity,
         lead_capture,
+        entry_fee,
+        first_place_percentage,
+        second_place_percentage,
+        third_place_percentage,
         tenants!tenant_id (
           name
         )
@@ -210,6 +214,10 @@ export async function GET(
           status: event.status,
           capacity: event.capacity,
           lead_capture: event.lead_capture,
+          entry_fee: event.entry_fee,
+          first_place_percentage: event.first_place_percentage,
+          second_place_percentage: event.second_place_percentage,
+          third_place_percentage: event.third_place_percentage,
           tenant: event.tenants
         },
         participantCount: participantCount || 0
