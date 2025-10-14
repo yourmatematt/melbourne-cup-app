@@ -38,6 +38,10 @@ interface Event {
   status: 'draft' | 'active' | 'drawing' | 'completed' | 'cancelled'
   capacity: number
   participant_count?: number
+  entry_fee?: number
+  first_place_percentage?: number
+  second_place_percentage?: number
+  third_place_percentage?: number
   tenant: {
     name: string
   }
@@ -82,7 +86,9 @@ interface ParticipantStatus {
   horse_number?: number
   horse_name?: string
   has_paid: boolean
+  payment_status?: 'pending' | 'paid' | 'expired'
   assigned_at?: string
+  created_at?: string
 }
 
 interface Result {
@@ -146,6 +152,14 @@ function LiveViewPage() {
   const [pollingInterval, setPollingInterval] = useState<NodeJS.Timeout | null>(null)
   const [realtimeFlash, setRealtimeFlash] = useState(false)
   const [joinUrl, setJoinUrl] = useState('')
+  const [recentActivity, setRecentActivity] = useState<Array<{
+    id: string
+    participantName: string
+    action: string
+    timestamp: Date
+    status: 'unpaid' | 'paid'
+  }>>([])
+  const [previousParticipants, setPreviousParticipants] = useState<ParticipantStatus[]>([])
 
   // Use the real-time assignments hook with relations
   console.log('🚨 LIVE PAGE - About to call useRealtimeAssignments hook with eventId:', eventId)
@@ -259,47 +273,149 @@ function LiveViewPage() {
     setRecentAssignments(formatted)
   }, [assignments, newAssignmentId])
 
+  // Track participant changes for Recent Activity
   useEffect(() => {
-    if (eventId) {
-      console.log('📊 Loading event data for eventId:', eventId)
-      loadEventData()
+    // Generate activity entries for new/changed participants
+    const generateActivity = (newParticipants: ParticipantStatus[], oldParticipants: ParticipantStatus[]) => {
+      const activities: Array<{
+        id: string
+        participantName: string
+        action: string
+        timestamp: Date
+        status: 'unpaid' | 'paid'
+      }> = []
 
-      // Set up real-time updates for results and event status
-      const channel = supabase
-        .channel(`event_status_${eventId}`)
-        .on('postgres_changes',
-          { event: '*', schema: 'public', table: 'event_results', filter: `event_id=eq.${eventId}` },
-          (payload) => {
-            console.log('🏆 Results updated via real-time')
-            loadEventData()
-            setLastUpdate(new Date())
-          }
-        )
-        .on('postgres_changes',
-          { event: 'UPDATE', schema: 'public', table: 'events', filter: `id=eq.${eventId}` },
-          (payload) => {
-            console.log('📅 Event status updated:', payload.new?.status)
-            const updatedEvent = payload.new as Event
-            setEvent(prev => prev ? {
-              ...prev,
-              status: updatedEvent.status
-            } : null)
+      // Check for new participants
+      newParticipants.forEach(newP => {
+        const existingP = oldParticipants.find(oldP => oldP.id === newP.id)
+        if (!existingP) {
+          // New participant joined - no horse info in ACTIVE status
+          activities.push({
+            id: `${newP.id}-joined`,
+            participantName: newP.participant_name,
+            action: newP.payment_status === 'paid' ? 'Joined & Paid' : 'Joined - Not Paid',
+            timestamp: newP.created_at ? new Date(newP.created_at) : new Date(),
+            status: newP.payment_status === 'paid' ? 'paid' : 'unpaid'
+          })
+        } else if (existingP.payment_status !== newP.payment_status && newP.payment_status === 'paid') {
+          // Payment status changed to paid
+          activities.push({
+            id: `${newP.id}-paid`,
+            participantName: newP.participant_name,
+            action: 'Paid',
+            timestamp: new Date(),
+            status: 'paid'
+          })
+        }
+      })
 
-            if (updatedEvent.status === 'completed') {
-              console.log('🏁 Event completed, reloading data for results')
-              loadEventData()
-            }
+      return activities.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime()).slice(0, 5)
+    }
 
-            setLastUpdate(new Date())
-          }
-        )
-        .subscribe((status) => {
-          console.log('📡 Real-time subscription status:', status)
-        })
-
-      return () => {
-        supabase.removeChannel(channel)
+    // Update activity only if participants changed
+    if (previousParticipants.length > 0) {
+      const newActivities = generateActivity(participants, previousParticipants)
+      if (newActivities.length > 0) {
+        console.log('📢 New activities generated:', newActivities.length)
+        setRecentActivity(prev => [...newActivities, ...prev].slice(0, 5))
       }
+    } else {
+      // First load - show initial participants as activities
+      const initialActivities = participants.map(p => ({
+        id: `${p.id}-initial`,
+        participantName: p.participant_name,
+        action: p.payment_status === 'paid' ? 'Joined & Paid' : 'Joined - Not Paid',
+        timestamp: p.created_at ? new Date(p.created_at) : new Date(),
+        status: p.payment_status === 'paid' ? 'paid' as const : 'unpaid' as const
+      })).sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime()).slice(0, 5)
+      setRecentActivity(initialActivities)
+    }
+
+    setPreviousParticipants(participants)
+    console.log('👥 Updated participants:', participants.map(p => `${p.participant_name} (${p.payment_status || 'unknown'})`).join(', '))
+  }, [participants, previousParticipants])
+
+  useEffect(() => {
+    if (!eventId) return
+
+    console.log('🔄 Fetching event data for:', eventId)
+    loadEventData()
+
+    // Set up comprehensive real-time subscription for all live view changes
+    console.log('🔗 Setting up real-time subscription for event:', eventId)
+    const channel = supabase
+      .channel(`event-${eventId}-live-comprehensive`)
+      .on('postgres_changes',
+        { event: '*', schema: 'public', table: 'patron_entries', filter: `event_id=eq.${eventId}` },
+        (payload) => {
+          console.log('🔔 Patron entry changed:', payload)
+          console.log('Event type:', payload.eventType)
+          console.log('Table:', payload.table)
+          console.log('🔄 Triggering loadEventData() due to patron_entries change')
+          loadEventData() // THIS MUST BE CALLED
+          setLastUpdate(new Date())
+
+          // Trigger visual flash indicator
+          setRealtimeFlash(true)
+          setTimeout(() => {
+            setRealtimeFlash(false)
+          }, 1000)
+        }
+      )
+      .on('postgres_changes',
+        { event: '*', schema: 'public', table: 'assignments' },
+        (payload) => {
+          console.log('🔔 Assignment changed:', payload)
+          console.log('Event type:', payload.eventType)
+          console.log('🔄 Triggering loadEventData() due to assignments change')
+          loadEventData() // THIS MUST BE CALLED
+          setLastUpdate(new Date())
+
+          // Also refresh assignments hook
+          if (refreshAssignments) {
+            refreshAssignments()
+          }
+
+          // Trigger visual flash indicator
+          setRealtimeFlash(true)
+          setTimeout(() => {
+            setRealtimeFlash(false)
+          }, 1000)
+        }
+      )
+      .on('postgres_changes',
+        { event: '*', schema: 'public', table: 'event_results', filter: `event_id=eq.${eventId}` },
+        (payload) => {
+          console.log('🏆 Results updated via real-time')
+          loadEventData()
+          setLastUpdate(new Date())
+        }
+      )
+      .on('postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'events', filter: `id=eq.${eventId}` },
+        (payload) => {
+          console.log('📅 Event status updated:', payload.new?.status)
+          const updatedEvent = payload.new as Event
+          setEvent(prev => prev ? {
+            ...prev,
+            status: updatedEvent.status
+          } : null)
+
+          if (updatedEvent.status === 'completed') {
+            console.log('🏁 Event completed, reloading data for results')
+            loadEventData()
+          }
+
+          setLastUpdate(new Date())
+        }
+      )
+      .subscribe((status) => {
+        console.log('📡 Comprehensive subscription status:', status)
+      })
+
+    return () => {
+      console.log('🧹 Cleaning up comprehensive subscription')
+      supabase.removeChannel(channel)
     }
   }, [eventId, supabase])
 
@@ -707,6 +823,8 @@ function LiveViewPage() {
       horse_number: assignment?.event_horses?.number,
       horse_name: assignment?.event_horses?.name,
       has_paid: participant.payment_status === 'completed',
+      payment_status: participant.payment_status,
+      created_at: participant.created_at,
       assigned_at: assignment?.created_at
     }
   })
@@ -714,16 +832,21 @@ function LiveViewPage() {
   // Calculate progress percentage
   const progressPercentage = Math.min((participants.length / event.capacity) * 100, 100)
 
-  // Calculate prize pool (simple calculation - could be from database)
-  const prizePool = participants.filter(p => p.payment_status === 'completed').length * 20 // Assuming $20 per entry
+  // Calculate prize pool using event data
+  const paidParticipants = participants.filter(p => p.payment_status === 'completed')
+  const entryFee = event.entry_fee || 0
+  const totalPool = paidParticipants.length * entryFee
+  const prizePool = totalPool
 
-  // Get recent activity for footer with correct format
-  const recentActivity = recentAssignments.slice(0, 3).map(assignment => {
-    const participant = participantStatuses.find(p => p.participant_name === assignment.participant_name)
-    const action = participant?.has_paid ? 'paid' : 'joined'
-    const suffix = participant?.has_paid ? 'confirmed!' : `Got Horse #${assignment.horse_number}!`
-    return `${assignment.participant_name} ${action} - Horse #${assignment.horse_number} ${suffix}`
-  })
+  // Calculate prize breakdown using event percentages
+  const firstPrize = event.first_place_percentage ? totalPool * (event.first_place_percentage / 100) : 0
+  const secondPrize = event.second_place_percentage ? totalPool * (event.second_place_percentage / 100) : 0
+  const thirdPrize = event.third_place_percentage ? totalPool * (event.third_place_percentage / 100) : 0
+
+  // Get recent activity for footer with correct format - use our recentActivity state
+  const footerActivity = recentActivity.slice(0, 3).map(activity =>
+    `${activity.participantName} ${activity.action}`
+  )
 
   return (
     <div className="min-h-screen bg-[#f8f7f4] overflow-hidden w-screen h-screen relative" style={{ minWidth: '1920px', minHeight: '1080px' }}>
@@ -945,8 +1068,8 @@ function LiveViewPage() {
             <h3 className="text-3xl font-bold text-white">RECENT ACTIVITY</h3>
           </div>
           <div className="space-y-2">
-            {recentActivity.length > 0 ? (
-              recentActivity.map((activity, index) => (
+            {footerActivity.length > 0 ? (
+              footerActivity.map((activity, index) => (
                 <div
                   key={index}
                   className="text-2xl text-white opacity-90"
@@ -956,7 +1079,7 @@ function LiveViewPage() {
               ))
             ) : (
               <div className="text-2xl text-white opacity-75">
-                Waiting for first horse draw...
+                Waiting for participants to join...
               </div>
             )}
           </div>
@@ -972,9 +1095,16 @@ function LiveViewPage() {
           >
             <p className="text-lg text-white opacity-80 mb-2">PRIZE POOL</p>
             <div className="text-6xl font-bold text-white mb-1">
-              {formatCurrency(prizePool)}
+              {entryFee === 0 ? 'FREE EVENT' : formatCurrency(prizePool)}
             </div>
-            <p className="text-base text-white opacity-70">Winner takes all!</p>
+            {entryFee > 0 ? (
+              <div className="text-sm text-white opacity-70 text-center">
+                <div>1st: {formatCurrency(firstPrize)} | 2nd: {formatCurrency(secondPrize)} | 3rd: {formatCurrency(thirdPrize)}</div>
+                <div className="mt-1">{event.capacity - participants.length}/{event.capacity} spots remaining</div>
+              </div>
+            ) : (
+              <p className="text-base text-white opacity-70">Free to enter!</p>
+            )}
           </div>
         </div>
       </div>
