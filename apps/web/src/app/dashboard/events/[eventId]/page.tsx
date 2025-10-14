@@ -455,7 +455,7 @@ function ParticipantRowModal({ participant, onToggleClick }: {
             <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
           </label>
           <span className="text-xs text-gray-600">
-            {participant.payment_status === 'paid' ? 'Paid' : 'Unpaid'}
+            {participant.payment_status === 'paid' ? 'PAID' : 'PENDING'}
           </span>
         </div>
 
@@ -512,7 +512,7 @@ function ParticipantRow({ participant, onToggleClick }: {
 
         {/* Payment Toggle */}
         <button
-          onClick={() => onToggleClick?.(participant, isPaid ? 'unpaid' : 'paid')}
+          onClick={() => onToggleClick?.(participant, isPaid ? 'pending' : 'paid')}
           className={`w-12 h-6 rounded-full border-2 transition-all relative shadow-sm ${
             isPaid
               ? 'bg-emerald-500 border-emerald-500'
@@ -814,7 +814,7 @@ function EventOverviewContent() {
     handlePaymentToggle(participant.id, newStatus)
   }
 
-  async function handlePaymentToggle(participantId: string, newStatus: 'paid' | 'unpaid') {
+  async function handlePaymentToggle(participantId: string, newStatus: 'paid' | 'pending') {
     try {
       // Update local state immediately for responsive UI
       setParticipants(prevParticipants =>
@@ -823,8 +823,25 @@ function EventOverviewContent() {
         )
       )
 
-      // TODO: Update payment status in database
-      console.log(`Payment status for ${participantId} changed to ${newStatus}`)
+      // Update payment status in database
+      const response = await fetch(`/api/events/${eventId}/participants/${participantId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ payment_status: newStatus }),
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to update payment status')
+      }
+
+      const result = await response.json()
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to update payment status')
+      }
+
+      console.log(`Payment status for ${participantId} updated to ${newStatus}`)
     } catch (err) {
       console.error('Error updating payment status:', err)
       // Revert local state on error
