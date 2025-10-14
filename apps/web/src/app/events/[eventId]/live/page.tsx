@@ -840,9 +840,8 @@ function LiveViewPage() {
   const progressPercentage = Math.min((participants.length / event.capacity) * 100, 100)
 
   // Calculate prize pool using event data
-  const paidParticipants = participants.filter(p => p.payment_status === 'paid')
   const entryFee = event.entry_fee || 0
-  const totalPool = paidParticipants.length * entryFee
+  const totalPool = event.capacity * entryFee  // Total pool based on all spots
   const prizePool = totalPool
 
   // Calculate prize breakdown using event percentages
