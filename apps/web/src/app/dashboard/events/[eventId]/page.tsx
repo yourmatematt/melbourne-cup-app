@@ -631,8 +631,8 @@ function EventOverviewContent() {
 
   // Join URL for QR code and sharing
   const joinUrl = typeof window !== 'undefined'
-  ? `${window.location.origin}/events/${eventId}/join`  // ✅ CORRECT
-  : `https://app.melbournecupsweep.com.au/events/${eventId}/join`
+  ? `${window.location.origin}/events/${eventId}/enter`  // ✅ CORRECT
+  : `https://app.melbournecupsweep.com.au/events/${eventId}/enter`
 
   useEffect(() => {
     fetchEventData()
@@ -1401,7 +1401,7 @@ function EventOverviewContent() {
   function getSettingsJoinUrl() {
     if (typeof window !== 'undefined') {
       const baseUrl = window.location.origin
-      return `${baseUrl}/events/${eventId}/join`
+      return `${baseUrl}/events/${eventId}/enter`
     }
     return ''
   }
