@@ -12,6 +12,7 @@ interface Participant {
   phone?: string
   join_code: string
   consent: boolean
+  payment_status?: 'pending' | 'paid' | 'expired'
   created_at: string
   updated_at: string
 }

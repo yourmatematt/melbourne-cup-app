@@ -829,7 +829,7 @@ function LiveViewPage() {
       participant_name: participant.participant_name,
       horse_number: assignment?.event_horses?.number,
       horse_name: assignment?.event_horses?.name,
-      has_paid: participant.payment_status === 'completed',
+      has_paid: participant.payment_status === 'paid',
       payment_status: participant.payment_status,
       created_at: participant.created_at,
       assigned_at: assignment?.created_at
@@ -840,7 +840,7 @@ function LiveViewPage() {
   const progressPercentage = Math.min((participants.length / event.capacity) * 100, 100)
 
   // Calculate prize pool using event data
-  const paidParticipants = participants.filter(p => p.payment_status === 'completed')
+  const paidParticipants = participants.filter(p => p.payment_status === 'paid')
   const entryFee = event.entry_fee || 0
   const totalPool = paidParticipants.length * entryFee
   const prizePool = totalPool
