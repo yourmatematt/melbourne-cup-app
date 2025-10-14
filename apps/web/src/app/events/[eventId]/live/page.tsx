@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback, useRef } from 'react'
 import { useParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -30,6 +30,7 @@ import { useRealtimeAssignments } from '@/hooks/use-realtime-assignments'
 import { useRealtimeParticipants } from '@/hooks/use-realtime-participants'
 import ErrorBoundary from '@/components/error-boundary'
 import { ClientDebugBanner } from '@/components/debug/client-debug-banner'
+import { motion, AnimatePresence } from 'framer-motion'
 
 interface Event {
   id: string
@@ -160,6 +161,29 @@ function LiveViewPage() {
     status: 'unpaid' | 'paid'
   }>>([])
   const [previousParticipants, setPreviousParticipants] = useState<ParticipantStatus[]>([])
+
+  // Animation State Management - Initialize to prevent hydration mismatch
+  const [isClient, setIsClient] = useState(false)
+  const [animationState, setAnimationState] = useState<'idle' | 'drawing' | 'spinning' | 'revealing' | 'complete'>('idle')
+  const [currentDrawnParticipant, setCurrentDrawnParticipant] = useState<string | null>(null)
+  const [previousDrawnParticipant, setPreviousDrawnParticipant] = useState<string | null>(null)
+  const [spinningNumber, setSpinningNumber] = useState(1)
+  const [finalHorseNumber, setFinalHorseNumber] = useState<number | null>(null)
+  const [finalHorseName, setFinalHorseName] = useState<string | null>(null)
+  const [showConfetti, setShowConfetti] = useState(false)
+  const [showDrawnConfirmation, setShowDrawnConfirmation] = useState(false)
+  const [loadingDots, setLoadingDots] = useState(1)
+  const [loadingDirection, setLoadingDirection] = useState<'up' | 'down'>('up')
+  const [drawnPillsCount, setDrawnPillsCount] = useState(0)
+
+  // Animation refs
+  const spinningIntervalRef = useRef<NodeJS.Timeout | null>(null)
+  const loadingDotsIntervalRef = useRef<NodeJS.Timeout | null>(null)
+
+  // Client-side hydration flag to prevent server/client mismatch
+  useEffect(() => {
+    setIsClient(true)
+  }, [])
 
   // Use the real-time assignments hook with relations
   console.log('[HOOK] LIVE PAGE - About to call useRealtimeAssignments hook with eventId:', eventId)
@@ -797,6 +821,199 @@ function LiveViewPage() {
     )
   }
 
+  // Animation Functions for DRAWING state
+  const startDrawAnimation = useCallback((newAssignment: any) => {
+    if (!isClient) return
+
+    console.log('[DRAW] Starting animation for:', newAssignment?.patron_entries?.participant_name)
+
+    // Set the current participant
+    setCurrentDrawnParticipant(newAssignment?.patron_entries?.participant_name || null)
+    setFinalHorseNumber(newAssignment?.event_horses?.number || null)
+    setFinalHorseName(newAssignment?.event_horses?.name || null)
+
+    // Start animation sequence
+    setAnimationState('drawing')
+
+    // Start the spinning numbers effect
+    setTimeout(() => {
+      startHorseNumberSpinning()
+    }, 500)
+
+    // Stop spinning and reveal after 3 seconds
+    setTimeout(() => {
+      stopSpinningAndReveal()
+    }, 3500)
+  }, [isClient])
+
+  const startHorseNumberSpinning = useCallback(() => {
+    if (!isClient) return
+
+    setAnimationState('spinning')
+    let currentNumber = 1
+
+    const spin = () => {
+      setSpinningNumber(currentNumber)
+      currentNumber = (currentNumber % 24) + 1
+    }
+
+    // Start fast spinning
+    const fastInterval = setInterval(spin, 50)
+    spinningIntervalRef.current = fastInterval
+
+    // After 2 seconds, slow down
+    setTimeout(() => {
+      clearInterval(fastInterval)
+      const slowInterval = setInterval(spin, 150)
+      spinningIntervalRef.current = slowInterval
+
+      // After another second, very slow
+      setTimeout(() => {
+        clearInterval(slowInterval)
+        const verySlowInterval = setInterval(spin, 300)
+        spinningIntervalRef.current = verySlowInterval
+      }, 1000)
+    }, 2000)
+  }, [isClient])
+
+  const stopSpinningAndReveal = useCallback(() => {
+    if (!isClient) return
+
+    // Clear any spinning intervals
+    if (spinningIntervalRef.current) {
+      clearInterval(spinningIntervalRef.current)
+      spinningIntervalRef.current = null
+    }
+
+    setAnimationState('revealing')
+
+    // Set final number
+    if (finalHorseNumber) {
+      setSpinningNumber(finalHorseNumber)
+    }
+
+    // Show confetti
+    setTimeout(() => {
+      triggerConfettiBurst()
+    }, 200)
+
+    // Show drawn confirmation
+    setTimeout(() => {
+      setShowDrawnConfirmation(true)
+      setAnimationState('complete')
+    }, 800)
+
+    // Reset animation state after showing for a while
+    setTimeout(() => {
+      setAnimationState('idle')
+      setShowDrawnConfirmation(false)
+      setShowConfetti(false)
+    }, 4000)
+  }, [finalHorseNumber, isClient])
+
+  const triggerConfettiBurst = useCallback(() => {
+    // Only trigger confetti on client-side
+    if (typeof window !== 'undefined' && isClient) {
+      setShowConfetti(true)
+
+      // Use canvas-confetti if available
+      if (window.confetti) {
+        const duration = 15 * 1000
+        const animationEnd = Date.now() + duration
+        const defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 0 }
+
+        function randomInRange(min: number, max: number) {
+          return Math.random() * (max - min) + min
+        }
+
+        const interval = setInterval(function() {
+          const timeLeft = animationEnd - Date.now()
+
+          if (timeLeft <= 0) {
+            clearInterval(interval)
+            setShowConfetti(false)
+            return
+          }
+
+          const particleCount = 50 * (timeLeft / duration)
+
+          // Left side
+          window.confetti(Object.assign({}, defaults, {
+            particleCount,
+            origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 }
+          }))
+
+          // Right side
+          window.confetti(Object.assign({}, defaults, {
+            particleCount,
+            origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 }
+          }))
+        }, 250)
+      }
+    }
+  }, [isClient])
+
+  // Animate loading dots for "NEXT DRAW" state
+  useEffect(() => {
+    if (animationState === 'idle' && !currentDrawnParticipant) {
+      const interval = setInterval(() => {
+        setLoadingDots(prev => {
+          if (loadingDirection === 'up') {
+            if (prev >= 3) {
+              setLoadingDirection('down')
+              return 2
+            }
+            return prev + 1
+          } else {
+            if (prev <= 1) {
+              setLoadingDirection('up')
+              return 2
+            }
+            return prev - 1
+          }
+        })
+      }, 600)
+
+      loadingDotsIntervalRef.current = interval
+
+      return () => {
+        if (loadingDotsIntervalRef.current) {
+          clearInterval(loadingDotsIntervalRef.current)
+        }
+      }
+    }
+
+    return () => {
+      if (loadingDotsIntervalRef.current) {
+        clearInterval(loadingDotsIntervalRef.current)
+      }
+    }
+  }, [animationState, loadingDirection, isClient])
+
+  // Function to get the most recent assignment for drawing display
+  const getMostRecentAssignment = useCallback(() => {
+    if (!assignments || assignments.length === 0) return null
+
+    // Sort assignments by created_at descending to get the most recent
+    const sortedAssignments = [...assignments].sort((a, b) =>
+      new Date(b.created_at || '').getTime() - new Date(a.created_at || '').getTime()
+    )
+
+    return sortedAssignments[0]
+  }, [assignments])
+
+  // Auto-trigger drawing animation when new assignment arrives
+  useEffect(() => {
+    const mostRecentAssignment = getMostRecentAssignment()
+    if (mostRecentAssignment && event?.status === 'drawing' && animationState === 'idle') {
+      // Check if this is a new assignment (different from current)
+      if (currentDrawnParticipant !== mostRecentAssignment.patron_entries?.display_name) {
+        startDrawAnimation(mostRecentAssignment)
+      }
+    }
+  }, [assignments, event?.status, animationState, currentDrawnParticipant, getMostRecentAssignment, startDrawAnimation])
+
+
   // Show loading state
   if (loading || assignmentsLoading || participantsLoading) {
     return (
@@ -854,38 +1071,70 @@ function LiveViewPage() {
     `${activity.participantName} ${activity.action}`
   )
 
-  // Function to get the most recent assignment for drawing display
-  const getMostRecentAssignment = () => {
-    if (!assignments || assignments.length === 0) return null
-
-    // Sort assignments by created_at descending to get the most recent
-    const sortedAssignments = [...assignments].sort((a, b) =>
-      new Date(b.created_at || '').getTime() - new Date(a.created_at || '').getTime()
-    )
-
-    return sortedAssignments[0]
-  }
 
   // Function to get already drawn participants for the bottom display
   const getDrawnParticipants = () => {
     return assignments.slice().reverse() // Show in reverse order (most recent first)
   }
 
-  // DrawingStateView component
+  // DrawingStateView component with full animations - HYDRATION SAFE
   const DrawingStateView = () => {
+    // Early return if not mounted to prevent hydration issues
+    if (!isClient) {
+      return (
+        <div className="min-h-screen bg-[#f8f7f4] flex items-center justify-center">
+          <div className="text-center">
+            <Loader2 className="h-16 w-16 animate-spin text-slate-900 mx-auto mb-6" />
+            <p className="text-2xl text-slate-600 font-['Arial']">Loading...</p>
+          </div>
+        </div>
+      )
+    }
+
     const recentAssignment = getMostRecentAssignment()
     const drawnParticipants = getDrawnParticipants()
+
+    // Character animation for participant names
+    const CharacterShiftName = ({ name, isAnimating }: { name: string, isAnimating: boolean }) => {
+      if (!name) return <span>NEXT DRAW</span>
+
+      return (
+        <AnimatePresence mode="wait">
+          {name.split('').map((char, index) => (
+            <motion.span
+              key={`${name}-${index}`}
+              initial={isAnimating ? { y: 100, opacity: 0 } : { y: 0, opacity: 1 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: -100, opacity: 0 }}
+              transition={{
+                duration: 0.3,
+                delay: index * 0.05,
+                ease: "easeOut"
+              }}
+              style={{ display: 'inline-block' }}
+            >
+              {char === ' ' ? '\u00A0' : char}
+            </motion.span>
+          ))}
+        </AnimatePresence>
+      )
+    }
 
     return (
       <div className="min-h-screen bg-[#f8f7f4] overflow-hidden w-screen h-screen relative" style={{ minWidth: '1920px', minHeight: '1080px' }}>
         {/* Real-time Flash Indicator */}
         {realtimeFlash && (
-          <div className="absolute top-0 left-0 right-0 bg-green-500 text-white text-center py-3 z-50 animate-pulse">
+          <motion.div
+            initial={{ y: -100, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: -100, opacity: 0 }}
+            className="absolute top-0 left-0 right-0 bg-green-500 text-white text-center py-3 z-50"
+          >
             <p className="text-2xl font-bold">⚡ REAL-TIME UPDATE RECEIVED!</p>
-          </div>
+          </motion.div>
         )}
 
-        {/* Header Section - Same as ACTIVE state but with DRAWING LIVE badge */}
+        {/* Header Section - DRAWING LIVE badge, NO QR CODE */}
         <div className="h-[120px] bg-white border-b border-gray-200 shadow-sm flex items-center justify-between px-8">
           {/* Left: Venue Avatar + Event Details */}
           <div className="flex items-center space-x-6">
@@ -905,7 +1154,9 @@ function LiveViewPage() {
                 </h1>
 
                 {/* DRAWING LIVE Badge */}
-                <div
+                <motion.div
+                  initial={{ scale: 0.8, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
                   className="px-6 py-3 rounded-full flex items-center space-x-2 shadow-lg"
                   style={{
                     background: 'linear-gradient(90deg, #fb2c36 0%, #ff4d8d 100%)'
@@ -915,7 +1166,7 @@ function LiveViewPage() {
                   <span className="text-white font-bold text-2xl font-['Arial']">
                     🎯 DRAWING LIVE
                   </span>
-                </div>
+                </motion.div>
               </div>
               <p className="text-xl text-slate-600 font-['Arial'] mt-1">
                 {event.tenant?.name || 'Live Event'}
@@ -923,19 +1174,20 @@ function LiveViewPage() {
             </div>
           </div>
 
-          {/* Right: QR Code */}
-          <div className="flex flex-col items-center">
-            <div className="bg-slate-900 p-5 rounded-3xl flex items-center justify-center">
-              <QRCodeSVG
-                value={`${window.location.origin}/events/${event.id}/join`}
-                size={80}
-                bgColor="transparent"
-                fgColor="white"
-                level="M"
-              />
+          {/* Right: Prize Pool (NO QR CODE during drawing) */}
+          <motion.div
+            initial={{ x: 100, opacity: 0 }}
+            animate={{ x: 0, opacity: 1 }}
+            className="h-24 rounded-2xl flex flex-col items-center justify-center px-8 shadow-lg"
+            style={{
+              background: 'linear-gradient(180deg, #ff8a00 0%, #ff4d8d 50%, #8b5cf6 100%)'
+            }}
+          >
+            <p className="text-white/80 text-sm font-['Arial'] mb-1">PRIZE POOL</p>
+            <div className="text-3xl font-bold text-white font-['Arial']">
+              {entryFee === 0 ? 'FREE' : formatCurrency(prizePool)}
             </div>
-            <p className="text-lg text-slate-900 font-['Arial'] mt-2">Scan to Join</p>
-          </div>
+          </motion.div>
         </div>
 
         {/* Main Drawing Display Area */}
@@ -951,98 +1203,192 @@ function LiveViewPage() {
             }}
           />
 
+          {/* Confetti overlay */}
+          {showConfetti && (
+            <div className="absolute inset-0 pointer-events-none z-10">
+              {Array.from({ length: 50 }).map((_, i) => (
+                <motion.div
+                  key={i}
+                  initial={{
+                    y: -20,
+                    x: Math.random() * window.innerWidth,
+                    rotate: 0,
+                    opacity: 1
+                  }}
+                  animate={{
+                    y: window.innerHeight + 100,
+                    rotate: 360,
+                    opacity: 0
+                  }}
+                  transition={{
+                    duration: Math.random() * 2 + 2,
+                    delay: Math.random() * 0.5,
+                    ease: "easeOut"
+                  }}
+                  className="absolute w-3 h-3 rounded"
+                  style={{
+                    backgroundColor: ['#ff8a00', '#ff4d8d', '#8b5cf6', '#05df72', '#fbbf24'][Math.floor(Math.random() * 5)]
+                  }}
+                />
+              ))}
+            </div>
+          )}
+
           {/* Central Drawing Display */}
           <div className="absolute top-14 left-1/2 transform -translate-x-1/2 w-[500px] h-[752px]">
             {/* Participant Avatar/Initials */}
             <div className="flex justify-center mb-6">
-              <div
+              <motion.div
+                key={currentDrawnParticipant || 'default'}
+                initial={{ scale: 0.5, opacity: 0, rotateY: -90 }}
+                animate={{ scale: 1, opacity: 1, rotateY: 0 }}
+                transition={{ duration: 0.6, ease: "backOut" }}
                 className="w-40 h-40 rounded-full flex items-center justify-center text-white text-6xl font-bold shadow-2xl"
                 style={{
                   background: 'linear-gradient(180deg, #ff8a00 0%, #ff4d8d 50%, #8b5cf6 100%)'
                 }}
               >
-                {recentAssignment?.participant_name ?
-                  recentAssignment.participant_name.split(' ').map(n => n[0]).join('').toUpperCase()
+                {currentDrawnParticipant ?
+                  currentDrawnParticipant.split(' ').map(n => n[0]).join('').toUpperCase()
                   : 'MC'
                 }
-              </div>
+              </motion.div>
             </div>
 
-            {/* Participant Name */}
+            {/* Participant Name with Character Animation */}
             <div className="text-center mb-8">
-              <h1 className="text-6xl font-bold text-white font-['Arial'] mb-4">
-                {recentAssignment?.participant_name?.toUpperCase() || 'NEXT DRAW'}
-              </h1>
+              <motion.h1
+                className="text-6xl font-bold text-white font-['Arial'] mb-4"
+                key={currentDrawnParticipant || 'default'}
+                initial={{ y: 50, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                transition={{ duration: 0.5, delay: 0.3 }}
+              >
+                <CharacterShiftName
+                  name={currentDrawnParticipant?.toUpperCase() || 'NEXT DRAW'}
+                  isAnimating={animationState === 'drawing'}
+                />
+                {animationState === 'idle' && !currentDrawnParticipant && (
+                  <span className="animate-pulse">
+                    {'.'.repeat(loadingDots)}
+                  </span>
+                )}
+              </motion.h1>
 
               {/* Drawn Confirmation */}
-              {recentAssignment && (
-                <div className="text-5xl font-bold text-[#05df72] font-['Arial']">
-                  ✓ DRAWN!
-                </div>
-              )}
+              <AnimatePresence>
+                {showDrawnConfirmation && (
+                  <motion.div
+                    initial={{ scale: 0, y: 20, opacity: 0 }}
+                    animate={{ scale: 1, y: 0, opacity: 1 }}
+                    exit={{ scale: 0, y: -20, opacity: 0 }}
+                    transition={{ type: "spring", bounce: 0.6 }}
+                    className="text-5xl font-bold text-[#05df72] font-['Arial']"
+                  >
+                    ✓ DRAWN!
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
 
-            {/* Horse Card Display */}
-            {recentAssignment && (
-              <div className="relative">
-                <div className="bg-white border-4 border-black/10 rounded-3xl p-1 shadow-2xl">
-                  <div
-                    className="rounded-3xl p-6 h-[300px] flex flex-col items-center justify-center"
+            {/* Horse Card Display with Animation */}
+            <AnimatePresence mode="wait">
+              {(currentDrawnParticipant || animationState !== 'idle') && (
+                <motion.div
+                  key={finalHorseNumber || 'spinning'}
+                  initial={{ y: 100, opacity: 0, rotateX: -90 }}
+                  animate={{ y: 0, opacity: 1, rotateX: 0 }}
+                  exit={{ y: -100, opacity: 0, rotateX: 90 }}
+                  transition={{ duration: 0.6, delay: 0.2 }}
+                  className="relative"
+                >
+                  <div className="bg-white border-4 border-black/10 rounded-3xl p-1 shadow-2xl">
+                    <div
+                      className="rounded-3xl p-6 h-[300px] flex flex-col items-center justify-center"
+                      style={{
+                        background: 'linear-gradient(180deg, #ff8a00 0%, #ff4d8d 50%, #8b5cf6 100%)'
+                      }}
+                    >
+                      <div className="bg-white rounded-3xl p-8 w-full h-full flex flex-col items-center justify-center">
+                        {/* Horse Number with Spinning Animation */}
+                        <motion.div
+                          className="text-[120px] font-black leading-none mb-4"
+                          style={{
+                            background: 'linear-gradient(90deg, #ff8a00 0%, #ff4d8d 50%, #8b5cf6 100%)',
+                            WebkitBackgroundClip: 'text',
+                            WebkitTextFillColor: 'transparent',
+                            backgroundClip: 'text'
+                          }}
+                          animate={animationState === 'spinning' ? {
+                            scale: [1, 1.1, 1],
+                            rotateY: [0, 10, -10, 0]
+                          } : {}}
+                          transition={{
+                            duration: 0.3,
+                            repeat: animationState === 'spinning' ? Infinity : 0
+                          }}
+                        >
+                          #{animationState === 'spinning' ? spinningNumber : (finalHorseNumber || '--')}
+                        </motion.div>
+
+                        {/* Horse Name with Fade Up */}
+                        <motion.div
+                          initial={{ y: 30, opacity: 0 }}
+                          animate={{ y: 0, opacity: animationState === 'complete' ? 1 : 0.7 }}
+                          transition={{ duration: 0.5, delay: 0.3 }}
+                          className="text-4xl text-slate-600 font-['Arial'] text-center"
+                        >
+                          {finalHorseName || 'HORSE NAME'}
+                        </motion.div>
+                      </div>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        </div>
+
+        {/* Bottom Section - Already Drawn with Scrolling Pills */}
+        <div className="h-[180px] bg-gray-800 px-8 flex items-center justify-between">
+          {/* Left: Already Drawn List with Scrolling Animation */}
+          <div className="flex-1">
+            <h3 className="text-xl text-white/70 font-['Arial'] mb-4">ALREADY DRAWN:</h3>
+            <div className="overflow-hidden">
+              <motion.div
+                className="flex items-center space-x-4"
+                animate={{ x: drawnParticipants.length > 8 ? [0, -200, 0] : 0 }}
+                transition={{
+                  duration: 20,
+                  repeat: drawnParticipants.length > 8 ? Infinity : 0,
+                  ease: "linear"
+                }}
+              >
+                {drawnParticipants.map((assignment, index) => (
+                  <motion.div
+                    key={assignment.id}
+                    initial={{ scale: 0, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    transition={{ delay: index * 0.1 }}
+                    className="flex-shrink-0 px-6 py-3 rounded-full flex items-center space-x-3 shadow-lg"
                     style={{
                       background: 'linear-gradient(180deg, #ff8a00 0%, #ff4d8d 50%, #8b5cf6 100%)'
                     }}
                   >
-                    <div className="bg-white rounded-3xl p-8 w-full h-full flex flex-col items-center justify-center">
-                      {/* Horse Number */}
-                      <div
-                        className="text-[120px] font-black leading-none mb-4"
-                        style={{
-                          background: 'linear-gradient(90deg, #ff8a00 0%, #ff4d8d 50%, #8b5cf6 100%)',
-                          WebkitBackgroundClip: 'text',
-                          WebkitTextFillColor: 'transparent',
-                          backgroundClip: 'text'
-                        }}
-                      >
-                        #{recentAssignment.event_horses?.number || '--'}
-                      </div>
-
-                      {/* Horse Name */}
-                      <div className="text-4xl text-slate-600 font-['Arial'] text-center">
-                        {recentAssignment.event_horses?.name || 'HORSE NAME'}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Bottom Section - Already Drawn */}
-        <div className="h-[180px] bg-gray-800 px-8 flex items-center justify-between">
-          {/* Left: Already Drawn List */}
-          <div className="flex-1">
-            <h3 className="text-xl text-white/70 font-['Arial'] mb-4">ALREADY DRAWN:</h3>
-            <div className="flex items-center space-x-4 overflow-x-auto">
-              {drawnParticipants.slice(0, 8).map((assignment, index) => (
-                <div
-                  key={assignment.id}
-                  className="flex-shrink-0 px-6 py-3 rounded-full flex items-center space-x-3 shadow-lg"
-                  style={{
-                    background: 'linear-gradient(180deg, #ff8a00 0%, #ff4d8d 50%, #8b5cf6 100%)'
-                  }}
-                >
-                  <Trophy className="h-5 w-5 text-white" />
-                  <span className="text-white font-['Arial'] text-xl whitespace-nowrap">
-                    {assignment.participant_name?.split(' ')[0] || 'Unknown'} {assignment.participant_name?.split(' ')[1]?.[0] || ''}. → #{assignment.event_horses?.number || '--'}
-                  </span>
-                </div>
-              ))}
+                    <Trophy className="h-5 w-5 text-white" />
+                    <span className="text-white font-['Arial'] text-xl whitespace-nowrap">
+                      {assignment.patron_entries?.participant_name?.split(' ')[0] || 'Unknown'} {assignment.patron_entries?.participant_name?.split(' ')[1]?.[0] || ''}. → #{assignment.event_horses?.number || '--'}
+                    </span>
+                  </motion.div>
+                ))}
+              </motion.div>
             </div>
           </div>
 
           {/* Right: Prize Pool */}
-          <div
+          <motion.div
+            initial={{ scale: 0.8, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
             className="w-[200px] h-[120px] rounded-2xl flex flex-col items-center justify-center shadow-2xl"
             style={{
               background: 'linear-gradient(180deg, #ff8a00 0%, #ff4d8d 50%, #8b5cf6 100%)'
@@ -1052,7 +1398,7 @@ function LiveViewPage() {
             <div className="text-4xl font-bold text-white font-['Arial']">
               {entryFee === 0 ? 'FREE' : formatCurrency(prizePool)}
             </div>
-          </div>
+          </motion.div>
         </div>
       </div>
     )
