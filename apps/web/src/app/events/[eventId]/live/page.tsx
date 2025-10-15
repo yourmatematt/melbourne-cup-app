@@ -162,12 +162,10 @@ function LiveViewPage() {
   }>>([])
   const [previousParticipants, setPreviousParticipants] = useState<ParticipantStatus[]>([])
 
-  // Animation State Management - Initialize to prevent hydration mismatch
+  // CLEAN ANIMATION STATE MANAGEMENT
   const [isClient, setIsClient] = useState(false)
-  const [animationsEnabled, setAnimationsEnabled] = useState(false)
   const [animationState, setAnimationState] = useState<'idle' | 'drawing' | 'spinning' | 'revealing' | 'complete'>('idle')
   const [currentDrawnParticipant, setCurrentDrawnParticipant] = useState<string | null>(null)
-  const [previousDrawnParticipant, setPreviousDrawnParticipant] = useState<string | null>(null)
   const [spinningNumber, setSpinningNumber] = useState(1)
   const [finalHorseNumber, setFinalHorseNumber] = useState<number | null>(null)
   const [finalHorseName, setFinalHorseName] = useState<string | null>(null)
@@ -175,49 +173,19 @@ function LiveViewPage() {
   const [showDrawnConfirmation, setShowDrawnConfirmation] = useState(false)
   const [loadingDots, setLoadingDots] = useState(1)
   const [loadingDirection, setLoadingDirection] = useState<'up' | 'down'>('up')
-  const [drawnPillsCount, setDrawnPillsCount] = useState(0)
 
   // Animation refs
   const spinningIntervalRef = useRef<NodeJS.Timeout | null>(null)
   const loadingDotsIntervalRef = useRef<NodeJS.Timeout | null>(null)
 
-  // Track which assignments have already been animated to prevent replays
-  const animatedAssignmentIds = useRef<Set<string>>(new Set())
-
-  // Track initial assignment IDs that exist on page load
+  // SIMPLE ANIMATION GUARD: Track initial assignment IDs only
   const initialAssignmentIds = useRef<Set<string>>(new Set())
+  const initialDataCaptured = useRef(false)
 
-  // Track initial assignment count on mount
-  const initialAssignmentCount = useRef<number>(0)
-
-  // Track initial data load completion to distinguish between initial load and new real-time assignments
-  const [initialDataLoaded, setInitialDataLoaded] = useState(false)
-
-  // Client-side hydration flag to prevent server/client mismatch
+  // Client-side hydration flag
   useEffect(() => {
     setIsClient(true)
   }, [])
-
-  // NUCLEAR APPROACH: 3-second delay before enabling animations - complete silence during page load
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      // Only enable animations if initial data has been captured
-      if (initialDataLoaded && initialAssignmentIds.current.size >= 0) {
-        console.log('[ANIMATION] NUCLEAR: Enabling animations after 3-second delay and data loaded')
-        setAnimationsEnabled(true)
-      } else {
-        console.log('[ANIMATION] NUCLEAR: Delaying animation enable - initial data not ready')
-        // Check again in 1 second if initial data isn't loaded yet
-        const retryTimer = setTimeout(() => {
-          console.log('[ANIMATION] NUCLEAR: Retry - enabling animations after data delay')
-          setAnimationsEnabled(true)
-        }, 1000)
-        return () => clearTimeout(retryTimer)
-      }
-    }, 3000)
-
-    return () => clearTimeout(timer)
-  }, [initialDataLoaded])
 
   // Use the real-time assignments hook with relations
   console.log('[HOOK] LIVE PAGE - About to call useRealtimeAssignments hook with eventId:', eventId)
@@ -313,27 +281,22 @@ function LiveViewPage() {
     connectionType: realtimeConnected ? 'realtime' : pollingActive ? 'polling' : 'disconnected'
   }
 
-  // Track initial data loading completion and capture initial assignment IDs and count
+  // CLEAN INITIAL DATA CAPTURE: Capture assignment IDs when data first loads
   useEffect(() => {
-    // Only run once when data is initially loaded
-    if (!initialDataLoaded && !assignmentsLoading && !participantsLoading && !loading) {
-      console.log('[INITIAL] Capturing initial assignments on first data load:', assignments.length)
-
-      // Capture initial assignment count
-      initialAssignmentCount.current = assignments.length
-
-      // Capture all initial assignment IDs to prevent animations for existing assignments
+    // Only capture once when initial load completes
+    if (!initialDataCaptured.current && !assignmentsLoading && !loading && assignments.length >= 0) {
+      console.log('[INIT] Capturing initial assignment IDs:', assignments.length)
+      
+      // Clear and populate the set with initial IDs
+      initialAssignmentIds.current.clear()
       assignments.forEach(assignment => {
         initialAssignmentIds.current.add(assignment.id)
-        animatedAssignmentIds.current.add(assignment.id)
       })
-
-      console.log('[INITIAL] Initial assignment count:', initialAssignmentCount.current)
-      console.log('[INITIAL] Initial assignment IDs:', Array.from(initialAssignmentIds.current))
-      console.log('[INITIAL] Setting initialDataLoaded to true - animations may be enabled soon')
-      setInitialDataLoaded(true)
+      
+      initialDataCaptured.current = true
+      console.log('[INIT] Initial data captured with IDs:', Array.from(initialAssignmentIds.current))
     }
-  }, [assignmentsLoading, participantsLoading, loading, assignments, initialDataLoaded])
+  }, [assignmentsLoading, loading, assignments])
 
   // Convert assignments to recent assignments format
   useEffect(() => {
@@ -439,7 +402,7 @@ function LiveViewPage() {
             })
           }
           console.log('[TRIGGER] Triggering loadEventData() due to patron_entries change')
-          loadEventData() // THIS MUST BE CALLED
+          loadEventData()
           setLastUpdate(new Date())
 
           // Trigger visual flash indicator
@@ -455,7 +418,7 @@ function LiveViewPage() {
           console.log('[SUBSCRIPTION] Assignment changed:', payload)
           console.log('[EVENT] Event type:', payload.eventType)
           console.log('[TRIGGER] Triggering loadEventData() due to assignments change')
-          loadEventData() // THIS MUST BE CALLED
+          loadEventData()
           setLastUpdate(new Date())
 
           // Also refresh assignments hook
@@ -877,38 +840,13 @@ function LiveViewPage() {
     )
   }
 
-  // Animation Functions for DRAWING state
+  // CLEAN ANIMATION FUNCTIONS
   const startDrawAnimation = useCallback((newAssignment: any) => {
     if (!isClient) return
 
-    // NUCLEAR GUARD - stop everything if animations disabled
-    if (!animationsEnabled) {
-      console.log('[ANIMATION] NUCLEAR: startDrawAnimation blocked - animations disabled')
-      return
-    }
+    console.log('[ANIM] Starting draw animation for:', newAssignment.id)
 
-    // Additional safety guards
-    if (assignments.length <= initialAssignmentCount.current) {
-      console.log('[ANIMATION] NUCLEAR: startDrawAnimation blocked: No new assignments')
-      return
-    }
-
-    // Guard: Check if this assignment was present on initial page load
-    if (initialAssignmentIds.current.has(newAssignment.id)) {
-      console.log('[ANIMATION] NUCLEAR: startDrawAnimation blocked: Assignment from initial load')
-      return
-    }
-
-    // Guard: Check if this assignment has already been animated
-    if (animatedAssignmentIds.current.has(newAssignment.id)) {
-      console.log('[ANIMATION] NUCLEAR: startDrawAnimation blocked: Already animated')
-      return
-    }
-
-    // Mark this assignment as animated
-    animatedAssignmentIds.current.add(newAssignment.id)
-
-    // Set the current participant
+    // Set the participant and horse details
     setCurrentDrawnParticipant(newAssignment?.patron_entries?.participant_name || null)
     setFinalHorseNumber(newAssignment?.event_horses?.number || null)
     setFinalHorseName(newAssignment?.event_horses?.name || null)
@@ -916,7 +854,7 @@ function LiveViewPage() {
     // Start animation sequence
     setAnimationState('drawing')
 
-    // Start the spinning numbers effect
+    // Start the spinning numbers effect after a brief delay
     setTimeout(() => {
       startHorseNumberSpinning()
     }, 500)
@@ -925,7 +863,7 @@ function LiveViewPage() {
     setTimeout(() => {
       stopSpinningAndReveal()
     }, 3500)
-  }, [isClient, animationsEnabled, assignments.length])
+  }, [isClient])
 
   const startHorseNumberSpinning = useCallback(() => {
     if (!isClient) return
@@ -989,7 +927,11 @@ function LiveViewPage() {
       setAnimationState('idle')
       setShowDrawnConfirmation(false)
       setShowConfetti(false)
-    }, 4000)
+      // Clear the current drawn participant to prepare for next draw
+      setCurrentDrawnParticipant(null)
+      setFinalHorseNumber(null)
+      setFinalHorseName(null)
+    }, 5000)
   }, [finalHorseNumber, isClient])
 
   const triggerConfettiBurst = useCallback(() => {
@@ -997,46 +939,16 @@ function LiveViewPage() {
     if (typeof window !== 'undefined' && isClient) {
       setShowConfetti(true)
 
-      // Use canvas-confetti if available
-      if (window.confetti) {
-        const duration = 15 * 1000
-        const animationEnd = Date.now() + duration
-        const defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 0 }
-
-        function randomInRange(min: number, max: number) {
-          return Math.random() * (max - min) + min
-        }
-
-        const interval = setInterval(function() {
-          const timeLeft = animationEnd - Date.now()
-
-          if (timeLeft <= 0) {
-            clearInterval(interval)
-            setShowConfetti(false)
-            return
-          }
-
-          const particleCount = 50 * (timeLeft / duration)
-
-          // Left side
-          window.confetti(Object.assign({}, defaults, {
-            particleCount,
-            origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 }
-          }))
-
-          // Right side
-          window.confetti(Object.assign({}, defaults, {
-            particleCount,
-            origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 }
-          }))
-        }, 250)
-      }
+      // Visual confetti animation (no canvas-confetti dependency)
+      setTimeout(() => {
+        setShowConfetti(false)
+      }, 3000)
     }
   }, [isClient])
 
   // Animate loading dots for "NEXT DRAW" state
   useEffect(() => {
-    if (animationState === 'idle' && !currentDrawnParticipant) {
+    if (animationState === 'idle' && event?.status === 'drawing' && !currentDrawnParticipant) {
       const interval = setInterval(() => {
         setLoadingDots(prev => {
           if (loadingDirection === 'up') {
@@ -1069,7 +981,7 @@ function LiveViewPage() {
         clearInterval(loadingDotsIntervalRef.current)
       }
     }
-  }, [animationState, loadingDirection, isClient])
+  }, [animationState, loadingDirection, isClient, event?.status, currentDrawnParticipant])
 
   // Function to get the most recent assignment for drawing display
   const getMostRecentAssignment = useCallback(() => {
@@ -1083,123 +995,56 @@ function LiveViewPage() {
     return sortedAssignments[0]
   }, [assignments])
 
-  // Auto-trigger drawing animation when new assignment arrives - NUCLEAR APPROACH
+  // CLEAN ANIMATION TRIGGER: Only animate truly new assignments
   useEffect(() => {
-    console.log('[ANIMATION] NUCLEAR: Animation trigger effect called', {
-      animationsEnabled,
-      assignmentCount: assignments.length,
-      initialCount: initialAssignmentCount.current,
-      eventStatus: event?.status,
-      animationState,
-      initialDataLoaded
-    })
-
-    // NUCLEAR GUARD: Stop HERE if animations are disabled - NOTHING runs
-    if (!animationsEnabled) {
-      console.log('[ANIMATION] NUCLEAR: Animations completely disabled - blocking all logic')
+    // Guard: Must have initial data captured
+    if (!initialDataCaptured.current) {
+      console.log('[ANIM] Skipping: Initial data not captured yet')
       return
     }
 
-    console.log('[ANIMATION] NUCLEAR: Animations enabled - checking assignment logic')
-
-    // Additional safety guards
-    if (!initialDataLoaded) {
-      console.log('[ANIMATION] NUCLEAR: Initial data not loaded yet')
+    // Guard: Must be in drawing status
+    if (event?.status !== 'drawing') {
+      console.log('[ANIM] Skipping: Not in drawing status')
       return
     }
 
-    // Must have more assignments than initial count
-    if (assignments.length <= initialAssignmentCount.current) {
-      console.log('[ANIMATION] NUCLEAR: No new assignments since initial load')
+    // Guard: Animation must be idle
+    if (animationState !== 'idle') {
+      console.log('[ANIM] Skipping: Animation already in progress')
       return
     }
 
+    // Get the most recent assignment
     const mostRecentAssignment = getMostRecentAssignment()
-    if (!mostRecentAssignment) return
+    if (!mostRecentAssignment) {
+      console.log('[ANIM] Skipping: No assignments found')
+      return
+    }
 
-    if (event?.status !== 'drawing' || animationState !== 'idle') return
-
-    // Check if this assignment was present on initial page load
+    // CRITICAL GUARD: Check if this assignment was in initial set
     if (initialAssignmentIds.current.has(mostRecentAssignment.id)) {
-      console.log('[ANIMATION] NUCLEAR: Assignment was present on initial load')
+      console.log('[ANIM] Skipping: Assignment was in initial load', mostRecentAssignment.id)
       return
     }
 
-    // Check if this assignment has already been animated
-    if (animatedAssignmentIds.current.has(mostRecentAssignment.id)) {
-      console.log('[ANIMATION] NUCLEAR: Assignment already animated')
-      return
-    }
-
-    console.log('[ANIMATION] NUCLEAR: All checks passed - starting animation for:', mostRecentAssignment.id)
+    // This is a genuinely new assignment - animate it!
+    console.log('[ANIM] New assignment detected, starting animation:', mostRecentAssignment.id)
+    
+    // Add to initial set so we don't animate it again on subsequent checks
+    initialAssignmentIds.current.add(mostRecentAssignment.id)
+    
+    // Start the animation
     startDrawAnimation(mostRecentAssignment)
-  }, [assignments, event?.status, animationState, initialDataLoaded, getMostRecentAssignment, startDrawAnimation, animationsEnabled])
 
-
-  // Show loading state
-  if (loading || assignmentsLoading || participantsLoading) {
-    return (
-      <div className="min-h-screen bg-[#f8f7f4] flex items-center justify-center">
-        <div className="text-center">
-          <Loader2 className="h-16 w-16 animate-spin text-slate-900 mx-auto mb-6" />
-          <p className="text-2xl text-slate-600 font-['Arial']">Loading live event...</p>
-        </div>
-      </div>
-    )
-  }
-
-  // Show error state
-  if (error || !event) {
-    return (
-      <div className="min-h-screen bg-[#f8f7f4] flex items-center justify-center p-4">
-        <div className="text-center">
-          <h1 className="text-4xl font-bold text-red-600 font-['Arial'] mb-4">Event Unavailable</h1>
-          <p className="text-xl text-slate-600 font-['Arial']">{error || 'Event not found'}</p>
-        </div>
-      </div>
-    )
-  }
-
-  // Create participant status array combining participants and assignments
-  const participantStatuses: ParticipantStatus[] = participants.map(participant => {
-    const assignment = assignments.find(a => a.patron_entry_id === participant.id)
-    return {
-      id: participant.id,
-      participant_name: participant.participant_name,
-      horse_number: assignment?.event_horses?.number,
-      horse_name: assignment?.event_horses?.name,
-      has_paid: participant.payment_status === 'paid',
-      payment_status: participant.payment_status,
-      created_at: participant.created_at,
-      assigned_at: assignment?.created_at
-    }
-  })
-
-  // Calculate progress percentage
-  const progressPercentage = Math.min((participants.length / event.capacity) * 100, 100)
-
-  // Calculate prize pool using event data
-  const entryFee = event.entry_fee || 0
-  const totalPool = event.capacity * entryFee  // Total pool based on all spots
-  const prizePool = totalPool
-
-  // Calculate prize breakdown using event percentages
-  const firstPrize = event.first_place_percentage ? totalPool * (event.first_place_percentage / 100) : 0
-  const secondPrize = event.second_place_percentage ? totalPool * (event.second_place_percentage / 100) : 0
-  const thirdPrize = event.third_place_percentage ? totalPool * (event.third_place_percentage / 100) : 0
-
-  // Get recent activity for footer with correct format - use our recentActivity state
-  const footerActivity = recentActivity.slice(0, 3).map(activity =>
-    `${activity.participantName} ${activity.action}`
-  )
-
+  }, [assignments, event?.status, animationState, getMostRecentAssignment, startDrawAnimation])
 
   // Function to get already drawn participants for the bottom display
   const getDrawnParticipants = () => {
     return assignments.slice().reverse() // Show in reverse order (most recent first)
   }
 
-  // DrawingStateView component with full animations - HYDRATION SAFE
+  // DrawingStateView component with clean animations
   const DrawingStateView = () => {
     // Early return if not mounted to prevent hydration issues
     if (!isClient) {
@@ -1213,7 +1058,6 @@ function LiveViewPage() {
       )
     }
 
-    const recentAssignment = getMostRecentAssignment()
     const drawnParticipants = getDrawnParticipants()
 
     // Character animation for participant names
@@ -1307,7 +1151,7 @@ function LiveViewPage() {
           >
             <p className="text-white/80 text-sm font-['Arial'] mb-1">PRIZE POOL</p>
             <div className="text-3xl font-bold text-white font-['Arial']">
-              {entryFee === 0 ? 'FREE' : formatCurrency(prizePool)}
+              {event.entry_fee === 0 ? 'FREE' : formatCurrency(event.capacity * (event.entry_fee || 0))}
             </div>
           </motion.div>
         </div>
@@ -1518,7 +1362,7 @@ function LiveViewPage() {
           >
             <p className="text-white/80 text-base font-['Arial'] mb-1">PRIZE POOL</p>
             <div className="text-4xl font-bold text-white font-['Arial']">
-              {entryFee === 0 ? 'FREE' : formatCurrency(prizePool)}
+              {event.entry_fee === 0 ? 'FREE' : formatCurrency(event.capacity * (event.entry_fee || 0))}
             </div>
           </motion.div>
         </div>
@@ -1526,11 +1370,69 @@ function LiveViewPage() {
     )
   }
 
+  // Show loading state
+  if (loading || assignmentsLoading || participantsLoading) {
+    return (
+      <div className="min-h-screen bg-[#f8f7f4] flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="h-16 w-16 animate-spin text-slate-900 mx-auto mb-6" />
+          <p className="text-2xl text-slate-600 font-['Arial']">Loading live event...</p>
+        </div>
+      </div>
+    )
+  }
+
+  // Show error state
+  if (error || !event) {
+    return (
+      <div className="min-h-screen bg-[#f8f7f4] flex items-center justify-center p-4">
+        <div className="text-center">
+          <h1 className="text-4xl font-bold text-red-600 font-['Arial'] mb-4">Event Unavailable</h1>
+          <p className="text-xl text-slate-600 font-['Arial']">{error || 'Event not found'}</p>
+        </div>
+      </div>
+    )
+  }
+
+  // Create participant status array combining participants and assignments
+  const participantStatuses: ParticipantStatus[] = participants.map(participant => {
+    const assignment = assignments.find(a => a.patron_entry_id === participant.id)
+    return {
+      id: participant.id,
+      participant_name: participant.participant_name,
+      horse_number: assignment?.event_horses?.number,
+      horse_name: assignment?.event_horses?.name,
+      has_paid: participant.payment_status === 'paid',
+      payment_status: participant.payment_status,
+      created_at: participant.created_at,
+      assigned_at: assignment?.created_at
+    }
+  })
+
+  // Calculate progress percentage
+  const progressPercentage = Math.min((participants.length / event.capacity) * 100, 100)
+
+  // Calculate prize pool using event data
+  const entryFee = event.entry_fee || 0
+  const totalPool = event.capacity * entryFee  // Total pool based on all spots
+  const prizePool = totalPool
+
+  // Calculate prize breakdown using event percentages
+  const firstPrize = event.first_place_percentage ? totalPool * (event.first_place_percentage / 100) : 0
+  const secondPrize = event.second_place_percentage ? totalPool * (event.second_place_percentage / 100) : 0
+  const thirdPrize = event.third_place_percentage ? totalPool * (event.third_place_percentage / 100) : 0
+
+  // Get recent activity for footer with correct format
+  const footerActivity = recentActivity.slice(0, 3).map(activity =>
+    `${activity.participantName} ${activity.action}`
+  )
+
   // Conditional rendering based on event status
   if (event.status === 'drawing') {
     return <DrawingStateView />
   }
 
+  // ACTIVE state rendering (unchanged)
   return (
     <div className="min-h-screen bg-[#f8f7f4] overflow-hidden w-screen h-screen relative" style={{ minWidth: '1920px', minHeight: '1080px' }}>
       {/* Real-time Flash Indicator */}
