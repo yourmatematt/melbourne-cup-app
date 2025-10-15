@@ -161,6 +161,31 @@ function LiveViewPage() {
   }>>([])
   const [previousParticipants, setPreviousParticipants] = useState<ParticipantStatus[]>([])
 
+  // Draw state management for smooth transitions
+  const [drawState, setDrawState] = useState<'idle' | 'revealing' | 'revealed'>('idle')
+
+  // Manage draw state transitions
+  useEffect(() => {
+    // Get the most recent assignment inline
+    const sortedAssignments = assignments?.length > 0
+      ? [...assignments].sort((a, b) =>
+          new Date(b.created_at || '').getTime() - new Date(a.created_at || '').getTime()
+        )
+      : []
+    const recentAssignment = sortedAssignments[0] || null
+
+    if (!recentAssignment) {
+      setDrawState('idle')
+    } else {
+      // Trigger revealing state, then move to revealed after a brief delay
+      setDrawState('revealing')
+
+      setTimeout(() => {
+        setDrawState('revealed')
+      }, 800) // Brief transition period
+    }
+  }, [assignments])
+
   // Use the real-time assignments hook with relations
   console.log('[HOOK] LIVE PAGE - About to call useRealtimeAssignments hook with eventId:', eventId)
 
@@ -969,23 +994,36 @@ function LiveViewPage() {
               </div>
             </div>
 
-            {/* Participant Name */}
+            {/* Participant Name - with smooth transitions */}
             <div className="text-center mb-8">
-              <h1 className="text-6xl font-bold text-white font-['Arial'] mb-4">
-                {recentAssignment?.participant_name?.toUpperCase() || 'NEXT DRAW'}
+              <h1
+                className="text-6xl font-bold text-white font-['Arial'] mb-4 transition-opacity duration-500"
+                style={{
+                  opacity: drawState === 'idle' ? 1 : 0.3
+                }}
+              >
+                {drawState === 'idle' ? 'NEXT DRAW' : (recentAssignment?.participant_name?.toUpperCase() || 'NEXT DRAW')}
               </h1>
 
-              {/* Drawn Confirmation */}
-              {recentAssignment && (
-                <div className="text-5xl font-bold text-[#05df72] font-['Arial']">
-                  ✓ DRAWN!
-                </div>
-              )}
+              {/* Drawn Confirmation - fades in when revealed */}
+              <div
+                className="text-5xl font-bold text-[#05df72] font-['Arial'] transition-opacity duration-500"
+                style={{
+                  opacity: drawState === 'revealed' ? 1 : 0
+                }}
+              >
+                ✓ DRAWN!
+              </div>
             </div>
 
-            {/* Horse Card Display */}
-            {recentAssignment && (
-              <div className="relative">
+            {/* Horse Card Display - fades in when revealing/revealed */}
+            <div
+              className="relative transition-opacity duration-700"
+              style={{
+                opacity: drawState === 'idle' ? 0 : 1
+              }}
+            >
+              {recentAssignment && (
                 <div className="bg-white border-4 border-black/10 rounded-3xl p-1 shadow-2xl">
                   <div
                     className="rounded-3xl p-6 h-[300px] flex flex-col items-center justify-center"
@@ -1014,8 +1052,8 @@ function LiveViewPage() {
                     </div>
                   </div>
                 </div>
-              </div>
-            )}
+              )}
+            </div>
           </div>
         </div>
 
