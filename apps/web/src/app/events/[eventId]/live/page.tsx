@@ -1075,6 +1075,12 @@ function LiveViewPage() {
     return assignments.slice().reverse() // Show in reverse order (most recent first)
   }
 
+// At the very top of DrawingStateView component
+useEffect(() => {
+  console.log('🔴 DrawingStateView MOUNTED')
+  return () => console.log('🔴 DrawingStateView UNMOUNTED')
+}, [])
+
   // DrawingStateView component with clean animations
   const DrawingStateView = () => {
     // Keep container always mounted, handle loading state internally
