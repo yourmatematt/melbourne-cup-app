@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect, useCallback, useRef } from 'react'
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { useParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -121,7 +121,7 @@ function LiveViewPage() {
   const params = useParams()
   const eventId = params.eventId as string
   console.log('[PARAMS] LIVE PAGE - eventId from params:', eventId, 'params:', params)
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
 
   // Client-side only initialization
   useEffect(() => {
