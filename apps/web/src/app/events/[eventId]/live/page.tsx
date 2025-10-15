@@ -1193,7 +1193,7 @@ function LiveViewPage() {
             <div>
               <div className="flex items-center space-x-4">
                 <h1 className="text-4xl font-bold text-slate-900 font-['Arial']">
-                  {event.name}
+                  {event?.name || 'Loading Event...'}
                 </h1>
 
                 {/* DRAWING LIVE Badge */}
@@ -1228,7 +1228,7 @@ function LiveViewPage() {
           >
             <p className="text-white/80 text-sm font-['Arial'] mb-1">PRIZE POOL</p>
             <div className="text-3xl font-bold text-white font-['Arial']">
-              {event.entry_fee === 0 ? 'FREE' : formatCurrency(event.capacity * (event.entry_fee || 0))}
+              {event?.entry_fee === 0 ? 'FREE' : formatCurrency((event?.capacity || 0) * (event?.entry_fee || 0))}
             </div>
           </motion.div>
         </div>
@@ -1439,7 +1439,7 @@ function LiveViewPage() {
           >
             <p className="text-white/80 text-base font-['Arial'] mb-1">PRIZE POOL</p>
             <div className="text-4xl font-bold text-white font-['Arial']">
-              {event.entry_fee === 0 ? 'FREE' : formatCurrency(event.capacity * (event.entry_fee || 0))}
+              {event?.entry_fee === 0 ? 'FREE' : formatCurrency((event?.capacity || 0) * (event?.entry_fee || 0))}
             </div>
           </motion.div>
         </div>
@@ -1478,17 +1478,17 @@ function LiveViewPage() {
   })
 
   // Calculate progress percentage
-  const progressPercentage = Math.min((participants.length / event.capacity) * 100, 100)
+  const progressPercentage = event?.capacity ? Math.min((participants.length / event.capacity) * 100, 100) : 0
 
   // Calculate prize pool using event data
-  const entryFee = event.entry_fee || 0
-  const totalPool = event.capacity * entryFee  // Total pool based on all spots
+  const entryFee = event?.entry_fee || 0
+  const totalPool = (event?.capacity || 0) * entryFee  // Total pool based on all spots
   const prizePool = totalPool
 
   // Calculate prize breakdown using event percentages
-  const firstPrize = event.first_place_percentage ? totalPool * (event.first_place_percentage / 100) : 0
-  const secondPrize = event.second_place_percentage ? totalPool * (event.second_place_percentage / 100) : 0
-  const thirdPrize = event.third_place_percentage ? totalPool * (event.third_place_percentage / 100) : 0
+  const firstPrize = event?.first_place_percentage ? totalPool * (event.first_place_percentage / 100) : 0
+  const secondPrize = event?.second_place_percentage ? totalPool * (event.second_place_percentage / 100) : 0
+  const thirdPrize = event?.third_place_percentage ? totalPool * (event.third_place_percentage / 100) : 0
 
   // Get recent activity for footer with correct format
   const footerActivity = recentActivity.slice(0, 3).map(activity =>
@@ -1521,19 +1521,19 @@ function LiveViewPage() {
               background: 'linear-gradient(180deg, #ff8a00 0%, #ff4d8d 50%, #8b5cf6 100%)'
             }}
           >
-            {event.tenant.name.charAt(0).toUpperCase()}
+            {event?.tenant?.name?.charAt(0)?.toUpperCase() || 'V'}
           </div>
 
           {/* Event Details */}
           <div className="text-left">
             <h1 className="text-4xl font-bold text-slate-900 leading-tight">
-              {event.name}
+              {event?.name || 'Event'}
             </h1>
             <p className="text-2xl text-slate-600 mt-1">
-              {event.tenant.name}
+              {event?.tenant?.name || 'Venue'}
             </p>
             <p className="text-xl text-slate-600 mt-1">
-              {formatDateTime(event.starts_at)}
+              {event?.starts_at ? formatDateTime(event.starts_at) : ''}
             </p>
           </div>
         </div>
@@ -1571,7 +1571,7 @@ function LiveViewPage() {
       >
         <div className="text-center">
           <p className="font-bold text-white mb-3" style={{ fontSize: '48px' }}>
-            {event.capacity - participants.length} / {event.capacity} SPOTS REMAINING
+            {(event?.capacity || 0) - participants.length} / {event?.capacity || 0} SPOTS REMAINING
           </p>
           <div className="w-[600px] h-3 bg-white bg-opacity-30 rounded-full overflow-hidden">
             <div
@@ -1612,7 +1612,7 @@ function LiveViewPage() {
 
             // In ACTIVE status, show participants in order even without horse assignments
             let assignedParticipant = null
-            if (event.status === 'active') {
+            if (event?.status === 'active') {
               // Show participants in the first available slots (index order)
               assignedParticipant = participantStatuses[index] || null
             } else {
@@ -1760,8 +1760,8 @@ function LiveViewPage() {
             </div>
             {entryFee > 0 ? (
               <div className="text-sm text-white opacity-70 text-center">
-                <div>1st: {formatCurrency(firstPrize)} ({event.first_place_percentage}%) | 2nd: {formatCurrency(secondPrize)} ({event.second_place_percentage}%) | 3rd: {formatCurrency(thirdPrize)} ({event.third_place_percentage}%)</div>
-                <div className="mt-1">{event.capacity - participants.length}/{event.capacity} spots remaining</div>
+                <div>1st: {formatCurrency(firstPrize)} ({event?.first_place_percentage || 0}%) | 2nd: {formatCurrency(secondPrize)} ({event?.second_place_percentage || 0}%) | 3rd: {formatCurrency(thirdPrize)} ({event?.third_place_percentage || 0}%)</div>
+                <div className="mt-1">{(event?.capacity || 0) - participants.length}/{event?.capacity || 0} spots remaining</div>
               </div>
             ) : (
               <p className="text-base text-white opacity-70">Free to enter!</p>
