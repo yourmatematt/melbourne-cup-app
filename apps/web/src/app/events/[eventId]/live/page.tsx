@@ -467,7 +467,7 @@ function LiveViewPage() {
       console.log('[CLEANUP] Cleaning up comprehensive subscription')
       supabase.removeChannel(channel)
     }
-  }, [eventId, supabase])
+  }, [eventId])
 
   // Polling functions for demo/fallback mode
   const startPolling = () => {
