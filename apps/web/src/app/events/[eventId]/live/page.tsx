@@ -181,6 +181,8 @@ function LiveViewPage() {
   // SIMPLE ANIMATION GUARD: Track initial assignment IDs only
   const initialAssignmentIds = useRef<Set<string>>(new Set())
   const initialDataCaptured = useRef(false)
+  // Track which specific assignments have been animated (separate from initial)
+  const animatedAssignmentIds = useRef<Set<string>>(new Set())
 
   // Client-side hydration flag
   useEffect(() => {
@@ -855,7 +857,7 @@ function LiveViewPage() {
   const startDrawAnimation = useCallback((newAssignment: any) => {
     if (!isClient) return
 
-    console.log('[ANIM] Starting draw animation for:', newAssignment.id)
+    console.log('[ANIM-START] Starting draw animation for:', newAssignment.id, 'at', new Date().toISOString())
 
     // Set the participant and horse details
     setCurrentDrawnParticipant(newAssignment?.patron_entries?.participant_name || null)
@@ -935,6 +937,7 @@ function LiveViewPage() {
 
     // Reset animation state after showing for a while
     setTimeout(() => {
+      console.log('[ANIM-RESET] Resetting animation state to idle after 5 seconds')
       setAnimationState('idle')
       setShowDrawnConfirmation(false)
       setShowConfetti(false)
@@ -1008,43 +1011,60 @@ function LiveViewPage() {
 
   // CLEAN ANIMATION TRIGGER: Only animate truly new assignments
   useEffect(() => {
+    console.log('[ANIM-CHECK] Animation trigger fired', {
+      animationState,
+      assignmentCount: assignments.length,
+      eventStatus: event?.status,
+      timestamp: new Date().toISOString()
+    })
+
     // Guard: Must have initial data captured
     if (!initialDataCaptured.current) {
-      console.log('[ANIM] Skipping: Initial data not captured yet')
+      console.log('[ANIM-CHECK] Skipping: Initial data not captured yet')
       return
     }
 
     // Guard: Must be in drawing status
     if (event?.status !== 'drawing') {
-      console.log('[ANIM] Skipping: Not in drawing status')
+      console.log('[ANIM-CHECK] Skipping: Not in drawing status')
       return
     }
 
     // Guard: Animation must be idle
     if (animationState !== 'idle') {
-      console.log('[ANIM] Skipping: Animation already in progress')
+      console.log('[ANIM-CHECK] Skipping: Animation already in progress, state:', animationState)
       return
     }
 
     // Get the most recent assignment
     const mostRecentAssignment = getMostRecentAssignment()
     if (!mostRecentAssignment) {
-      console.log('[ANIM] Skipping: No assignments found')
+      console.log('[ANIM-CHECK] Skipping: No assignments found')
       return
     }
 
-    // CRITICAL GUARD: Check if this assignment was in initial set
+    console.log('[ANIM-CHECK] Most recent assignment:', mostRecentAssignment.id)
+    console.log('[ANIM-CHECK] Already animated IDs:', Array.from(animatedAssignmentIds.current))
+    console.log('[ANIM-CHECK] Initial IDs:', Array.from(initialAssignmentIds.current))
+
+    // CRITICAL GUARD: Check if this assignment was in initial load
     if (initialAssignmentIds.current.has(mostRecentAssignment.id)) {
-      console.log('[ANIM] Skipping: Assignment was in initial load', mostRecentAssignment.id)
+      console.log('[ANIM-CHECK] Skipping: Assignment was in initial load', mostRecentAssignment.id)
+      return
+    }
+
+    // NEW GUARD: Check if we've already animated this assignment
+    if (animatedAssignmentIds.current.has(mostRecentAssignment.id)) {
+      console.log('[ANIM-CHECK] Skipping: Assignment already animated', mostRecentAssignment.id)
       return
     }
 
     // This is a genuinely new assignment - animate it!
-    console.log('[ANIM] New assignment detected, starting animation:', mostRecentAssignment.id)
-    
-    // Add to initial set so we don't animate it again on subsequent checks
-    initialAssignmentIds.current.add(mostRecentAssignment.id)
-    
+    console.log('[ANIM-START] New assignment detected, starting animation:', mostRecentAssignment.id)
+
+    // Track that we're animating this assignment
+    animatedAssignmentIds.current.add(mostRecentAssignment.id)
+
     // Start the animation
     startDrawAnimation(mostRecentAssignment)
 
