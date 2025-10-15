@@ -672,7 +672,7 @@ function LiveViewPage() {
     }
   }, [pollingInterval])
 
-  async function loadEventData() {
+  const loadEventData = useCallback(async () => {
     console.log('[DEBUG] loadEventData started for eventId:', eventId)
     try {
       setError(null)
@@ -794,7 +794,7 @@ function LiveViewPage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [eventId, supabase])
 
   function formatDateTime(dateString: string) {
     return new Date(dateString).toLocaleDateString('en-AU', {
