@@ -139,7 +139,7 @@ function LiveViewPage() {
     if (mounted) {
       console.log('[MOUNT] Component fully mounted', { eventId, supabaseReady: !!supabase })
     }
-  }, [mounted, eventId, supabase])
+  }, [mounted, eventId])
 
   const [event, setEvent] = useState<Event | null>(null)
   const [results, setResults] = useState<Result[]>([])
