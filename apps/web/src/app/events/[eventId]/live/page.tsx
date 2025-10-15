@@ -166,28 +166,6 @@ function LiveViewPage() {
   // Draw state management for smooth transitions
   const [drawState, setDrawState] = useState<'idle' | 'revealing' | 'revealed'>('idle')
 
-  // Manage draw state transitions
-  useEffect(() => {
-    // Get the most recent assignment inline
-    const sortedAssignments = assignments?.length > 0
-      ? [...assignments].sort((a, b) =>
-          new Date(b.created_at || '').getTime() - new Date(a.created_at || '').getTime()
-        )
-      : []
-    const recentAssignment = sortedAssignments[0] || null
-
-    if (!recentAssignment) {
-      setDrawState('idle')
-    } else {
-      // Trigger revealing state, then move to revealed after a brief delay
-      setDrawState('revealing')
-
-      setTimeout(() => {
-        setDrawState('revealed')
-      }, 800) // Brief transition period
-    }
-  }, [assignments])
-
   // Use the real-time assignments hook with relations
   console.log('[HOOK] LIVE PAGE - About to call useRealtimeAssignments hook with eventId:', eventId)
 
@@ -281,6 +259,28 @@ function LiveViewPage() {
     lastUpdated: assignmentsRealtimeState.lastUpdated || participantsRealtimeState.lastUpdated,
     connectionType: realtimeConnected ? 'realtime' : pollingActive ? 'polling' : 'disconnected'
   }
+
+  // Manage draw state transitions based on assignments
+  useEffect(() => {
+    // Get the most recent assignment inline
+    const sortedAssignments = assignments?.length > 0
+      ? [...assignments].sort((a, b) =>
+          new Date(b.created_at || '').getTime() - new Date(a.created_at || '').getTime()
+        )
+      : []
+    const recentAssignment = sortedAssignments[0] || null
+
+    if (!recentAssignment) {
+      setDrawState('idle')
+    } else {
+      // Trigger revealing state, then move to revealed after a brief delay
+      setDrawState('revealing')
+
+      setTimeout(() => {
+        setDrawState('revealed')
+      }, 800) // Brief transition period
+    }
+  }, [assignments])
 
   // Convert assignments to recent assignments format
   useEffect(() => {
@@ -913,49 +913,52 @@ function LiveViewPage() {
 
         <div className="flex flex-col min-h-screen">
           {/* Header */}
-          <div className="h-[120px] bg-white border-b border-gray-200 shadow-sm flex items-center justify-between px-8">
-            <div className="flex items-center space-x-6">
+          <div className="h-[120px] bg-white border-b border-[rgba(0,0,0,0.08)] flex items-center justify-between px-8">
+            <div className="flex items-center gap-6">
               <div
-                className="w-20 h-20 rounded-full flex items-center justify-center text-white text-2xl font-bold"
+                className="w-20 h-20 rounded-full flex items-center justify-center"
                 style={{
                   background: 'linear-gradient(180deg, #ff8a00 0%, #ff4d8d 50%, #8b5cf6 100%)'
                 }}
               >
-                {event.tenant?.name?.charAt(0) || 'V'}
+                <p className="font-['Arial'] font-bold text-[24px] leading-[32px] text-white">
+                  {event.tenant?.name?.charAt(0) || 'V'}
+                </p>
               </div>
-              <div>
-                <div className="flex items-center space-x-4">
-                  <h1 className="text-4xl font-bold text-slate-900 font-['Arial']">
+              <div className="flex flex-col gap-1">
+                <div className="flex items-center gap-4">
+                  <h1 className="font-['Arial'] font-bold text-[36px] leading-[54px] text-slate-900">
                     {event.name}
                   </h1>
                   <div
-                    className="px-6 py-3 rounded-full flex items-center space-x-2 shadow-lg animate-pulse"
+                    className="h-[58px] px-6 rounded-full flex items-center gap-2 shadow-[0px_10px_15px_-3px_rgba(0,0,0,0.1),0px_4px_6px_-4px_rgba(0,0,0,0.1)] animate-pulse"
                     style={{
                       background: 'linear-gradient(90deg, #fb2c36 0%, #ff4d8d 100%)'
                     }}
                   >
                     <Radio className="h-6 w-6 text-white" />
-                    <span className="text-white font-bold text-2xl font-['Arial']">
+                    <span className="font-['Arial'] font-bold text-[28px] leading-[42px] text-white">
                       🎯 DRAWING LIVE
                     </span>
                   </div>
                 </div>
-                <p className="text-xl text-slate-600 font-['Arial'] mt-1">
+                <p className="font-['Arial'] text-[20px] leading-[30px] text-slate-600">
                   {event.tenant?.name || 'Live Event'}
                 </p>
               </div>
             </div>
-            <div className="flex flex-col items-center">
-              <div className="bg-slate-900 p-5 rounded-3xl">
-                <QRCodeSVG
-                  value={`${window.location.origin}/events/${event.id}/join`}
-                  size={80}
-                  bgColor="transparent"
-                  fgColor="white"
-                  level="M"
-                />
-              </div>
-              <p className="text-lg text-slate-900 font-['Arial'] mt-2">Scan to Join</p>
+            <div
+              className="h-[97px] w-[182px] rounded-2xl shadow-[0px_20px_25px_-5px_rgba(0,0,0,0.1),0px_8px_10px_-6px_rgba(0,0,0,0.1)] flex flex-col items-center justify-center pb-2"
+              style={{
+                background: 'linear-gradient(180deg, #ff8a00 0%, #ff4d8d 50%, #8b5cf6 100%)'
+              }}
+            >
+              <p className="font-['Arial'] text-[16px] leading-[24px] text-white text-opacity-80 mb-[-8px]">
+                PRIZE POOL
+              </p>
+              <p className="font-['Arial'] font-bold text-[40px] leading-[60px] text-white mb-[-8px]">
+                {entryFee === 0 ? 'FREE' : formatCurrency(prizePool)}
+              </p>
             </div>
           </div>
 
@@ -968,138 +971,117 @@ function LiveViewPage() {
               background: 'radial-gradient(ellipse at center, rgba(168,85,247,0.15) 0%, rgba(84,43,124,0.1) 35%, transparent 70%)'
             }} />
 
-            {/* Center Panel */}
-            <div className="flex-1 flex flex-col items-center justify-center relative z-10">
-              {/* Main Draw Card */}
-              <div className="relative">
-                {/* Sparkle Effects */}
-                <div className="absolute -top-8 -left-8 text-yellow-300 opacity-80 animate-spin" style={{ animationDuration: '3s' }}>
-                  <Sparkles className="w-12 h-12" />
-                </div>
-                <div className="absolute -top-12 right-16 text-yellow-300 opacity-60 animate-spin" style={{ animationDuration: '4s', animationDelay: '1s' }}>
-                  <Sparkles className="w-8 h-8" />
-                </div>
-                <div className="absolute -bottom-8 -right-8 text-yellow-300 opacity-70 animate-spin" style={{ animationDuration: '5s', animationDelay: '2s' }}>
-                  <Sparkles className="w-10 h-10" />
-                </div>
-                <div className="absolute -bottom-12 left-16 text-yellow-300 opacity-50 animate-spin" style={{ animationDuration: '3.5s', animationDelay: '0.5s' }}>
-                  <Sparkles className="w-6 h-6" />
-                </div>
+            {/* Center Panel - Exact Figma Layout */}
+            <div className="absolute h-[752px] w-[556px] left-[682px] top-[14px]">
+              {/* Participant Avatar - 160px circle */}
+              <div
+                className={cn(
+                  "absolute w-[160px] h-[160px] rounded-full left-[170px] top-0 flex items-center justify-center shadow-[0px_25px_50px_-12px_rgba(0,0,0,0.25)] transition-all duration-500",
+                  recentAssignment ? "scale-110 shadow-2xl" : "scale-100"
+                )}
+                style={{
+                  background: 'linear-gradient(180deg, #ff8a00 0%, #ff4d8d 50%, #8b5cf6 100%)'
+                }}
+              >
+                <p className="font-['Arial'] font-bold text-[64px] leading-[96px] text-white">
+                  {recentAssignment?.patron_entries?.participant_name ?
+                    recentAssignment.patron_entries.participant_name.split(' ').map(n => n[0]).join('').toUpperCase()
+                    : 'MC'
+                  }
+                </p>
+              </div>
 
-                {/* Main Card with Enhanced Animations */}
-                <div className={cn(
-                  "bg-white rounded-3xl p-8 shadow-2xl border-4 border-gray-200 min-w-[500px] min-h-[400px] flex flex-col items-center justify-center transition-all duration-700",
-                  recentAssignment ? "scale-105 border-yellow-400 shadow-yellow-400/30" : "scale-100"
+              {/* Participant Name */}
+              <div className="absolute h-[96px] w-[474px] left-[13px] top-[184px]">
+                <p className={cn(
+                  "font-['Arial'] font-bold text-[64px] leading-[96px] text-white transition-all duration-500",
+                  !recentAssignment && "opacity-50"
                 )}>
-                  {/* Participant Display */}
-                  <div className="mb-8">
-                    {/* Avatar */}
-                    <div className={cn(
-                      "w-32 h-32 rounded-full mx-auto mb-6 flex items-center justify-center text-white text-5xl font-bold shadow-lg transition-all duration-500",
-                      recentAssignment ? "scale-110 shadow-2xl" : "scale-100"
-                    )} style={{
-                      background: 'linear-gradient(180deg, #ff8a00 0%, #ff4d8d 50%, #8b5cf6 100%)'
-                    }}>
-                      {recentAssignment?.patron_entries?.participant_name ?
-                        recentAssignment.patron_entries.participant_name.split(' ').map(n => n[0]).join('').toUpperCase()
-                        : 'MC'
-                      }
-                    </div>
+                  {recentAssignment?.patron_entries?.participant_name?.toUpperCase() || 'NEXT PARTICIPANT'}
+                </p>
+              </div>
 
-                    {/* Name with Fade Animation */}
-                    <div className={cn(
-                      "text-center transition-all duration-500",
-                      !recentAssignment && "opacity-50"
-                    )}>
-                      <h2 className="text-4xl font-bold text-gray-800 mb-2">
-                        {recentAssignment?.patron_entries?.participant_name?.toUpperCase() || 'NEXT PARTICIPANT'}
-                      </h2>
+              {/* Status - ✓ DRAWN! */}
+              <div className="absolute h-[72px] w-[250px] left-[125px] top-[320px]">
+                <p className={cn(
+                  "font-['Arial'] font-bold text-[48px] leading-[72px] transition-all duration-300",
+                  recentAssignment ? "text-[#05df72] scale-110" : "text-gray-400 opacity-50"
+                )}>
+                  {recentAssignment ? '✓ DRAWN!' : 'WAITING...'}
+                </p>
+              </div>
 
-                      {/* Status with Color Animation */}
-                      <div className={cn(
-                        "text-2xl font-bold transition-all duration-300",
-                        recentAssignment ? "text-green-500 scale-110" : "text-gray-400"
-                      )}>
-                        {recentAssignment ? '✓ DRAWN!' : 'WAITING...'}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Horse Assignment Card with Slide-in Animation */}
-                  <div className={cn(
-                    "transition-all duration-700 transform",
-                    recentAssignment
-                      ? "translate-y-0 opacity-100 scale-100"
-                      : "translate-y-8 opacity-0 scale-95"
-                  )}>
-                    {recentAssignment && (
-                      <div className="bg-gradient-to-br from-purple-500 to-pink-500 rounded-2xl p-6 text-white shadow-xl">
-                        <div className="text-center">
-                          <div className="text-6xl font-black mb-2">
-                            #{recentAssignment.event_horses?.number || '--'}
-                          </div>
-                          <div className="text-xl font-semibold">
-                            {recentAssignment.event_horses?.name || 'HORSE NAME'}
-                          </div>
-                          {recentAssignment.event_horses?.jockey && (
-                            <div className="text-sm opacity-90 mt-1">
-                              Jockey: {recentAssignment.event_horses.jockey}
-                            </div>
-                          )}
+              {/* Horse Card with Slide-in Animation */}
+              <div className={cn(
+                "absolute h-[300px] w-[500px] left-[-1px] top-[432px] transition-all duration-700 transform",
+                recentAssignment
+                  ? "translate-y-0 opacity-100 scale-100"
+                  : "translate-y-8 opacity-0 scale-95"
+              )}>
+                {recentAssignment && (
+                  <div className="bg-white border-4 border-[rgba(0,0,0,0.08)] rounded-[24px] h-[300px] w-[500px]">
+                    <div
+                      className="h-[292px] w-[492px] m-1 rounded-[24px] flex flex-col items-center justify-center gap-4"
+                      style={{
+                        background: 'linear-gradient(180deg, #ff8a00 0%, #ff4d8d 50%, #8b5cf6 100%)'
+                      }}
+                    >
+                      <div className="bg-white h-[284px] w-full rounded-[24px] flex flex-col items-center justify-center gap-4">
+                        {/* Horse Number with Gradient Text */}
+                        <div
+                          className="font-['Arial'] font-black text-[120px] leading-[180px]"
+                          style={{
+                            background: 'linear-gradient(90deg, #ff8a00 0%, #ff4d8d 50%, #8b5cf6 100%)',
+                            WebkitBackgroundClip: 'text',
+                            WebkitTextFillColor: 'transparent',
+                            backgroundClip: 'text'
+                          }}
+                        >
+                          #{recentAssignment.event_horses?.number || '--'}
                         </div>
+
+                        {/* Horse Name */}
+                        <p className="font-['Arial'] text-[36px] leading-[54px] text-slate-600 text-center">
+                          {recentAssignment.event_horses?.name || 'HORSE NAME'}
+                        </p>
                       </div>
-                    )}
+                    </div>
                   </div>
-                </div>
-              </div>
-
-              {/* Additional Status Info */}
-              <div className="mt-8 text-center">
-                <div className="text-white/70 text-xl">
-                  Assignments Drawn: {assignments.length} / {participants.length}
-                </div>
+                )}
               </div>
             </div>
 
-            {/* Side Panels for Recent Draws */}
-            <div className="w-80 p-6 border-l border-gray-600">
-              <h3 className="text-white text-xl font-bold mb-4 flex items-center">
-                <Trophy className="w-6 h-6 mr-2" />
-                Recent Draws
-              </h3>
-              <div className="space-y-3 max-h-96 overflow-y-auto">
-                {assignments.slice(-10).reverse().map((assignment, index) => (
-                  <div
-                    key={assignment.id}
-                    className={cn(
-                      "bg-white/10 backdrop-blur-sm rounded-lg p-3 transition-all duration-300",
-                      index === 0 && "ring-2 ring-yellow-400 bg-yellow-400/20"
-                    )}
-                  >
-                    <div className="text-white font-semibold text-sm">
-                      {assignment.patron_entries?.participant_name}
-                    </div>
-                    <div className="text-yellow-300 font-bold">
-                      Horse #{assignment.event_horses?.number} - {assignment.event_horses?.name}
-                    </div>
-                    <div className="text-white/60 text-xs">
-                      {new Date(assignment.created_at).toLocaleTimeString()}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
           </div>
 
-          {/* Footer */}
-          <div className="h-[120px] bg-gray-800 px-8 flex items-center justify-between">
-            <div className="flex items-center space-x-4">
-              <div className="text-white/70 text-lg">
-                Prize Pool: <span className="text-white font-bold">{entryFee === 0 ? 'FREE' : formatCurrency(prizePool)}</span>
+          {/* Footer - Already Drawn Section */}
+          <div className="h-[180px] bg-gray-800 px-8 flex items-center justify-between">
+            <div className="w-full">
+              <div className="flex flex-col gap-4 h-[103px] overflow-hidden">
+                <h3 className="font-['Arial'] text-[20px] leading-[30px] text-white text-opacity-70">
+                  ALREADY DRAWN:
+                </h3>
+                <div className="flex gap-4 h-[57px] items-center overflow-x-auto">
+                  {assignments.slice(-10).reverse().map((assignment, index) => (
+                    <div
+                      key={assignment.id}
+                      className={cn(
+                        "h-[57px] px-6 rounded-full flex items-center gap-3 shadow-[0px_10px_15px_-3px_rgba(0,0,0,0.1),0px_4px_6px_-4px_rgba(0,0,0,0.1)] flex-shrink-0 transition-all duration-300",
+                        index === 0 && "ring-2 ring-yellow-400 scale-105"
+                      )}
+                      style={{
+                        background: 'linear-gradient(180deg, #ff8a00 0%, #ff4d8d 50%, #8b5cf6 100%)'
+                      }}
+                    >
+                      <Trophy className="w-5 h-5 text-white" />
+                      <p className="font-['Arial'] font-bold text-[22px] leading-[33px] text-white whitespace-nowrap">
+                        {assignment.patron_entries?.participant_name?.split(' ')[0] || 'Unknown'} {assignment.patron_entries?.participant_name?.split(' ')[1]?.[0] || ''}.
+                        {assignment.patron_entries?.participant_name?.split(' ')[1] ? ' ' : ''}
+                        → #{assignment.event_horses?.number || '--'}
+                      </p>
+                    </div>
+                  ))}
+                </div>
               </div>
-            </div>
-            <div className="text-white/70 text-lg">
-              Total Participants: {participants.length} | Capacity: {event.capacity}
             </div>
           </div>
         </div>
