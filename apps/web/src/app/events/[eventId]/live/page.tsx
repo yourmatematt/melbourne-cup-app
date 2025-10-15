@@ -904,11 +904,12 @@ function LiveViewPage() {
                   {event.name}
                 </h1>
 
-                {/* DRAWING LIVE Badge */}
+                {/* DRAWING LIVE Badge with pulse animation */}
                 <div
                   className="px-6 py-3 rounded-full flex items-center space-x-2 shadow-lg"
                   style={{
-                    background: 'linear-gradient(90deg, #fb2c36 0%, #ff4d8d 100%)'
+                    background: 'linear-gradient(90deg, #fb2c36 0%, #ff4d8d 100%)',
+                    animation: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite'
                   }}
                 >
                   <Radio className="h-6 w-6 text-white" />
