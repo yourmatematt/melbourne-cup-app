@@ -1077,19 +1077,9 @@ function LiveViewPage() {
 
   // DrawingStateView component with clean animations
   const DrawingStateView = () => {
-    // Early return if not mounted to prevent hydration issues
-    if (!isClient) {
-      return (
-        <div className="min-h-screen bg-[#f8f7f4] flex items-center justify-center">
-          <div className="text-center">
-            <Loader2 className="h-16 w-16 animate-spin text-slate-900 mx-auto mb-6" />
-            <p className="text-2xl text-slate-600 font-['Arial']">Loading...</p>
-          </div>
-        </div>
-      )
-    }
+    // Keep container always mounted, handle loading state internally
+    const drawnParticipants = isClient ? getDrawnParticipants() : []
 
-    const drawnParticipants = getDrawnParticipants()
 
     // Character animation for participant names
     const CharacterShiftName = ({ name, isAnimating }: { name: string, isAnimating: boolean }) => {
@@ -1119,17 +1109,73 @@ function LiveViewPage() {
 
     return (
       <div className="min-h-screen bg-[#f8f7f4] overflow-hidden w-screen h-screen relative" style={{ minWidth: '1920px', minHeight: '1080px' }}>
+        {/* Loading overlay - renders on top without unmounting container */}
+        <AnimatePresence>
+          {(isLoading || !isClient) && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-[#f8f7f4] z-[100] flex items-center justify-center"
+            >
+              <div className="text-center">
+                <Loader2 className="h-16 w-16 animate-spin text-slate-900 mx-auto mb-6" />
+                <p className="text-2xl text-slate-600 font-['Arial']">Loading...</p>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Persistent confetti canvas - always mounted, controlled by state */}
+        <AnimatePresence>
+          {showConfetti && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 pointer-events-none z-[90]"
+            >
+              {/* Confetti visual effect */}
+              <div className="absolute inset-0">
+                {Array.from({ length: 50 }).map((_, i) => (
+                  <motion.div
+                    key={`confetti-${i}`}
+                    className="absolute w-2 h-2 rounded-full"
+                    style={{
+                      left: `${Math.random() * 100}%`,
+                      backgroundColor: ['#ff8a00', '#ff4d8d', '#8b5cf6'][Math.floor(Math.random() * 3)]
+                    }}
+                    initial={{ y: -20, opacity: 1 }}
+                    animate={{
+                      y: window.innerHeight + 20,
+                      x: (Math.random() - 0.5) * 200,
+                      rotate: Math.random() * 720,
+                      opacity: 0
+                    }}
+                    transition={{
+                      duration: 2 + Math.random() * 2,
+                      ease: 'linear'
+                    }}
+                  />
+                ))}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         {/* Real-time Flash Indicator */}
-        {realtimeFlash && (
-          <motion.div
-            initial={{ y: -100, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            exit={{ y: -100, opacity: 0 }}
-            className="absolute top-0 left-0 right-0 bg-green-500 text-white text-center py-3 z-50"
-          >
-            <p className="text-2xl font-bold">⚡ REAL-TIME UPDATE RECEIVED!</p>
-          </motion.div>
-        )}
+        <AnimatePresence>
+          {realtimeFlash && (
+            <motion.div
+              initial={{ y: -100, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: -100, opacity: 0 }}
+              className="absolute top-0 left-0 right-0 bg-green-500 text-white text-center py-3 z-50"
+            >
+              <p className="text-2xl font-bold">⚡ REAL-TIME UPDATE RECEIVED!</p>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* Header Section - DRAWING LIVE badge, NO QR CODE */}
         <div className="h-[120px] bg-white border-b border-gray-200 shadow-sm flex items-center justify-between px-8">
@@ -1401,20 +1447,8 @@ function LiveViewPage() {
     )
   }
 
-  // Show loading state
-  if (loading || assignmentsLoading || participantsLoading) {
-    return (
-      <div className="min-h-screen bg-[#f8f7f4] flex items-center justify-center">
-        <div className="text-center">
-          <Loader2 className="h-16 w-16 animate-spin text-slate-900 mx-auto mb-6" />
-          <p className="text-2xl text-slate-600 font-['Arial']">Loading live event...</p>
-        </div>
-      </div>
-    )
-  }
-
-  // Show error state
-  if (error || !event) {
+  // Early return for error state only
+  if (error || (!loading && !event)) {
     return (
       <div className="min-h-screen bg-[#f8f7f4] flex items-center justify-center p-4">
         <div className="text-center">
@@ -1424,6 +1458,9 @@ function LiveViewPage() {
       </div>
     )
   }
+
+  // Show loading overlay while keeping the main view mounted
+  const isLoading = loading || assignmentsLoading || participantsLoading || !event
 
   // Create participant status array combining participants and assignments
   const participantStatuses: ParticipantStatus[] = participants.map(participant => {
@@ -1458,12 +1495,12 @@ function LiveViewPage() {
     `${activity.participantName} ${activity.action}`
   )
 
-  // Conditional rendering based on event status
-  if (event.status === 'drawing') {
+  // MAIN RENDER - Keep container always mounted, change content internally
+  if (event?.status === 'drawing') {
     return <DrawingStateView />
   }
 
-  // ACTIVE state rendering (unchanged)
+  // ACTIVE state rendering
   return (
     <div className="min-h-screen bg-[#f8f7f4] overflow-hidden w-screen h-screen relative" style={{ minWidth: '1920px', minHeight: '1080px' }}>
       {/* Real-time Flash Indicator */}
