@@ -378,96 +378,7 @@ function LiveViewPage() {
     console.log('[PARTICIPANTS] Updated participants:', participants.map(p => `${p.participant_name} (${p.payment_status || 'unknown'})`).join(', '))
   }, [participants, previousParticipants])
 
-  useEffect(() => {
-    if (!eventId) return
-
-    console.log('[DATA] Fetching event data for:', eventId)
-    loadEventData()
-
-    // Set up comprehensive real-time subscription for all live view changes
-    console.log('[SUBSCRIPTION] Setting up real-time subscription for event:', eventId)
-    const channel = supabase
-      .channel(`event-${eventId}-live-comprehensive`)
-      .on('postgres_changes',
-        { event: '*', schema: 'public', table: 'patron_entries', filter: `event_id=eq.${eventId}` },
-        (payload) => {
-          console.log('[SUBSCRIPTION] Patron entry changed:', payload)
-          console.log('[EVENT] Event type:', payload.eventType)
-          console.log('[TABLE] Table:', payload.table)
-          if (payload.eventType === 'UPDATE') {
-            console.log('[UPDATE] Payment status changed:', {
-              old: payload.old?.payment_status,
-              new: payload.new?.payment_status,
-              participant: payload.new?.participant_name
-            })
-          }
-          console.log('[TRIGGER] Triggering loadEventData() due to patron_entries change')
-          loadEventData()
-          setLastUpdate(new Date())
-
-          // Trigger visual flash indicator
-          setRealtimeFlash(true)
-          setTimeout(() => {
-            setRealtimeFlash(false)
-          }, 1000)
-        }
-      )
-      .on('postgres_changes',
-        { event: '*', schema: 'public', table: 'assignments' },
-        (payload) => {
-          console.log('[SUBSCRIPTION] Assignment changed:', payload)
-          console.log('[EVENT] Event type:', payload.eventType)
-          console.log('[TRIGGER] Triggering loadEventData() due to assignments change')
-          loadEventData()
-          setLastUpdate(new Date())
-
-          // Also refresh assignments hook
-          if (refreshAssignments) {
-            refreshAssignments()
-          }
-
-          // Trigger visual flash indicator
-          setRealtimeFlash(true)
-          setTimeout(() => {
-            setRealtimeFlash(false)
-          }, 1000)
-        }
-      )
-      .on('postgres_changes',
-        { event: '*', schema: 'public', table: 'event_results', filter: `event_id=eq.${eventId}` },
-        (payload) => {
-          console.log('[RESULTS] Results updated via real-time')
-          loadEventData()
-          setLastUpdate(new Date())
-        }
-      )
-      .on('postgres_changes',
-        { event: 'UPDATE', schema: 'public', table: 'events', filter: `id=eq.${eventId}` },
-        (payload) => {
-          console.log('[STATUS] Event status updated:', payload.new?.status)
-          const updatedEvent = payload.new as Event
-          setEvent(prev => prev ? {
-            ...prev,
-            status: updatedEvent.status
-          } : null)
-
-          if (updatedEvent.status === 'completed') {
-            console.log('[COMPLETE] Event completed, reloading data for results')
-            loadEventData()
-          }
-
-          setLastUpdate(new Date())
-        }
-      )
-      .subscribe((status) => {
-        console.log('[SUBSCRIPTION] Comprehensive subscription status:', status)
-      })
-
-    return () => {
-      console.log('[CLEANUP] Cleaning up comprehensive subscription')
-      supabase.removeChannel(channel)
-    }
-  }, [eventId])
+  // NOTE: Subscription effect moved after loadEventData definition to fix dependency issue
 
   // Polling functions for demo/fallback mode
   const startPolling = () => {
@@ -673,6 +584,7 @@ function LiveViewPage() {
   }, [pollingInterval])
 
   const loadEventData = useCallback(async () => {
+    console.log('[loadEventData] Started at:', new Date().toISOString())
     console.log('[DEBUG] loadEventData started for eventId:', eventId)
     try {
       setError(null)
@@ -795,6 +707,105 @@ function LiveViewPage() {
       setLoading(false)
     }
   }, [eventId, supabase])
+
+  // Set up comprehensive real-time subscription AFTER loadEventData is defined
+  useEffect(() => {
+    if (!eventId) return
+
+    console.log('[DATA] Initial mount - fetching event data for:', eventId)
+    console.log('[loadEventData] Called at:', new Date().toISOString(), 'from initial mount')
+    loadEventData()
+
+    // Set up comprehensive real-time subscription for all live view changes
+    console.log('[SUBSCRIPTION] Setting up real-time subscription for event:', eventId)
+    const channel = supabase
+      .channel(`event-${eventId}-live-comprehensive`)
+      .on('postgres_changes',
+        { event: '*', schema: 'public', table: 'patron_entries', filter: `event_id=eq.${eventId}` },
+        (payload) => {
+          console.log('[SUBSCRIPTION] Event received:', payload.eventType, 'from', payload.table)
+          console.log('[EVENT] Event type:', payload.eventType)
+          console.log('[TABLE] Table:', payload.table)
+          if (payload.eventType === 'UPDATE') {
+            console.log('[UPDATE] Payment status changed:', {
+              old: payload.old?.payment_status,
+              new: payload.new?.payment_status,
+              participant: payload.new?.participant_name
+            })
+          }
+          console.log('[TRIGGER] Triggering loadEventData() due to patron_entries change')
+          console.log('[loadEventData] Called at:', new Date().toISOString(), 'from patron_entries subscription')
+          loadEventData()
+          setLastUpdate(new Date())
+
+          // Trigger visual flash indicator
+          setRealtimeFlash(true)
+          setTimeout(() => {
+            setRealtimeFlash(false)
+          }, 1000)
+        }
+      )
+      .on('postgres_changes',
+        { event: '*', schema: 'public', table: 'assignments' },
+        (payload) => {
+          console.log('[SUBSCRIPTION] Event received:', payload.eventType, 'from', payload.table)
+          console.log('[EVENT] Event type:', payload.eventType)
+          console.log('[TRIGGER] Triggering loadEventData() due to assignments change')
+          console.log('[loadEventData] Called at:', new Date().toISOString(), 'from assignments subscription')
+          loadEventData()
+          setLastUpdate(new Date())
+
+          // Also refresh assignments hook
+          if (refreshAssignments) {
+            refreshAssignments()
+          }
+
+          // Trigger visual flash indicator
+          setRealtimeFlash(true)
+          setTimeout(() => {
+            setRealtimeFlash(false)
+          }, 1000)
+        }
+      )
+      .on('postgres_changes',
+        { event: '*', schema: 'public', table: 'event_results', filter: `event_id=eq.${eventId}` },
+        (payload) => {
+          console.log('[SUBSCRIPTION] Event received:', payload.eventType, 'from', payload.table)
+          console.log('[RESULTS] Results updated via real-time')
+          console.log('[loadEventData] Called at:', new Date().toISOString(), 'from event_results subscription')
+          loadEventData()
+          setLastUpdate(new Date())
+        }
+      )
+      .on('postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'events', filter: `id=eq.${eventId}` },
+        (payload) => {
+          console.log('[SUBSCRIPTION] Event received:', payload.eventType, 'from', payload.table)
+          console.log('[STATUS] Event status updated:', payload.new?.status)
+          const updatedEvent = payload.new as Event
+          setEvent(prev => prev ? {
+            ...prev,
+            status: updatedEvent.status
+          } : null)
+
+          if (updatedEvent.status === 'completed') {
+            console.log('[COMPLETE] Event completed, reloading data for results')
+            console.log('[loadEventData] Called at:', new Date().toISOString(), 'from events status=completed')
+            loadEventData()
+          }
+
+          setLastUpdate(new Date())
+        }
+      )
+      .subscribe((status) => {
+        console.log('[SUBSCRIPTION] Comprehensive subscription status:', status)
+      })
+
+    return () => {
+      console.log('[CLEANUP] Cleaning up comprehensive subscription')
+      supabase.removeChannel(channel)
+    }
+  }, [eventId, loadEventData, refreshAssignments, supabase])
 
   function formatDateTime(dateString: string) {
     return new Date(dateString).toLocaleDateString('en-AU', {
