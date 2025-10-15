@@ -164,7 +164,7 @@ function LiveViewPage() {
 
   // Animation State Management - Initialize to prevent hydration mismatch
   const [isClient, setIsClient] = useState(false)
-  const [isReady, setIsReady] = useState(false)
+  const [animationsEnabled, setAnimationsEnabled] = useState(false)
   const [animationState, setAnimationState] = useState<'idle' | 'drawing' | 'spinning' | 'revealing' | 'complete'>('idle')
   const [currentDrawnParticipant, setCurrentDrawnParticipant] = useState<string | null>(null)
   const [previousDrawnParticipant, setPreviousDrawnParticipant] = useState<string | null>(null)
@@ -198,15 +198,26 @@ function LiveViewPage() {
     setIsClient(true)
   }, [])
 
-  // 2-second delay before allowing any animations - bulletproof guard
+  // NUCLEAR APPROACH: 3-second delay before enabling animations - complete silence during page load
   useEffect(() => {
     const timer = setTimeout(() => {
-      console.log('[ANIMATION] Setting isReady to true after 2-second delay')
-      setIsReady(true)
-    }, 2000)
+      // Only enable animations if initial data has been captured
+      if (initialDataLoaded && initialAssignmentIds.current.size >= 0) {
+        console.log('[ANIMATION] NUCLEAR: Enabling animations after 3-second delay and data loaded')
+        setAnimationsEnabled(true)
+      } else {
+        console.log('[ANIMATION] NUCLEAR: Delaying animation enable - initial data not ready')
+        // Check again in 1 second if initial data isn't loaded yet
+        const retryTimer = setTimeout(() => {
+          console.log('[ANIMATION] NUCLEAR: Retry - enabling animations after data delay')
+          setAnimationsEnabled(true)
+        }, 1000)
+        return () => clearTimeout(retryTimer)
+      }
+    }, 3000)
 
     return () => clearTimeout(timer)
-  }, [])
+  }, [initialDataLoaded])
 
   // Use the real-time assignments hook with relations
   console.log('[HOOK] LIVE PAGE - About to call useRealtimeAssignments hook with eventId:', eventId)
@@ -319,6 +330,7 @@ function LiveViewPage() {
 
       console.log('[INITIAL] Initial assignment count:', initialAssignmentCount.current)
       console.log('[INITIAL] Initial assignment IDs:', Array.from(initialAssignmentIds.current))
+      console.log('[INITIAL] Setting initialDataLoaded to true - animations may be enabled soon')
       setInitialDataLoaded(true)
     }
   }, [assignmentsLoading, participantsLoading, loading, assignments, initialDataLoaded])
@@ -869,26 +881,27 @@ function LiveViewPage() {
   const startDrawAnimation = useCallback((newAssignment: any) => {
     if (!isClient) return
 
-    // ROBUST GUARDS - same as main trigger
-    if (!isReady) {
-      console.log('[ANIMATION] startDrawAnimation blocked: Component not ready')
+    // NUCLEAR GUARD - stop everything if animations disabled
+    if (!animationsEnabled) {
+      console.log('[ANIMATION] NUCLEAR: startDrawAnimation blocked - animations disabled')
       return
     }
 
+    // Additional safety guards
     if (assignments.length <= initialAssignmentCount.current) {
-      console.log('[ANIMATION] startDrawAnimation blocked: No new assignments')
+      console.log('[ANIMATION] NUCLEAR: startDrawAnimation blocked: No new assignments')
       return
     }
 
     // Guard: Check if this assignment was present on initial page load
     if (initialAssignmentIds.current.has(newAssignment.id)) {
-      console.log('[ANIMATION] startDrawAnimation blocked: Assignment from initial load')
+      console.log('[ANIMATION] NUCLEAR: startDrawAnimation blocked: Assignment from initial load')
       return
     }
 
     // Guard: Check if this assignment has already been animated
     if (animatedAssignmentIds.current.has(newAssignment.id)) {
-      console.log('[ANIMATION] startDrawAnimation blocked: Already animated')
+      console.log('[ANIMATION] NUCLEAR: startDrawAnimation blocked: Already animated')
       return
     }
 
@@ -912,7 +925,7 @@ function LiveViewPage() {
     setTimeout(() => {
       stopSpinningAndReveal()
     }, 3500)
-  }, [isClient, isReady, assignments.length])
+  }, [isClient, animationsEnabled, assignments.length])
 
   const startHorseNumberSpinning = useCallback(() => {
     if (!isClient) return
@@ -1070,10 +1083,10 @@ function LiveViewPage() {
     return sortedAssignments[0]
   }, [assignments])
 
-  // Auto-trigger drawing animation when new assignment arrives - ROBUST GUARDS
+  // Auto-trigger drawing animation when new assignment arrives - NUCLEAR APPROACH
   useEffect(() => {
-    console.log('[ANIMATION] Animation trigger effect called', {
-      isReady,
+    console.log('[ANIMATION] NUCLEAR: Animation trigger effect called', {
+      animationsEnabled,
       assignmentCount: assignments.length,
       initialCount: initialAssignmentCount.current,
       eventStatus: event?.status,
@@ -1081,40 +1094,46 @@ function LiveViewPage() {
       initialDataLoaded
     })
 
-    // FIRST GUARD: Component must be ready (2+ seconds after mount)
-    if (!isReady) {
-      console.log('[ANIMATION] Blocked: Component not ready yet')
+    // NUCLEAR GUARD: Stop HERE if animations are disabled - NOTHING runs
+    if (!animationsEnabled) {
+      console.log('[ANIMATION] NUCLEAR: Animations completely disabled - blocking all logic')
       return
     }
 
-    // SECOND GUARD: Must have more assignments than initial count
+    console.log('[ANIMATION] NUCLEAR: Animations enabled - checking assignment logic')
+
+    // Additional safety guards
+    if (!initialDataLoaded) {
+      console.log('[ANIMATION] NUCLEAR: Initial data not loaded yet')
+      return
+    }
+
+    // Must have more assignments than initial count
     if (assignments.length <= initialAssignmentCount.current) {
-      console.log('[ANIMATION] Blocked: No new assignments since initial load')
+      console.log('[ANIMATION] NUCLEAR: No new assignments since initial load')
       return
     }
-
-    if (!initialDataLoaded) return
 
     const mostRecentAssignment = getMostRecentAssignment()
     if (!mostRecentAssignment) return
 
     if (event?.status !== 'drawing' || animationState !== 'idle') return
 
-    // THIRD GUARD: Check if this assignment was present on initial page load
+    // Check if this assignment was present on initial page load
     if (initialAssignmentIds.current.has(mostRecentAssignment.id)) {
-      console.log('[ANIMATION] Blocked: Assignment was present on initial load')
+      console.log('[ANIMATION] NUCLEAR: Assignment was present on initial load')
       return
     }
 
-    // FOURTH GUARD: Check if this assignment has already been animated
+    // Check if this assignment has already been animated
     if (animatedAssignmentIds.current.has(mostRecentAssignment.id)) {
-      console.log('[ANIMATION] Blocked: Assignment already animated')
+      console.log('[ANIMATION] NUCLEAR: Assignment already animated')
       return
     }
 
-    console.log('[ANIMATION] All guards passed - starting animation for:', mostRecentAssignment.id)
+    console.log('[ANIMATION] NUCLEAR: All checks passed - starting animation for:', mostRecentAssignment.id)
     startDrawAnimation(mostRecentAssignment)
-  }, [assignments, event?.status, animationState, initialDataLoaded, getMostRecentAssignment, startDrawAnimation, isReady])
+  }, [assignments, event?.status, animationState, initialDataLoaded, getMostRecentAssignment, startDrawAnimation, animationsEnabled])
 
 
   // Show loading state
