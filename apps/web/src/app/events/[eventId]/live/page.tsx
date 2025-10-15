@@ -164,6 +164,7 @@ function LiveViewPage() {
 
   // Animation State Management - Initialize to prevent hydration mismatch
   const [isClient, setIsClient] = useState(false)
+  const [isReady, setIsReady] = useState(false)
   const [animationState, setAnimationState] = useState<'idle' | 'drawing' | 'spinning' | 'revealing' | 'complete'>('idle')
   const [currentDrawnParticipant, setCurrentDrawnParticipant] = useState<string | null>(null)
   const [previousDrawnParticipant, setPreviousDrawnParticipant] = useState<string | null>(null)
@@ -186,17 +187,25 @@ function LiveViewPage() {
   // Track initial assignment IDs that exist on page load
   const initialAssignmentIds = useRef<Set<string>>(new Set())
 
+  // Track initial assignment count on mount
+  const initialAssignmentCount = useRef<number>(0)
+
   // Track initial data load completion to distinguish between initial load and new real-time assignments
   const [initialDataLoaded, setInitialDataLoaded] = useState(false)
-  const [isInitialLoad, setIsInitialLoad] = useState(true)
-  const mountTimestamp = useRef<number>(Date.now())
-
-  // Enhanced debugging
-  console.log('[DEBUG] Component render - mountTimestamp:', mountTimestamp.current, 'time now:', Date.now())
 
   // Client-side hydration flag to prevent server/client mismatch
   useEffect(() => {
     setIsClient(true)
+  }, [])
+
+  // 2-second delay before allowing any animations - bulletproof guard
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      console.log('[ANIMATION] Setting isReady to true after 2-second delay')
+      setIsReady(true)
+    }, 2000)
+
+    return () => clearTimeout(timer)
   }, [])
 
   // Use the real-time assignments hook with relations
@@ -293,16 +302,23 @@ function LiveViewPage() {
     connectionType: realtimeConnected ? 'realtime' : pollingActive ? 'polling' : 'disconnected'
   }
 
-  // Track initial data loading completion and capture initial assignment IDs
+  // Track initial data loading completion and capture initial assignment IDs and count
   useEffect(() => {
     // Only run once when data is initially loaded
     if (!initialDataLoaded && !assignmentsLoading && !participantsLoading && !loading) {
+      console.log('[INITIAL] Capturing initial assignments on first data load:', assignments.length)
+
+      // Capture initial assignment count
+      initialAssignmentCount.current = assignments.length
+
       // Capture all initial assignment IDs to prevent animations for existing assignments
       assignments.forEach(assignment => {
         initialAssignmentIds.current.add(assignment.id)
         animatedAssignmentIds.current.add(assignment.id)
       })
 
+      console.log('[INITIAL] Initial assignment count:', initialAssignmentCount.current)
+      console.log('[INITIAL] Initial assignment IDs:', Array.from(initialAssignmentIds.current))
       setInitialDataLoaded(true)
     }
   }, [assignmentsLoading, participantsLoading, loading, assignments, initialDataLoaded])
@@ -853,13 +869,26 @@ function LiveViewPage() {
   const startDrawAnimation = useCallback((newAssignment: any) => {
     if (!isClient) return
 
+    // ROBUST GUARDS - same as main trigger
+    if (!isReady) {
+      console.log('[ANIMATION] startDrawAnimation blocked: Component not ready')
+      return
+    }
+
+    if (assignments.length <= initialAssignmentCount.current) {
+      console.log('[ANIMATION] startDrawAnimation blocked: No new assignments')
+      return
+    }
+
     // Guard: Check if this assignment was present on initial page load
     if (initialAssignmentIds.current.has(newAssignment.id)) {
+      console.log('[ANIMATION] startDrawAnimation blocked: Assignment from initial load')
       return
     }
 
     // Guard: Check if this assignment has already been animated
     if (animatedAssignmentIds.current.has(newAssignment.id)) {
+      console.log('[ANIMATION] startDrawAnimation blocked: Already animated')
       return
     }
 
@@ -883,7 +912,7 @@ function LiveViewPage() {
     setTimeout(() => {
       stopSpinningAndReveal()
     }, 3500)
-  }, [isClient])
+  }, [isClient, isReady, assignments.length])
 
   const startHorseNumberSpinning = useCallback(() => {
     if (!isClient) return
@@ -1041,8 +1070,29 @@ function LiveViewPage() {
     return sortedAssignments[0]
   }, [assignments])
 
-  // Auto-trigger drawing animation when new assignment arrives
+  // Auto-trigger drawing animation when new assignment arrives - ROBUST GUARDS
   useEffect(() => {
+    console.log('[ANIMATION] Animation trigger effect called', {
+      isReady,
+      assignmentCount: assignments.length,
+      initialCount: initialAssignmentCount.current,
+      eventStatus: event?.status,
+      animationState,
+      initialDataLoaded
+    })
+
+    // FIRST GUARD: Component must be ready (2+ seconds after mount)
+    if (!isReady) {
+      console.log('[ANIMATION] Blocked: Component not ready yet')
+      return
+    }
+
+    // SECOND GUARD: Must have more assignments than initial count
+    if (assignments.length <= initialAssignmentCount.current) {
+      console.log('[ANIMATION] Blocked: No new assignments since initial load')
+      return
+    }
+
     if (!initialDataLoaded) return
 
     const mostRecentAssignment = getMostRecentAssignment()
@@ -1050,14 +1100,21 @@ function LiveViewPage() {
 
     if (event?.status !== 'drawing' || animationState !== 'idle') return
 
-    // Guard: Check if this assignment was present on initial page load
-    if (initialAssignmentIds.current.has(mostRecentAssignment.id)) return
+    // THIRD GUARD: Check if this assignment was present on initial page load
+    if (initialAssignmentIds.current.has(mostRecentAssignment.id)) {
+      console.log('[ANIMATION] Blocked: Assignment was present on initial load')
+      return
+    }
 
-    // Guard: Check if this assignment has already been animated
-    if (animatedAssignmentIds.current.has(mostRecentAssignment.id)) return
+    // FOURTH GUARD: Check if this assignment has already been animated
+    if (animatedAssignmentIds.current.has(mostRecentAssignment.id)) {
+      console.log('[ANIMATION] Blocked: Assignment already animated')
+      return
+    }
 
+    console.log('[ANIMATION] All guards passed - starting animation for:', mostRecentAssignment.id)
     startDrawAnimation(mostRecentAssignment)
-  }, [assignments, event?.status, animationState, initialDataLoaded, getMostRecentAssignment, startDrawAnimation])
+  }, [assignments, event?.status, animationState, initialDataLoaded, getMostRecentAssignment, startDrawAnimation, isReady])
 
 
   // Show loading state
