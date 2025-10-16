@@ -912,10 +912,10 @@ function LiveViewPage() {
         setShowConfetti(true)
 
         // Stop spinning after animation completes
-        setTimeout(() => setIsSpinning(false), 2000)
+        setTimeout(() => setIsSpinning(false), 3000)
 
         // Hide confetti after celebration
-        setTimeout(() => setShowConfetti(false), 5000)
+        setTimeout(() => setShowConfetti(false), 4000)
       }
     }, [recentAssignment, newAssignmentId])
 
@@ -1021,13 +1021,15 @@ function LiveViewPage() {
           }
 
           .spin-animation {
-            animation: spin-number 2s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+            animation: spin-number 3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
             transform-style: preserve-3d;
             perspective: 1000px;
           }
 
           .slide-up-fade {
             animation: slide-up-fade 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);
+            animation-delay: 3.1s;
+            animation-fill-mode: both;
           }
 
           .typewriter-effect {
