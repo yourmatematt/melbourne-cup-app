@@ -898,18 +898,160 @@ function LiveViewPage() {
     return assignments.slice().reverse() // Show in reverse order (most recent first)
   }
 
-  // DrawingStateView component - Exact Figma structure with preserved animation mounting
+  // DrawingStateView component - Exact Figma structure with comprehensive animations
   const DrawingStateView = () => {
     const recentAssignment = getMostRecentAssignment()
+    const [isSpinning, setIsSpinning] = useState(false)
+    const [showConfetti, setShowConfetti] = useState(false)
+    const [drawingTextVisible, setDrawingTextVisible] = useState(true)
+
+    // Trigger spin animation when new assignment comes in
+    useEffect(() => {
+      if (recentAssignment && newAssignmentId === recentAssignment.id) {
+        setIsSpinning(true)
+        setShowConfetti(true)
+
+        // Stop spinning after animation completes
+        setTimeout(() => setIsSpinning(false), 2000)
+
+        // Hide confetti after celebration
+        setTimeout(() => setShowConfetti(false), 5000)
+      }
+    }, [recentAssignment, newAssignmentId])
+
+    // Animate drawing text
+    useEffect(() => {
+      const interval = setInterval(() => {
+        setDrawingTextVisible(prev => !prev)
+      }, 1500)
+      return () => clearInterval(interval)
+    }, [])
 
     return (
       <div className="bg-[#f8f7f4] relative w-full h-screen overflow-hidden" style={{ minWidth: '1920px', minHeight: '1080px' }}>
+        {/* Confetti Animation Overlay */}
+        {showConfetti && (
+          <div className="absolute inset-0 pointer-events-none z-[60]">
+            <div className="confetti-container">
+              {[...Array(50)].map((_, i) => (
+                <div
+                  key={i}
+                  className="confetti"
+                  style={{
+                    left: `${Math.random() * 100}%`,
+                    animationDelay: `${Math.random() * 3}s`,
+                    backgroundColor: ['#ff8a00', '#ff4d8d', '#8b5cf6', '#05df72', '#fbbf24'][Math.floor(Math.random() * 5)]
+                  }}
+                />
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Real-time Flash Indicator - Preserved animation */}
         {realtimeFlash && (
           <div className="absolute top-0 left-0 right-0 bg-green-500 text-white text-center py-3 z-50 animate-pulse">
             <p className="text-2xl font-bold">⚡ REAL-TIME UPDATE RECEIVED!</p>
           </div>
         )}
+
+        <style jsx>{`
+          @keyframes scroll-left {
+            0% {
+              transform: translateX(0);
+            }
+            100% {
+              transform: translateX(-50%);
+            }
+          }
+
+          @keyframes spin-number {
+            0% {
+              transform: rotateX(0deg) scale(1);
+              opacity: 0.5;
+            }
+            50% {
+              transform: rotateX(360deg) scale(1.2);
+              opacity: 1;
+            }
+            100% {
+              transform: rotateX(720deg) scale(1);
+              opacity: 1;
+            }
+          }
+
+          @keyframes slide-up-fade {
+            0% {
+              transform: translateY(20px);
+              opacity: 0;
+            }
+            100% {
+              transform: translateY(0);
+              opacity: 1;
+            }
+          }
+
+          @keyframes typewriter {
+            0% {
+              width: 0;
+              opacity: 0;
+            }
+            10% {
+              opacity: 1;
+            }
+            100% {
+              width: 100%;
+              opacity: 1;
+            }
+          }
+
+          @keyframes confetti-fall {
+            0% {
+              transform: translateY(-100vh) rotate(0deg);
+              opacity: 1;
+            }
+            100% {
+              transform: translateY(100vh) rotate(720deg);
+              opacity: 0;
+            }
+          }
+
+          .scroll-container {
+            animation: scroll-left 20s linear infinite;
+          }
+
+          .spin-animation {
+            animation: spin-number 2s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+            transform-style: preserve-3d;
+            perspective: 1000px;
+          }
+
+          .slide-up-fade {
+            animation: slide-up-fade 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);
+          }
+
+          .typewriter-effect {
+            overflow: hidden;
+            white-space: nowrap;
+            animation: typewriter 2s steps(40, end) infinite alternate;
+          }
+
+          .confetti {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            animation: confetti-fall 3s linear infinite;
+          }
+
+          .pill-hover {
+            transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+          }
+
+          .pill-hover:hover {
+            transform: scale(1.05) translateY(-2px);
+            box-shadow: 0px 15px 25px -5px rgba(0,0,0,0.2);
+          }
+        `}</style>
 
         {/* Header - Exact Figma structure */}
         <div className="absolute bg-white border-b border-[rgba(0,0,0,0.08)] box-border flex h-[120px] items-center justify-between left-0 px-[32px] top-0 w-[1920px]">
@@ -934,8 +1076,11 @@ function LiveViewPage() {
                         "animate-pulse"
                       )}
                     >
-                      <Radio className="size-[24px] text-white" />
-                      <p className="font-bold text-[28px] leading-[42px] text-white">
+                      <Radio className="size-[24px] text-white animate-spin" />
+                      <p className={cn(
+                        "font-bold text-[28px] leading-[42px] text-white transition-opacity duration-500",
+                        drawingTextVisible ? "opacity-100" : "opacity-70"
+                      )}>
                         🎯 DRAWING LIVE
                       </p>
                     </div>
@@ -987,11 +1132,11 @@ function LiveViewPage() {
               </p>
             </div>
 
-            {/* Participant Name - Animated opacity */}
+            {/* Participant Name - Animated slide up fade */}
             <div className="absolute h-[96px] left-[13px] top-[184px] w-[474px]">
               <p className={cn(
                 "font-bold text-[64px] leading-[96px] text-white",
-                "transition-all duration-500",
+                recentAssignment && newAssignmentId === recentAssignment.id ? "slide-up-fade" : "",
                 !recentAssignment && "opacity-50"
               )}>
                 {recentAssignment?.patron_entries?.participant_name?.toUpperCase() || 'NEXT PARTICIPANT'}
@@ -1022,10 +1167,13 @@ function LiveViewPage() {
                   <div className="h-[300px] overflow-hidden relative rounded-[inherit] w-[500px]">
                     <div className="absolute bg-gradient-to-b from-[#ff8a00] h-[292px] left-[4px] rounded-[24px] to-[#8b5cf6] top-[4px] via-50% via-[#ff4d8d] w-[492px] flex items-center justify-center">
                       <div className="bg-white flex flex-col gap-[16px] h-[284px] items-center justify-center rounded-[24px] w-[484px]">
-                        {/* Horse Number with gradient text */}
+                        {/* Horse Number with gradient text and spin animation */}
                         <div className="h-[180px] w-[304px] flex items-center justify-center">
                           <p
-                            className="font-black text-[120px] leading-[180px]"
+                            className={cn(
+                              "font-black text-[120px] leading-[180px]",
+                              isSpinning ? "spin-animation" : ""
+                            )}
                             style={{
                               background: 'linear-gradient(90deg, #ff8a00 0%, #ff4d8d 50%, #8b5cf6 100%)',
                               WebkitBackgroundClip: 'text',
@@ -1060,24 +1208,46 @@ function LiveViewPage() {
                   ALREADY DRAWN:
                 </p>
               </div>
-              <div className="flex gap-[16px] h-[57px] items-center w-full overflow-x-auto">
-                {assignments.slice(-10).reverse().map((assignment, index) => (
-                  <div
-                    key={assignment.id}
-                    className={cn(
-                      "bg-gradient-to-b from-[#ff8a00] h-[57px] rounded-full shadow-[0px_10px_15px_-3px_rgba(0,0,0,0.1),0px_4px_6px_-4px_rgba(0,0,0,0.1)] to-[#8b5cf6] via-50% via-[#ff4d8d] px-[24px] flex items-center gap-[12px] flex-shrink-0",
-                      "transition-all duration-300",
-                      index === 0 && "ring-2 ring-yellow-400 scale-105"
-                    )}
-                  >
-                    <Trophy className="size-[20px] text-white" />
-                    <p className="font-bold text-[22px] leading-[33px] text-white whitespace-nowrap">
-                      {assignment.patron_entries?.participant_name?.split(' ')[0] || 'Unknown'} {assignment.patron_entries?.participant_name?.split(' ')[1]?.[0] || ''}.
-                      {assignment.patron_entries?.participant_name?.split(' ')[1] ? ' ' : ''}
-                      → #{assignment.event_horses?.number || '--'}
-                    </p>
-                  </div>
-                ))}
+              <div className="flex h-[57px] w-full overflow-hidden relative">
+                {/* Scrolling container with duplicated content for seamless loop */}
+                <div className="flex gap-[16px] items-center scroll-container">
+                  {/* First set of pills */}
+                  {assignments.slice(-10).reverse().map((assignment, index) => (
+                    <div
+                      key={`${assignment.id}-1`}
+                      className={cn(
+                        "bg-gradient-to-b from-[#ff8a00] h-[57px] rounded-full shadow-[0px_10px_15px_-3px_rgba(0,0,0,0.1),0px_4px_6px_-4px_rgba(0,0,0,0.1)] to-[#8b5cf6] via-50% via-[#ff4d8d] px-[24px] flex items-center gap-[12px] flex-shrink-0",
+                        "pill-hover",
+                        index === 0 && newAssignmentId === assignment.id && "ring-2 ring-yellow-400 scale-105"
+                      )}
+                    >
+                      <Trophy className="size-[20px] text-white" />
+                      <p className="font-bold text-[22px] leading-[33px] text-white whitespace-nowrap">
+                        {assignment.patron_entries?.participant_name?.split(' ')[0] || 'Unknown'} {assignment.patron_entries?.participant_name?.split(' ')[1]?.[0] || ''}.
+                        {assignment.patron_entries?.participant_name?.split(' ')[1] ? ' ' : ''}
+                        → #{assignment.event_horses?.number || '--'}
+                      </p>
+                    </div>
+                  ))}
+                  {/* Duplicate set for seamless loop */}
+                  {assignments.slice(-10).reverse().map((assignment, index) => (
+                    <div
+                      key={`${assignment.id}-2`}
+                      className={cn(
+                        "bg-gradient-to-b from-[#ff8a00] h-[57px] rounded-full shadow-[0px_10px_15px_-3px_rgba(0,0,0,0.1),0px_4px_6px_-4px_rgba(0,0,0,0.1)] to-[#8b5cf6] via-50% via-[#ff4d8d] px-[24px] flex items-center gap-[12px] flex-shrink-0",
+                        "pill-hover",
+                        index === 0 && newAssignmentId === assignment.id && "ring-2 ring-yellow-400 scale-105"
+                      )}
+                    >
+                      <Trophy className="size-[20px] text-white" />
+                      <p className="font-bold text-[22px] leading-[33px] text-white whitespace-nowrap">
+                        {assignment.patron_entries?.participant_name?.split(' ')[0] || 'Unknown'} {assignment.patron_entries?.participant_name?.split(' ')[1]?.[0] || ''}.
+                        {assignment.patron_entries?.participant_name?.split(' ')[1] ? ' ' : ''}
+                        → #{assignment.event_horses?.number || '--'}
+                      </p>
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
           </div>
