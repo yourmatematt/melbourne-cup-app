@@ -898,189 +898,186 @@ function LiveViewPage() {
     return assignments.slice().reverse() // Show in reverse order (most recent first)
   }
 
-  // DrawingStateView component - Figma structure with comprehensive animations
+  // DrawingStateView component - Exact Figma structure with preserved animation mounting
   const DrawingStateView = () => {
     const recentAssignment = getMostRecentAssignment()
 
     return (
-      <div className="min-h-screen bg-[#f8f7f4] overflow-hidden w-screen h-screen relative" style={{ minWidth: '1920px', minHeight: '1080px' }}>
-        {/* Real-time Flash Indicator */}
+      <div className="bg-[#f8f7f4] relative w-full h-screen overflow-hidden" style={{ minWidth: '1920px', minHeight: '1080px' }}>
+        {/* Real-time Flash Indicator - Preserved animation */}
         {realtimeFlash && (
           <div className="absolute top-0 left-0 right-0 bg-green-500 text-white text-center py-3 z-50 animate-pulse">
             <p className="text-2xl font-bold">⚡ REAL-TIME UPDATE RECEIVED!</p>
           </div>
         )}
 
-        <div className="flex flex-col min-h-screen">
-          {/* Header */}
-          <div className="h-[120px] bg-white border-b border-[rgba(0,0,0,0.08)] flex items-center justify-between px-8">
-            <div className="flex items-center gap-6">
-              <div
-                className="w-20 h-20 rounded-full flex items-center justify-center"
-                style={{
-                  background: 'linear-gradient(180deg, #ff8a00 0%, #ff4d8d 50%, #8b5cf6 100%)'
-                }}
-              >
-                <p className="font-['Arial'] font-bold text-[24px] leading-[32px] text-white">
+        {/* Header - Exact Figma structure */}
+        <div className="absolute bg-white border-b border-[rgba(0,0,0,0.08)] box-border flex h-[120px] items-center justify-between left-0 px-[32px] top-0 w-[1920px]">
+          <div className="h-[92px] relative w-[922px]">
+            <div className="flex gap-[24px] h-[92px] items-center relative w-[922px]">
+              <div className="bg-gradient-to-b from-[#ff8a00] relative rounded-full size-[80px] to-[#8b5cf6] via-50% via-[#ff4d8d] flex items-center justify-center">
+                <p className="font-bold text-[24px] leading-[32px] text-white">
                   {event.tenant?.name?.charAt(0) || 'V'}
                 </p>
               </div>
-              <div className="flex flex-col gap-1">
-                <div className="flex items-center gap-4">
-                  <h1 className="font-['Arial'] font-bold text-[36px] leading-[54px] text-slate-900">
-                    {event.name}
-                  </h1>
-                  <div
-                    className="h-[58px] px-6 rounded-full flex items-center gap-2 shadow-[0px_10px_15px_-3px_rgba(0,0,0,0.1),0px_4px_6px_-4px_rgba(0,0,0,0.1)] animate-pulse"
-                    style={{
-                      background: 'linear-gradient(90deg, #fb2c36 0%, #ff4d8d 100%)'
-                    }}
-                  >
-                    <Radio className="h-6 w-6 text-white" />
-                    <span className="font-['Arial'] font-bold text-[28px] leading-[42px] text-white">
-                      🎯 DRAWING LIVE
-                    </span>
+              <div className="flex-1 h-[92px]">
+                <div className="flex flex-col gap-[4px] h-[92px] items-start w-full">
+                  <div className="flex gap-[16px] h-[58px] items-center relative w-full">
+                    <div className="h-[54px]">
+                      <p className="font-bold text-[36px] leading-[54px] text-slate-900">
+                        {event.name}
+                      </p>
+                    </div>
+                    <div
+                      className={cn(
+                        "bg-gradient-to-r from-[#fb2c36] h-[58px] rounded-full shadow-[0px_10px_15px_-3px_rgba(0,0,0,0.1),0px_4px_6px_-4px_rgba(0,0,0,0.1)] to-[#ff4d8d] px-[24px] flex items-center gap-[8px]",
+                        "animate-pulse"
+                      )}
+                    >
+                      <Radio className="size-[24px] text-white" />
+                      <p className="font-bold text-[28px] leading-[42px] text-white">
+                        🎯 DRAWING LIVE
+                      </p>
+                    </div>
+                  </div>
+                  <div className="h-[30px] w-full">
+                    <p className="text-[20px] leading-[30px] text-slate-600">
+                      {event.tenant?.name || 'Live Event'}
+                    </p>
                   </div>
                 </div>
-                <p className="font-['Arial'] text-[20px] leading-[30px] text-slate-600">
-                  {event.tenant?.name || 'Live Event'}
-                </p>
               </div>
-            </div>
-            <div
-              className="h-[97px] w-[182px] rounded-2xl shadow-[0px_20px_25px_-5px_rgba(0,0,0,0.1),0px_8px_10px_-6px_rgba(0,0,0,0.1)] flex flex-col items-center justify-center pb-2"
-              style={{
-                background: 'linear-gradient(180deg, #ff8a00 0%, #ff4d8d 50%, #8b5cf6 100%)'
-              }}
-            >
-              <p className="font-['Arial'] text-[16px] leading-[24px] text-white text-opacity-80 mb-[-8px]">
-                PRIZE POOL
-              </p>
-              <p className="font-['Arial'] font-bold text-[40px] leading-[60px] text-white mb-[-8px]">
-                {entryFee === 0 ? 'FREE' : formatCurrency(prizePool)}
-              </p>
             </div>
           </div>
+          <div className="bg-gradient-to-b from-[#ff8a00] h-[97px] rounded-[16px] shadow-[0px_20px_25px_-5px_rgba(0,0,0,0.1),0px_8px_10px_-6px_rgba(0,0,0,0.1)] to-[#8b5cf6] via-50% via-[#ff4d8d] w-[182px] flex flex-col items-center justify-center pb-[8px]">
+            <p className="text-[16px] leading-[24px] text-[rgba(255,255,255,0.8)] mb-[-8px]">
+              PRIZE POOL
+            </p>
+            <p className="font-bold text-[40px] leading-[60px] text-white mb-[-8px]">
+              {entryFee === 0 ? 'FREE' : formatCurrency(prizePool)}
+            </p>
+          </div>
+        </div>
 
-          {/* Main Content Area */}
-          <div className="flex-1 flex" style={{
-            background: 'linear-gradient(180deg, #1f2937 0%, #111827 50%, #0f172a 100%)'
-          }}>
-            {/* Backdrop for sparkles */}
-            <div className="absolute inset-0 z-0" style={{
-              background: 'radial-gradient(ellipse at center, rgba(168,85,247,0.15) 0%, rgba(84,43,124,0.1) 35%, transparent 70%)'
-            }} />
+        {/* Main Content Area - Dark gradient background */}
+        <div className="absolute bg-gradient-to-b from-[#1f2937] h-[780px] left-0 overflow-hidden to-[#0f172a] top-[120px] via-50% via-[#111827] w-[1920px]">
+          {/* Radial gradient overlay */}
+          <div
+            className="absolute h-[780px] left-0 opacity-30 top-0 w-[1920px]"
+            style={{
+              background: 'radial-gradient(ellipse at center, rgba(168,85,247,0.3) 0%, rgba(84,43,124,0.15) 35%, transparent 70%)'
+            }}
+          />
 
-            {/* Center Panel - Exact Figma Layout */}
-            <div className="absolute h-[752px] w-[556px] left-[682px] top-[14px]">
-              {/* Participant Avatar - 160px circle */}
-              <div
-                className={cn(
-                  "absolute w-[160px] h-[160px] rounded-full left-[170px] top-0 flex items-center justify-center shadow-[0px_25px_50px_-12px_rgba(0,0,0,0.25)] transition-all duration-500",
-                  recentAssignment ? "scale-110 shadow-2xl" : "scale-100"
-                )}
-                style={{
-                  background: 'linear-gradient(180deg, #ff8a00 0%, #ff4d8d 50%, #8b5cf6 100%)'
-                }}
-              >
-                <p className="font-['Arial'] font-bold text-[64px] leading-[96px] text-white">
-                  {recentAssignment?.patron_entries?.participant_name ?
-                    recentAssignment.patron_entries.participant_name.split(' ').map(n => n[0]).join('').toUpperCase()
-                    : 'MC'
-                  }
-                </p>
-              </div>
+          {/* Center Panel - Exact Figma positioning */}
+          <div className="absolute h-[752px] left-[682px] top-[14px] w-[556px]">
+            {/* Participant Avatar - Animated scale on new assignment */}
+            <div
+              className={cn(
+                "absolute bg-gradient-to-b from-[#ff8a00] rounded-full shadow-[0px_25px_50px_-12px_rgba(0,0,0,0.25)] size-[160px] to-[#8b5cf6] via-50% via-[#ff4d8d] left-[170px] top-0 flex items-center justify-center",
+                "transition-all duration-500",
+                recentAssignment ? "scale-110 shadow-2xl" : "scale-100"
+              )}
+            >
+              <p className="font-bold text-[64px] leading-[96px] text-white">
+                {recentAssignment?.patron_entries?.participant_name ?
+                  recentAssignment.patron_entries.participant_name.split(' ').map(n => n[0]).join('').toUpperCase()
+                  : 'MC'
+                }
+              </p>
+            </div>
 
-              {/* Participant Name */}
-              <div className="absolute h-[96px] w-[474px] left-[13px] top-[184px]">
-                <p className={cn(
-                  "font-['Arial'] font-bold text-[64px] leading-[96px] text-white transition-all duration-500",
-                  !recentAssignment && "opacity-50"
-                )}>
-                  {recentAssignment?.patron_entries?.participant_name?.toUpperCase() || 'NEXT PARTICIPANT'}
-                </p>
-              </div>
-
-              {/* Status - ✓ DRAWN! */}
-              <div className="absolute h-[72px] w-[250px] left-[125px] top-[320px]">
-                <p className={cn(
-                  "font-['Arial'] font-bold text-[48px] leading-[72px] transition-all duration-300",
-                  recentAssignment ? "text-[#05df72] scale-110" : "text-gray-400 opacity-50"
-                )}>
-                  {recentAssignment ? '✓ DRAWN!' : 'WAITING...'}
-                </p>
-              </div>
-
-              {/* Horse Card with Slide-in Animation */}
-              <div className={cn(
-                "absolute h-[300px] w-[500px] left-[-1px] top-[432px] transition-all duration-700 transform",
-                recentAssignment
-                  ? "translate-y-0 opacity-100 scale-100"
-                  : "translate-y-8 opacity-0 scale-95"
+            {/* Participant Name - Animated opacity */}
+            <div className="absolute h-[96px] left-[13px] top-[184px] w-[474px]">
+              <p className={cn(
+                "font-bold text-[64px] leading-[96px] text-white",
+                "transition-all duration-500",
+                !recentAssignment && "opacity-50"
               )}>
-                {recentAssignment && (
-                  <div className="bg-white border-4 border-[rgba(0,0,0,0.08)] rounded-[24px] h-[300px] w-[500px]">
-                    <div
-                      className="h-[292px] w-[492px] m-1 rounded-[24px] flex flex-col items-center justify-center gap-4"
-                      style={{
-                        background: 'linear-gradient(180deg, #ff8a00 0%, #ff4d8d 50%, #8b5cf6 100%)'
-                      }}
-                    >
-                      <div className="bg-white h-[284px] w-full rounded-[24px] flex flex-col items-center justify-center gap-4">
-                        {/* Horse Number with Gradient Text */}
-                        <div
-                          className="font-['Arial'] font-black text-[120px] leading-[180px]"
-                          style={{
-                            background: 'linear-gradient(90deg, #ff8a00 0%, #ff4d8d 50%, #8b5cf6 100%)',
-                            WebkitBackgroundClip: 'text',
-                            WebkitTextFillColor: 'transparent',
-                            backgroundClip: 'text'
-                          }}
-                        >
-                          #{recentAssignment.event_horses?.number || '--'}
-                        </div>
+                {recentAssignment?.patron_entries?.participant_name?.toUpperCase() || 'NEXT PARTICIPANT'}
+              </p>
+            </div>
 
+            {/* Status - ✓ DRAWN! with color transition */}
+            <div className="absolute h-[72px] left-[125px] top-[320px] w-[250px]">
+              <p className={cn(
+                "font-bold text-[48px] leading-[72px]",
+                "transition-all duration-300",
+                recentAssignment ? "text-[#05df72] scale-110" : "text-gray-400 opacity-50"
+              )}>
+                {recentAssignment ? '✓ DRAWN!' : 'WAITING...'}
+              </p>
+            </div>
+
+            {/* Horse Card - Slide-in animation preserved */}
+            <div className={cn(
+              "absolute h-[300px] left-[-1px] top-[432px] w-[500px]",
+              "transition-all duration-700 transform",
+              recentAssignment
+                ? "translate-y-0 opacity-100 scale-100"
+                : "translate-y-8 opacity-0 scale-95"
+            )}>
+              {recentAssignment && (
+                <div className="bg-white border-4 border-[rgba(0,0,0,0.08)] h-[300px] rounded-[24px] w-[500px]">
+                  <div className="h-[300px] overflow-hidden relative rounded-[inherit] w-[500px]">
+                    <div className="absolute bg-gradient-to-b from-[#ff8a00] h-[292px] left-[4px] rounded-[24px] to-[#8b5cf6] top-[4px] via-50% via-[#ff4d8d] w-[492px] flex items-center justify-center">
+                      <div className="bg-white flex flex-col gap-[16px] h-[284px] items-center justify-center rounded-[24px] w-[484px]">
+                        {/* Horse Number with gradient text */}
+                        <div className="h-[180px] w-[304px] flex items-center justify-center">
+                          <p
+                            className="font-black text-[120px] leading-[180px]"
+                            style={{
+                              background: 'linear-gradient(90deg, #ff8a00 0%, #ff4d8d 50%, #8b5cf6 100%)',
+                              WebkitBackgroundClip: 'text',
+                              WebkitTextFillColor: 'transparent',
+                              backgroundClip: 'text'
+                            }}
+                          >
+                            #{recentAssignment.event_horses?.number || '--'}
+                          </p>
+                        </div>
                         {/* Horse Name */}
-                        <p className="font-['Arial'] text-[36px] leading-[54px] text-slate-600 text-center">
-                          {recentAssignment.event_horses?.name || 'HORSE NAME'}
-                        </p>
+                        <div className="h-[54px] w-[304px]">
+                          <p className="text-[36px] leading-[54px] text-slate-600 text-center">
+                            {recentAssignment.event_horses?.name?.toUpperCase() || 'HORSE NAME'}
+                          </p>
+                        </div>
                       </div>
                     </div>
                   </div>
-                )}
-              </div>
-            </div>
-
-          </div>
-
-          {/* Footer - Already Drawn Section */}
-          <div className="h-[180px] bg-gray-800 px-8 flex items-center justify-between">
-            <div className="w-full">
-              <div className="flex flex-col gap-4 h-[103px] overflow-hidden">
-                <h3 className="font-['Arial'] text-[20px] leading-[30px] text-white text-opacity-70">
-                  ALREADY DRAWN:
-                </h3>
-                <div className="flex gap-4 h-[57px] items-center overflow-x-auto">
-                  {assignments.slice(-10).reverse().map((assignment, index) => (
-                    <div
-                      key={assignment.id}
-                      className={cn(
-                        "h-[57px] px-6 rounded-full flex items-center gap-3 shadow-[0px_10px_15px_-3px_rgba(0,0,0,0.1),0px_4px_6px_-4px_rgba(0,0,0,0.1)] flex-shrink-0 transition-all duration-300",
-                        index === 0 && "ring-2 ring-yellow-400 scale-105"
-                      )}
-                      style={{
-                        background: 'linear-gradient(180deg, #ff8a00 0%, #ff4d8d 50%, #8b5cf6 100%)'
-                      }}
-                    >
-                      <Trophy className="w-5 h-5 text-white" />
-                      <p className="font-['Arial'] font-bold text-[22px] leading-[33px] text-white whitespace-nowrap">
-                        {assignment.patron_entries?.participant_name?.split(' ')[0] || 'Unknown'} {assignment.patron_entries?.participant_name?.split(' ')[1]?.[0] || ''}.
-                        {assignment.patron_entries?.participant_name?.split(' ')[1] ? ' ' : ''}
-                        → #{assignment.event_horses?.number || '--'}
-                      </p>
-                    </div>
-                  ))}
                 </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Footer - Already Drawn Section */}
+        <div className="absolute bg-gray-800 flex h-[180px] items-center justify-between left-0 px-[32px] top-[900px] w-[1920px]">
+          <div className="h-[103px] w-[1888px]">
+            <div className="flex flex-col gap-[16px] h-[103px] items-start overflow-hidden w-[1888px]">
+              <div className="h-[30px] w-full">
+                <p className="text-[20px] leading-[30px] text-[rgba(255,255,255,0.7)]">
+                  ALREADY DRAWN:
+                </p>
+              </div>
+              <div className="flex gap-[16px] h-[57px] items-center w-full overflow-x-auto">
+                {assignments.slice(-10).reverse().map((assignment, index) => (
+                  <div
+                    key={assignment.id}
+                    className={cn(
+                      "bg-gradient-to-b from-[#ff8a00] h-[57px] rounded-full shadow-[0px_10px_15px_-3px_rgba(0,0,0,0.1),0px_4px_6px_-4px_rgba(0,0,0,0.1)] to-[#8b5cf6] via-50% via-[#ff4d8d] px-[24px] flex items-center gap-[12px] flex-shrink-0",
+                      "transition-all duration-300",
+                      index === 0 && "ring-2 ring-yellow-400 scale-105"
+                    )}
+                  >
+                    <Trophy className="size-[20px] text-white" />
+                    <p className="font-bold text-[22px] leading-[33px] text-white whitespace-nowrap">
+                      {assignment.patron_entries?.participant_name?.split(' ')[0] || 'Unknown'} {assignment.patron_entries?.participant_name?.split(' ')[1]?.[0] || ''}.
+                      {assignment.patron_entries?.participant_name?.split(' ')[1] ? ' ' : ''}
+                      → #{assignment.event_horses?.number || '--'}
+                    </p>
+                  </div>
+                ))}
               </div>
             </div>
           </div>
