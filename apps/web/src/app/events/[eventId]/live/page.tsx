@@ -1258,9 +1258,279 @@ function LiveViewPage() {
     )
   }
 
+  // CompletedStateView component - Final results display after race
+  const CompletedStateView = () => {
+    // Get results sorted by place
+    const sortedResults = results.sort((a, b) => a.place - b.place)
+
+    // Get winning horses and participants
+    const firstPlace = sortedResults.find(r => r.place === 1)
+    const secondPlace = sortedResults.find(r => r.place === 2)
+    const thirdPlace = sortedResults.find(r => r.place === 3)
+
+    // Create a map of all assignments for easy lookup
+    const assignmentMap = new Map()
+    assignments.forEach(assignment => {
+      if (assignment.event_horses) {
+        assignmentMap.set(assignment.event_horses.number, assignment)
+      }
+    })
+
+    return (
+      <div className="min-h-screen bg-[#f8f7f4] overflow-hidden w-screen h-screen relative" style={{ minWidth: '1920px', minHeight: '1080px' }}>
+        {/* Header */}
+        <div className="h-[120px] bg-white border-b border-[rgba(0,0,0,0.08)] flex items-center justify-between px-8">
+          <div className="flex items-center space-x-6">
+            {/* Venue Avatar */}
+            <div
+              className="w-20 h-20 rounded-full flex items-center justify-center"
+              style={{
+                background: 'linear-gradient(180deg, #ff8a00 0%, #ff4d8d 50%, #8b5cf6 100%)'
+              }}
+            >
+              <p className="font-bold text-[24px] leading-[32px] text-white">
+                {event.tenant?.name?.charAt(0) || 'V'}
+              </p>
+            </div>
+            {/* Event Details */}
+            <div>
+              <h1 className="text-[36px] font-bold text-slate-900 leading-[54px]">
+                {event.name}
+              </h1>
+              <p className="text-[20px] text-slate-600">
+                {event.tenant?.name || 'Live Event'}
+              </p>
+            </div>
+          </div>
+          {/* Draw Complete Badge */}
+          <div className="bg-[#05df72] rounded-full px-6 py-3 flex items-center gap-2">
+            <Check className="w-6 h-6 text-white" />
+            <span className="text-white font-bold text-[24px]">DRAW COMPLETE</span>
+          </div>
+        </div>
+
+        {/* Main Content - Winners or Title */}
+        {results.length > 0 ? (
+          // Winners Section when results are available
+          <div className="h-[240px] bg-gradient-to-r from-[#fef3c7] via-[#fde68a] to-[#fbbf24] flex items-center justify-center">
+            <div className="max-w-[1600px] w-full px-10">
+              <h2 className="text-[48px] font-bold text-center mb-6 text-slate-900">
+                🏆 WINNERS 🏆
+              </h2>
+              <div className="grid grid-cols-3 gap-8">
+                {/* First Place */}
+                {firstPlace && (
+                  <div className="bg-white rounded-xl p-6 shadow-xl border-4 border-yellow-400">
+                    <div className="text-center">
+                      <div className="text-[64px] mb-2">🥇</div>
+                      <p className="text-[24px] font-bold text-slate-900 mb-2">1ST PLACE</p>
+                      <p className="text-[32px] font-bold text-[#ff8a00] mb-1">
+                        {firstPlace.patron_entries?.participant_name || 'Unknown'}
+                      </p>
+                      <p className="text-[20px] text-slate-600 mb-3">
+                        Horse #{firstPlace.event_horses?.number} - {firstPlace.event_horses?.name}
+                      </p>
+                      <div className="bg-gradient-to-r from-[#ff8a00] to-[#ff4d8d] rounded-lg py-2 px-4">
+                        <p className="text-white font-bold text-[28px]">
+                          {formatCurrency(firstPlace.prize_amount || firstPrize)}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Second Place */}
+                {secondPlace && (
+                  <div className="bg-white rounded-xl p-6 shadow-xl border-4 border-gray-300">
+                    <div className="text-center">
+                      <div className="text-[64px] mb-2">🥈</div>
+                      <p className="text-[24px] font-bold text-slate-900 mb-2">2ND PLACE</p>
+                      <p className="text-[32px] font-bold text-[#8b5cf6] mb-1">
+                        {secondPlace.patron_entries?.participant_name || 'Unknown'}
+                      </p>
+                      <p className="text-[20px] text-slate-600 mb-3">
+                        Horse #{secondPlace.event_horses?.number} - {secondPlace.event_horses?.name}
+                      </p>
+                      <div className="bg-gradient-to-r from-[#8b5cf6] to-[#ff4d8d] rounded-lg py-2 px-4">
+                        <p className="text-white font-bold text-[28px]">
+                          {formatCurrency(secondPlace.prize_amount || secondPrize)}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Third Place */}
+                {thirdPlace && (
+                  <div className="bg-white rounded-xl p-6 shadow-xl border-4 border-orange-400">
+                    <div className="text-center">
+                      <div className="text-[64px] mb-2">🥉</div>
+                      <p className="text-[24px] font-bold text-slate-900 mb-2">3RD PLACE</p>
+                      <p className="text-[32px] font-bold text-[#05df72] mb-1">
+                        {thirdPlace.patron_entries?.participant_name || 'Unknown'}
+                      </p>
+                      <p className="text-[20px] text-slate-600 mb-3">
+                        Horse #{thirdPlace.event_horses?.number} - {thirdPlace.event_horses?.name}
+                      </p>
+                      <div className="bg-gradient-to-r from-[#05df72] to-[#10b981] rounded-lg py-2 px-4">
+                        <p className="text-white font-bold text-[28px]">
+                          {formatCurrency(thirdPlace.prize_amount || thirdPrize)}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        ) : (
+          // Title Section when no results yet
+          <div className="h-[180px] flex items-center justify-center bg-white">
+            <div className="flex items-center gap-8">
+              <Trophy className="w-[80px] h-[80px] text-[#8b5cf6]" />
+              <h2 className="text-[64px] font-bold bg-gradient-to-r from-[#ff8a00] via-[#ff4d8d] to-[#8b5cf6] bg-clip-text text-transparent">
+                DRAW COMPLETE!
+              </h2>
+              <Trophy className="w-[80px] h-[80px] text-[#8b5cf6]" />
+            </div>
+            <div className="absolute right-8 text-[24px] text-slate-600">
+              Waiting for race results...
+            </div>
+          </div>
+        )}
+
+        {/* Horse Grid */}
+        <div className={cn(
+          "px-10 py-8 overflow-y-auto",
+          results.length > 0 ? "h-[560px]" : "h-[640px]"
+        )}>
+          <div className="grid grid-cols-6 gap-5">
+            {Array.from({ length: 24 }, (_, index) => {
+              const horseNumber = index + 1
+              const horse = horses.find(h => h.number === horseNumber)
+              const assignment = assignmentMap.get(horseNumber)
+              const participant = assignment?.patron_entries
+              const isPaid = participant?.payment_status === 'paid'
+
+              // Check if this horse won
+              const isWinner = firstPlace?.event_horses?.number === horseNumber ||
+                             secondPlace?.event_horses?.number === horseNumber ||
+                             thirdPlace?.event_horses?.number === horseNumber
+
+              const getPlaceText = () => {
+                if (firstPlace?.event_horses?.number === horseNumber) return '1st'
+                if (secondPlace?.event_horses?.number === horseNumber) return '2nd'
+                if (thirdPlace?.event_horses?.number === horseNumber) return '3rd'
+                return null
+              }
+
+              const placeText = getPlaceText()
+
+              return (
+                <div
+                  key={horseNumber}
+                  className={cn(
+                    "rounded-xl p-4 transition-all duration-300 h-[140px]",
+                    participant
+                      ? isPaid
+                        ? "bg-[#f0fdf4] border-2 border-[#05df72]"
+                        : "bg-[#fef9f3] border-2 border-[#fe9a00]"
+                      : "bg-white border-2 border-[#d1d5dc]",
+                    isWinner && "ring-4 ring-yellow-400 scale-105 shadow-xl"
+                  )}
+                >
+                  <div className="flex flex-col items-center justify-center h-full">
+                    {/* Horse Number */}
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className={cn(
+                        "text-[32px] font-bold",
+                        participant
+                          ? isPaid ? "text-[#05df72]" : "text-[#fe9a00]"
+                          : "text-[#99a1af]"
+                      )}>
+                        #{horseNumber}
+                      </span>
+                      {placeText && (
+                        <Badge className="bg-gradient-to-r from-[#ff8a00] to-[#ff4d8d] text-white font-bold">
+                          {placeText}
+                        </Badge>
+                      )}
+                    </div>
+
+                    {/* Participant Info */}
+                    {participant ? (
+                      <>
+                        <p className={cn(
+                          "text-[18px] font-bold text-center",
+                          isPaid ? "text-[#0d542b]" : "text-[#7b3306]"
+                        )}>
+                          {participant.participant_name}
+                        </p>
+                        <div className={cn(
+                          "mt-2 px-3 py-1 rounded-full flex items-center gap-1",
+                          isPaid ? "bg-[#05df72]" : "bg-[#fe9a00]"
+                        )}>
+                          {isPaid ? (
+                            <Check className="w-4 h-4 text-white" />
+                          ) : (
+                            <Clock className="w-4 h-4 text-white" />
+                          )}
+                          <span className="text-white font-bold text-[14px]">
+                            {isPaid ? 'PAID' : 'PENDING'}
+                          </span>
+                        </div>
+                      </>
+                    ) : (
+                      <p className="text-[18px] text-[#99a1af]">
+                        Not Drawn
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+
+        {/* Footer Stats */}
+        <div className="absolute bottom-0 left-0 right-0 h-[140px] bg-[#1f2937] flex items-center justify-around px-10">
+          <div className="text-center">
+            <p className="text-[#94a3b8] text-[18px] mb-2">Total Participants</p>
+            <p className="text-white text-[48px] font-bold">{participants.length}</p>
+          </div>
+
+          <div className="text-center">
+            <p className="text-[#94a3b8] text-[18px] mb-2">Paid & Confirmed</p>
+            <p className="text-[#05df72] text-[48px] font-bold">
+              {participants.filter(p => p.payment_status === 'paid').length}
+            </p>
+          </div>
+
+          <div className="text-center">
+            <p className="text-[#94a3b8] text-[18px] mb-2">Pending Payment</p>
+            <p className="text-[#fe9a00] text-[48px] font-bold">
+              {participants.filter(p => p.payment_status !== 'paid').length}
+            </p>
+          </div>
+
+          <div className="text-center">
+            <p className="text-[#94a3b8] text-[18px] mb-2">Prize Pool</p>
+            <p className="text-white text-[48px] font-bold">
+              {formatCurrency(prizePool)}
+            </p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   // Conditional rendering based on event status
   if (event.status === 'drawing') {
     return <DrawingStateView />
+  }
+
+  if (event.status === 'completed') {
+    return <CompletedStateView />
   }
 
   return (
