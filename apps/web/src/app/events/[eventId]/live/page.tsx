@@ -174,7 +174,6 @@ function LiveViewPage() {
   }>>([])
   const [previousParticipants, setPreviousParticipants] = useState<ParticipantStatus[]>([])
 
-<<<<<<< HEAD
   // CLEAN ANIMATION STATE MANAGEMENT
   const [isClient, setIsClient] = useState(false)
   const [animationState, setAnimationState] = useState<'idle' | 'drawing' | 'spinning' | 'revealing' | 'complete'>('idle')
@@ -201,10 +200,6 @@ function LiveViewPage() {
   useEffect(() => {
     setIsClient(true)
   }, [])
-=======
-  // Draw state management for smooth transitions
-  const [drawState, setDrawState] = useState<'idle' | 'revealing' | 'revealed'>('idle')
->>>>>>> fc2a5e1
 
   // Use the real-time assignments hook with relations
   console.log('[HOOK] LIVE PAGE - About to call useRealtimeAssignments hook with eventId:', eventId)
@@ -300,7 +295,6 @@ function LiveViewPage() {
     connectionType: realtimeConnected ? 'realtime' : pollingActive ? 'polling' : 'disconnected'
   }
 
-<<<<<<< HEAD
   // CLEAN INITIAL DATA CAPTURE: Capture assignment IDs when data first loads
   useEffect(() => {
     // Only capture once when initial load completes
@@ -317,29 +311,6 @@ function LiveViewPage() {
       console.log('[INIT] Initial data captured with IDs:', Array.from(initialAssignmentIds.current))
     }
   }, [assignmentsLoading, loading, assignments])
-=======
-  // Manage draw state transitions based on assignments
-  useEffect(() => {
-    // Get the most recent assignment inline
-    const sortedAssignments = assignments?.length > 0
-      ? [...assignments].sort((a, b) =>
-          new Date(b.created_at || '').getTime() - new Date(a.created_at || '').getTime()
-        )
-      : []
-    const recentAssignment = sortedAssignments[0] || null
-
-    if (!recentAssignment) {
-      setDrawState('idle')
-    } else {
-      // Trigger revealing state, then move to revealed after a brief delay
-      setDrawState('revealing')
-
-      setTimeout(() => {
-        setDrawState('revealed')
-      }, 800) // Brief transition period
-    }
-  }, [assignments])
->>>>>>> fc2a5e1
 
   // Convert assignments to recent assignments format
   useEffect(() => {
@@ -1547,14 +1518,12 @@ useEffect(() => {
     `${activity.participantName} ${activity.action}`
   )
 
-<<<<<<< HEAD
   // MAIN RENDER - Keep container always mounted, change content internally
   if (event?.status === 'drawing') {
     return <DrawingStateView />
   }
 
   // ACTIVE state rendering
-=======
   // Function to get the most recent assignment for drawing display
   const getMostRecentAssignment = () => {
     if (!assignments || assignments.length === 0) return null
@@ -2113,7 +2082,6 @@ useEffect(() => {
     return <CompletedStateView />
   }
 
->>>>>>> fc2a5e1
   return (
     <div className="min-h-screen bg-[#f8f7f4] overflow-hidden w-screen h-screen relative" style={{ minWidth: '1920px', minHeight: '1080px' }}>
       {/* Inject TV-optimized styles */}
@@ -2374,16 +2342,13 @@ useEffect(() => {
               {entryFee === 0 ? 'FREE EVENT' : formatCurrency(prizePool)}
             </div>
             {entryFee > 0 ? (
-<<<<<<< HEAD
               <div className="text-sm text-white opacity-70 text-center">
                 <div>1st: {formatCurrency(firstPrize)} ({event?.first_place_percentage || 0}%) | 2nd: {formatCurrency(secondPrize)} ({event?.second_place_percentage || 0}%) | 3rd: {formatCurrency(thirdPrize)} ({event?.third_place_percentage || 0}%)</div>
                 <div className="mt-1">{(event?.capacity || 0) - participants.length}/{event?.capacity || 0} spots remaining</div>
-=======
               <div className="text-base text-white font-semibold text-center leading-tight px-4">
                 <div className="bg-black/20 rounded-lg px-3 py-1">
                   1st: {formatCurrency(firstPrize)} ({event.first_place_percentage}%) • 2nd: {formatCurrency(secondPrize)} ({event.second_place_percentage}%) • 3rd: {formatCurrency(thirdPrize)} ({event.third_place_percentage}%)
                 </div>
->>>>>>> fc2a5e1
               </div>
             ) : (
               <p className="text-lg text-white font-semibold bg-black/20 rounded-lg px-4 py-1">Free to enter!</p>
