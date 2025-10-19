@@ -33,6 +33,16 @@ import { useRealtimeParticipants } from '@/hooks/use-realtime-participants'
 import ErrorBoundary from '@/components/error-boundary'
 import { ClientDebugBanner } from '@/components/debug/client-debug-banner'
 
+// TV-optimized text shadows for better readability
+const tvOptimizedStyles = `
+  .text-shadow-tv {
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8), 0 0 8px rgba(0, 0, 0, 0.5);
+  }
+  .text-shadow-strong {
+    text-shadow: 3px 3px 6px rgba(0, 0, 0, 0.9), 0 0 12px rgba(0, 0, 0, 0.6);
+  }
+`
+
 interface Event {
   id: string
   name: string
@@ -793,11 +803,16 @@ function LiveViewPage() {
   }
 
   function formatCurrency(amount: number) {
-    return new Intl.NumberFormat('en-AU', {
+    // Format for TV display with clean, readable currency
+    const formatted = new Intl.NumberFormat('en-AU', {
       style: 'currency',
       currency: 'AUD',
-      minimumFractionDigits: 0
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0
     }).format(amount)
+
+    // Replace "A$" with "$" for cleaner display
+    return formatted.replace('A$', '$')
   }
 
   function getStatusBadge(status: string) {
@@ -929,6 +944,9 @@ function LiveViewPage() {
 
     return (
       <div className="bg-[#f8f7f4] relative w-full h-screen overflow-hidden" style={{ minWidth: '1920px', minHeight: '1080px' }}>
+        {/* Inject TV-optimized styles */}
+        <style jsx>{tvOptimizedStyles}</style>
+
         {/* Confetti Animation Overlay */}
         {showConfetti && (
           <div className="absolute inset-0 pointer-events-none z-[60]">
@@ -1096,11 +1114,11 @@ function LiveViewPage() {
               </div>
             </div>
           </div>
-          <div className="bg-gradient-to-b from-[#ff8a00] h-[97px] rounded-[16px] shadow-[0px_20px_25px_-5px_rgba(0,0,0,0.1),0px_8px_10px_-6px_rgba(0,0,0,0.1)] to-[#8b5cf6] via-50% via-[#ff4d8d] w-[182px] flex flex-col items-center justify-center pb-[8px]">
-            <p className="text-[16px] leading-[24px] text-[rgba(255,255,255,0.8)] mb-[-8px]">
+          <div className="bg-gradient-to-b from-[#ff8a00] h-[120px] rounded-[20px] shadow-[0px_25px_30px_-5px_rgba(0,0,0,0.15),0px_10px_15px_-6px_rgba(0,0,0,0.1)] to-[#8b5cf6] via-50% via-[#ff4d8d] w-[240px] flex flex-col items-center justify-center border-2 border-white/20">
+            <p className="text-[18px] leading-[24px] text-white font-semibold tracking-wide mb-1">
               PRIZE POOL
             </p>
-            <p className="font-bold text-[40px] leading-[60px] text-white mb-[-8px]">
+            <p className="font-black text-[48px] leading-[52px] text-white text-shadow-strong">
               {entryFee === 0 ? 'FREE' : formatCurrency(prizePool)}
             </p>
           </div>
@@ -1211,52 +1229,43 @@ function LiveViewPage() {
                 </p>
               </div>
               <div className="flex h-[57px] w-full overflow-hidden relative">
-                {/* Scrolling container with duplicated content for seamless loop */}
+                {/* Scrolling container with unique participants only */}
                 <div className="flex gap-[16px] items-center scroll-container">
-                  {/* First set of pills - deduplicated by participant */}
+                  {/* Deduplicated pills by patron_entry_id for reliability */}
                   {assignments
-                    .filter((assignment, index, self) =>
-                      self.findIndex(a => a.patron_entries?.participant_name === assignment.patron_entries?.participant_name) === index
-                    )
-                    .slice(-10).reverse().map((assignment, index) => (
-                    <div
-                      key={`${assignment.id}-1`}
-                      className={cn(
-                        "bg-gradient-to-b from-[#ff8a00] h-[57px] rounded-full shadow-[0px_10px_15px_-3px_rgba(0,0,0,0.1),0px_4px_6px_-4px_rgba(0,0,0,0.1)] to-[#8b5cf6] via-50% via-[#ff4d8d] px-[24px] flex items-center gap-[12px] flex-shrink-0",
-                        "pill-hover",
-                        index === 0 && newAssignmentId === assignment.id && "ring-2 ring-yellow-400 scale-105"
-                      )}
-                    >
-                      <Trophy className="size-[20px] text-white" />
-                      <p className="font-bold text-[22px] leading-[33px] text-white whitespace-nowrap">
-                        {assignment.patron_entries?.participant_name?.split(' ')[0] || 'Unknown'} {assignment.patron_entries?.participant_name?.split(' ')[1]?.[0] || ''}.
-                        {assignment.patron_entries?.participant_name?.split(' ')[1] ? ' ' : ''}
-                        → #{assignment.event_horses?.number || '--'}
-                      </p>
-                    </div>
-                  ))}
-                  {/* Duplicate set for seamless loop */}
-                  {assignments
-                    .filter((assignment, index, self) =>
-                      self.findIndex(a => a.patron_entries?.participant_name === assignment.patron_entries?.participant_name) === index
-                    )
-                    .slice(-10).reverse().map((assignment, index) => (
-                    <div
-                      key={`${assignment.id}-2`}
-                      className={cn(
-                        "bg-gradient-to-b from-[#ff8a00] h-[57px] rounded-full shadow-[0px_10px_15px_-3px_rgba(0,0,0,0.1),0px_4px_6px_-4px_rgba(0,0,0,0.1)] to-[#8b5cf6] via-50% via-[#ff4d8d] px-[24px] flex items-center gap-[12px] flex-shrink-0",
-                        "pill-hover",
-                        index === 0 && newAssignmentId === assignment.id && "ring-2 ring-yellow-400 scale-105"
-                      )}
-                    >
-                      <Trophy className="size-[20px] text-white" />
-                      <p className="font-bold text-[22px] leading-[33px] text-white whitespace-nowrap">
-                        {assignment.patron_entries?.participant_name?.split(' ')[0] || 'Unknown'} {assignment.patron_entries?.participant_name?.split(' ')[1]?.[0] || ''}.
-                        {assignment.patron_entries?.participant_name?.split(' ')[1] ? ' ' : ''}
-                        → #{assignment.event_horses?.number || '--'}
-                      </p>
-                    </div>
-                  ))}
+                    .filter((assignment, index, self) => {
+                      // Filter by patron_entry_id to ensure uniqueness (more reliable than name)
+                      const firstOccurrence = self.findIndex(a =>
+                        a.patron_entry_id === assignment.patron_entry_id &&
+                        a.patron_entries?.participant_name === assignment.patron_entries?.participant_name
+                      ) === index
+                      // Also ensure we have participant data
+                      return firstOccurrence && assignment.patron_entries?.participant_name
+                    })
+                    .slice(-10).reverse().map((assignment, index) => {
+                      const participantName = assignment.patron_entries?.participant_name || 'Unknown'
+                      const firstName = participantName.split(' ')[0] || 'Unknown'
+                      const lastInitial = participantName.split(' ')[1]?.[0] || ''
+
+                      return (
+                        <div
+                          key={`participant-${assignment.patron_entry_id}`}
+                          className={cn(
+                            "bg-gradient-to-b from-[#ff8a00] h-[57px] rounded-full shadow-[0px_10px_15px_-3px_rgba(0,0,0,0.1),0px_4px_6px_-4px_rgba(0,0,0,0.1)] to-[#8b5cf6] via-50% via-[#ff4d8d] px-[24px] flex items-center gap-[12px] flex-shrink-0",
+                            "pill-hover",
+                            index === 0 && newAssignmentId === assignment.id && "ring-2 ring-yellow-400 scale-105"
+                          )}
+                        >
+                          <Trophy className="size-[20px] text-white" />
+                          <p className="font-bold text-[22px] leading-[33px] text-white whitespace-nowrap">
+                            {firstName} {lastInitial}{lastInitial ? '.' : ''}
+                            {lastInitial ? ' ' : ''}
+                            → #{assignment.event_horses?.number || '--'}
+                          </p>
+                        </div>
+                      )
+                    })
+                  }
                 </div>
               </div>
             </div>
@@ -1426,9 +1435,9 @@ function LiveViewPage() {
           </div>
 
           <div className="text-center">
-            <p className="text-[#94a3b8] text-[18px] mb-2">Prize Pool</p>
-            <p className="text-white text-[48px] font-bold">
-              {formatCurrency(prizePool)}
+            <p className="text-[#94a3b8] text-[24px] mb-3 font-semibold tracking-wide">PRIZE POOL</p>
+            <p className="text-white text-[64px] font-black text-shadow-strong">
+              {entryFee === 0 ? 'FREE EVENT' : formatCurrency(prizePool)}
             </p>
           </div>
         </div>
@@ -1447,6 +1456,9 @@ function LiveViewPage() {
 
   return (
     <div className="min-h-screen bg-[#f8f7f4] overflow-hidden w-screen h-screen relative" style={{ minWidth: '1920px', minHeight: '1080px' }}>
+      {/* Inject TV-optimized styles */}
+      <style jsx>{tvOptimizedStyles}</style>
+
       {/* Real-time Flash Indicator */}
       {realtimeFlash && (
         <div className="absolute top-0 left-0 right-0 bg-green-500 text-white text-center py-3 z-50 animate-pulse">
@@ -1692,21 +1704,23 @@ function LiveViewPage() {
         {/* Right: Prize Pool Display */}
         <div className="flex items-center justify-center p-8">
           <div
-            className="w-[547px] h-[136px] rounded-xl flex flex-col items-center justify-center"
+            className="w-[580px] h-[160px] rounded-2xl flex flex-col items-center justify-center border-4 border-white/30 shadow-2xl"
             style={{
               background: 'linear-gradient(180deg, #ff8a00 0%, #ff4d8d 50%, #8b5cf6 100%)'
             }}
           >
-            <p className="text-lg text-white opacity-80 mb-2">PRIZE POOL</p>
-            <div className="text-6xl font-bold text-white mb-1">
+            <p className="text-xl text-white font-bold tracking-wider mb-3 drop-shadow-lg">PRIZE POOL</p>
+            <div className="text-7xl font-black text-white mb-2 text-shadow-strong">
               {entryFee === 0 ? 'FREE EVENT' : formatCurrency(prizePool)}
             </div>
             {entryFee > 0 ? (
-              <div className="text-sm text-white opacity-90 text-center font-medium">
-                <div>1st: {formatCurrency(firstPrize)} ({event.first_place_percentage}%) | 2nd: {formatCurrency(secondPrize)} ({event.second_place_percentage}%) | 3rd: {formatCurrency(thirdPrize)} ({event.third_place_percentage}%)</div>
+              <div className="text-base text-white font-semibold text-center leading-tight px-4">
+                <div className="bg-black/20 rounded-lg px-3 py-1">
+                  1st: {formatCurrency(firstPrize)} ({event.first_place_percentage}%) • 2nd: {formatCurrency(secondPrize)} ({event.second_place_percentage}%) • 3rd: {formatCurrency(thirdPrize)} ({event.third_place_percentage}%)
+                </div>
               </div>
             ) : (
-              <p className="text-base text-white opacity-70">Free to enter!</p>
+              <p className="text-lg text-white font-semibold bg-black/20 rounded-lg px-4 py-1">Free to enter!</p>
             )}
           </div>
         </div>
