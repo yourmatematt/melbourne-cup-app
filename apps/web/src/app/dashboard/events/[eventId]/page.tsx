@@ -8,6 +8,7 @@ import { DashboardLayout } from '@/components/layout/dashboard-layout'
 import { StatCard } from '@/components/ui/stat-card'
 import { StatusPill } from '@/components/ui/status-pill'
 import { AddParticipantModal } from '@/components/shared/add-participant-modal'
+import { useRealtimeParticipants } from '@/hooks/use-realtime-participants'
 import { toast } from 'sonner'
 import { QRCodeSVG } from 'qrcode.react'
 import { Button } from '@/components/ui/button'
@@ -426,7 +427,7 @@ function ParticipantRowModal({ participant, onToggleClick }: {
           <h4 className="font-medium text-slate-900">{participant.participant_name}</h4>
           <p className="text-sm text-slate-600">{participant.email}</p>
           <p className="text-xs text-slate-500">
-            {new Date(participant.created_at).toLocaleDateString()} at {new Date(participant.created_at).toLocaleTimeString()}
+            Code: <span className="font-mono font-bold">{participant.join_code}</span> | {new Date(participant.created_at).toLocaleDateString()} at {new Date(participant.created_at).toLocaleTimeString()}
           </p>
         </div>
       </div>
@@ -576,6 +577,25 @@ function EventOverviewContent() {
   const supabase = createClient()
 
   const [event, setEvent] = useState<Event | null>(null)
+  // Use real-time participants hook
+  const {
+    participants: realtimeParticipants,
+    loading: participantsLoading,
+    realtimeState,
+    refresh: refreshParticipants
+  } = useRealtimeParticipants(eventId as string, {
+    onParticipantAdded: (participant) => {
+      console.log('New participant added:', participant.participant_name)
+      // Refresh assignments and stats when new participant is added
+      fetchEventData()
+    },
+    onParticipantUpdated: (participant) => {
+      console.log('Participant updated:', participant.participant_name)
+      // Refresh data when participant is updated
+      fetchEventData()
+    }
+  })
+
   const [participants, setParticipants] = useState<Participant[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -637,6 +657,80 @@ function EventOverviewContent() {
   useEffect(() => {
     fetchEventData()
   }, [eventId])
+
+  // Transform real-time participants data and merge with assignments
+  useEffect(() => {
+    if (!realtimeParticipants.length) {
+      setParticipants([])
+      return
+    }
+
+    const transformParticipantsWithAssignments = async () => {
+      try {
+        // Fetch assignments to get horse numbers for the real-time participants
+        const { data: assignmentsData, error: assignmentsError } = await supabase
+          .from('assignments')
+          .select(`
+            patron_entry_id,
+            event_horses!inner(
+              number,
+              name
+            )
+          `)
+          .in('patron_entry_id', realtimeParticipants.map(p => p.id))
+
+        if (assignmentsError) {
+          console.warn('Could not fetch assignments for real-time participants:', assignmentsError)
+        }
+
+        // Create a map of participant ID to horse assignment
+        const assignmentMap = new Map()
+        if (assignmentsData) {
+          assignmentsData.forEach(assignment => {
+            assignmentMap.set(assignment.patron_entry_id, {
+              horse_number: assignment.event_horses.number,
+              horse_name: assignment.event_horses.name
+            })
+          })
+        }
+
+        // Transform the real-time participants data to match our Participant type
+        const transformedParticipants = realtimeParticipants.map((p: any) => {
+          const assignment = assignmentMap.get(p.id)
+          return {
+            id: p.id,
+            participant_name: p.participant_name,
+            email: p.email || '',
+            phone: p.phone,
+            created_at: p.created_at,
+            horse_number: assignment?.horse_number,
+            horse_name: assignment?.horse_name,
+            payment_status: p.payment_status as 'paid' | 'pending' | 'expired'
+          }
+        })
+
+        setParticipants(transformedParticipants)
+
+        // Calculate stats based on transformed participants
+        const assigned = transformedParticipants.filter(p => p.horse_number).length
+        const waiting = transformedParticipants.filter(p => !p.horse_number).length
+        const availableHorses = 24 - assigned
+        const progressPercentage = Math.round((assigned / 24) * 100)
+
+        setDrawStats({
+          assigned,
+          waiting,
+          availableHorses,
+          progressPercentage
+        })
+
+      } catch (err) {
+        console.error('Error transforming real-time participants data:', err)
+      }
+    }
+
+    transformParticipantsWithAssignments()
+  }, [realtimeParticipants, supabase])
 
   // Handle click outside venue dropdown
   useEffect(() => {
@@ -793,7 +887,8 @@ function EventOverviewContent() {
   }
 
   async function handleParticipantAdded() {
-    await fetchEventData()
+    // Real-time hook will automatically update when new participant is added
+    // Just close the modal
     setShowAddParticipantModal(false)
   }
 

@@ -113,7 +113,7 @@ export async function POST(
         marketing_consent: body.marketingConsent || false,
         join_code: joinCode,
         entry_method: 'self-registered',
-        payment_status: event.requires_payment ? 'pending' : 'paid',
+        payment_status: 'pending',
         created_at: new Date().toISOString()
       })
       .select('id, join_code, participant_name, email')

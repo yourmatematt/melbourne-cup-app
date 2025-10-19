@@ -72,7 +72,7 @@ export async function GET() {
       if (events) {
         events.forEach(event => {
           urls.push({
-            loc: `/join/${event.id}`,
+            loc: `/events/${event.id}/enter`,
             changefreq: 'hourly',
             priority: 0.9,
             lastmod: event.updated_at

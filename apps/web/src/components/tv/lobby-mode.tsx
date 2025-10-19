@@ -52,8 +52,8 @@ export function LobbyMode({ event, participants, assignments, horses, onNext }: 
   // Set join URL
   useEffect(() => {
     const baseUrl = window.location.origin
-    setJoinUrl(`${baseUrl}/join/${event.slug}`)
-  }, [event.slug])
+    setJoinUrl(`${baseUrl}/events/${event.id}/enter`)
+  }, [event.id])
 
   const formatEventDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-AU', {
