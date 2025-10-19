@@ -94,6 +94,7 @@ type Participant = {
   participant_name: string
   email: string
   phone?: string
+  join_code: string
   horse_number?: number
   horse_name?: string
   created_at: string
@@ -702,6 +703,7 @@ function EventOverviewContent() {
             participant_name: p.participant_name,
             email: p.email || '',
             phone: p.phone,
+            join_code: p.join_code,
             created_at: p.created_at,
             horse_number: assignment?.horse_number,
             horse_name: assignment?.horse_name,
@@ -805,6 +807,7 @@ function EventOverviewContent() {
           participant_name,
           email,
           phone,
+          join_code,
           created_at,
           payment_status
         `)
@@ -848,6 +851,7 @@ function EventOverviewContent() {
           participant_name: p.participant_name,
           email: p.email,
           phone: p.phone,
+          join_code: p.join_code,
           created_at: p.created_at,
           horse_number: assignment?.horse_number,
           horse_name: assignment?.horse_name,

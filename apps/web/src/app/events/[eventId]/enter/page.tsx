@@ -29,6 +29,7 @@ interface Event {
   status: 'draft' | 'active' | 'drawing' | 'completed' | 'cancelled'
   capacity: number
   lead_capture: boolean
+  entry_fee?: number
   tenant: {
     name: string
   }
@@ -224,6 +225,13 @@ export default function PublicEntryPage() {
     })
   }
 
+  function formatEntryFee(entryFee?: number): string {
+    if (!entryFee || entryFee === 0) {
+      return 'Free Entry'
+    }
+    return `Entry Fee: $${entryFee}`
+  }
+
   function handleShare() {
     const url = window.location.href
     if (navigator.share) {
@@ -352,6 +360,22 @@ export default function PublicEntryPage() {
               <MapPin className="h-4 w-4" />
               <span>{event?.tenant.name}</span>
             </div>
+
+            {/* Entry Fee Display */}
+            {event?.entry_fee !== undefined && (
+              <div className="flex items-center justify-center">
+                <Badge
+                  variant={event.entry_fee === 0 ? "secondary" : "default"}
+                  className={`text-sm font-medium px-3 py-1 ${
+                    event.entry_fee === 0
+                      ? "bg-green-100 text-green-800 border-green-200"
+                      : "bg-blue-100 text-blue-800 border-blue-200"
+                  }`}
+                >
+                  {formatEntryFee(event.entry_fee)}
+                </Badge>
+              </div>
+            )}
 
             <div className="flex items-center justify-center space-x-4">
               <div className="flex items-center space-x-2">
