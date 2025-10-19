@@ -190,14 +190,25 @@ export async function GET(
       })
     }
 
-    // Get results with winner details
+    // Get results with winner details - join with assignments and participants
     const { data: results, error: resultsError } = await supabase
       .from('event_results')
       .select(`
         place,
         horse_number,
         prize_amount,
-        created_at
+        created_at,
+        assignments!inner(
+          horse_number,
+          patron_entries!inner(
+            participant_name,
+            join_code
+          ),
+          event_horses!inner(
+            name,
+            jockey
+          )
+        )
       `)
       .eq('event_id', eventId)
       .order('place', { ascending: true })
@@ -209,21 +220,17 @@ export async function GET(
       )
     }
 
-    // Get winner names (optionally hide for privacy)
-    const { data: winners, error: winnersError } = await supabase
-      .rpc('get_event_winners', { event_uuid: eventId })
-
-    if (winnersError) {
-      console.error('Error getting winners:', winnersError)
-    }
-
-    // Format results for public display
+    // Format results for public display with participant names
     const publicResults = (results || []).map(result => {
-      const winner = winners?.find(w => w.place === result.place)
+      // Extract participant name from joined data
+      const participantName = result.assignments?.[0]?.patron_entries?.[0]?.participant_name || null
+      const horseName = result.assignments?.[0]?.event_horses?.[0]?.name || null
+
       return {
         place: result.place,
         horseNumber: result.horse_number,
-        winnerName: winner?.participant_name || null,
+        winnerName: participantName,
+        horseName: horseName,
         prizeAmount: result.prize_amount || 0,
         positionText: result.place === 1 ? '1st' : result.place === 2 ? '2nd' : result.place === 3 ? '3rd' : `${result.place}th`
       }
@@ -241,7 +248,7 @@ export async function GET(
           resultsStatus: event.results_status
         },
         results: publicResults,
-        winnersCount: winners?.length || 0,
+        winnersCount: publicResults.filter(r => r.winnerName !== null).length,
         totalPrizes: publicResults.reduce((sum, r) => sum + (r.prizeAmount || 0), 0)
       }
     })

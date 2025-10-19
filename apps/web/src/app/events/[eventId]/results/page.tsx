@@ -54,8 +54,37 @@ interface PublicResult {
   place: number
   horseNumber: number
   winnerName: string | null
+  horseName: string | null
   prizeAmount: number
   positionText: string
+  status: string
+  collected: boolean
+}
+
+interface ResultsData {
+  hasResults: boolean
+  event: {
+    id: string
+    name: string
+    venue: string
+    startsAt: string
+  }
+  results: PublicResult[]
+  allParticipants: Array<{
+    place: number | null
+    horseNumber: number
+    horseName: string | null
+    participantName: string | null
+    status: string
+    prizeAmount: number
+    collected: boolean
+  }>
+  summary: {
+    totalParticipants: number
+    winnersCount: number
+    totalPrizes: number
+    prizesDistributed: number
+  }
 }
 
 export default function PublicResultsPage() {
@@ -65,13 +94,7 @@ export default function PublicResultsPage() {
   const [joinCode, setJoinCode] = useState('')
   const [checking, setChecking] = useState(false)
   const [result, setResult] = useState<CheckResult | null>(null)
-  const [publicResults, setPublicResults] = useState<{
-    hasResults: boolean
-    event: any
-    results: PublicResult[]
-    winnersCount: number
-    totalPrizes: number
-  } | null>(null)
+  const [publicResults, setPublicResults] = useState<ResultsData | null>(null)
   const [loadingResults, setLoadingResults] = useState(true)
   const [showWinnerCard, setShowWinnerCard] = useState(false)
 
@@ -82,7 +105,7 @@ export default function PublicResultsPage() {
   async function loadPublicResults() {
     try {
       setLoadingResults(true)
-      const response = await fetch(`/api/events/${eventId}/check-winner`)
+      const response = await fetch(`/api/events/${eventId}/results`)
       const data = await response.json()
 
       if (data.success) {
@@ -395,78 +418,235 @@ export default function PublicResultsPage() {
           </CardContent>
         </Card>
 
-        {/* Public Results Leaderboard */}
+        {/* Results Display matching Figma design */}
         {publicResults.hasResults && publicResults.results.length > 0 && (
-          <Card className="shadow-lg">
-            <CardHeader className="text-center">
-              <CardTitle className="flex items-center justify-center space-x-2 text-2xl">
-                <Trophy className="h-6 w-6" />
-                <span>Official Results</span>
-              </CardTitle>
-              <CardDescription>
-                Final finishing positions
-              </CardDescription>
-            </CardHeader>
-
-            <CardContent>
-              <div className="space-y-3">
-                {publicResults.results.map((result) => (
-                  <div
-                    key={result.place}
-                    className={`p-4 rounded-lg border-2 ${
-                      placeColors[result.place as keyof typeof placeColors] || 'bg-gray-50 border-gray-200'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-4">
-                        <div className="flex items-center space-x-2">
-                          {placeIcons[result.place as keyof typeof placeIcons] || (
-                            <div className="w-6 h-6 rounded-full bg-gray-400 flex items-center justify-center text-white text-sm font-bold">
-                              {result.place}
-                            </div>
-                          )}
-                          <span className="text-xl font-bold">
-                            {result.positionText}
-                          </span>
-                        </div>
-
-                        <div>
-                          <div className="text-lg font-semibold">
-                            Horse #{result.horseNumber}
-                          </div>
-                          {result.winnerName && (
-                            <div className="text-sm text-gray-600">
-                              Winner: {result.winnerName}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-
-                      {result.prizeAmount > 0 && (
-                        <div className="text-right">
-                          <div className="text-lg font-bold text-green-600">
-                            ${result.prizeAmount.toFixed(2)}
-                          </div>
-                          <div className="text-xs text-gray-500">Prize</div>
-                        </div>
-                      )}
+          <div className="space-y-6">
+            {/* Winner Hero Card */}
+            {publicResults.results[0] && (
+              <Card className="shadow-xl border-0 overflow-hidden">
+                <div className="bg-gradient-to-r from-orange-400 via-red-500 to-pink-500 p-8 text-white text-center relative">
+                  <div className="absolute top-4 right-4">
+                    <Trophy className="h-8 w-8 text-yellow-300" />
+                  </div>
+                  <div className="mb-4">
+                    <h2 className="text-3xl font-bold mb-2">
+                      {publicResults.results[0].winnerName || `Horse #${publicResults.results[0].horseNumber}`}
+                    </h2>
+                    <div className="text-lg opacity-90 mb-1">
+                      FIRST PLACE WINNER
+                    </div>
+                    <div className="text-sm opacity-75">
+                      Horse ({publicResults.results[0].horseNumber}) - {publicResults.results[0].horseName || 'Victory'}
                     </div>
                   </div>
-                ))}
-              </div>
-
-              {publicResults.totalPrizes > 0 && (
-                <div className="mt-6 pt-4 border-t border-gray-200">
-                  <div className="text-center">
-                    <div className="text-2xl font-bold text-blue-600">
-                      ${publicResults.totalPrizes.toFixed(2)}
-                    </div>
-                    <div className="text-sm text-gray-600">Total Prize Pool</div>
+                  <div className="text-4xl font-bold">
+                    ${publicResults.results[0].prizeAmount.toFixed(2)}
                   </div>
                 </div>
-              )}
-            </CardContent>
-          </Card>
+              </Card>
+            )}
+
+            {/* Runner-up Cards */}
+            {publicResults.results.length > 1 && (
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {publicResults.results.slice(1, 4).map((result, index) => (
+                  <Card key={result.place} className="shadow-lg border border-gray-200">
+                    <CardContent className="p-6 text-center">
+                      <div className="mb-4">
+                        {result.place === 2 && <Medal className="h-8 w-8 text-gray-500 mx-auto mb-2" />}
+                        {result.place === 3 && <Award className="h-8 w-8 text-amber-600 mx-auto mb-2" />}
+                        {result.place > 3 && (
+                          <div className="w-8 h-8 rounded-full bg-gray-400 flex items-center justify-center text-white text-sm font-bold mx-auto mb-2">
+                            {result.place}
+                          </div>
+                        )}
+                      </div>
+                      <div className="text-lg font-semibold mb-1">
+                        {result.winnerName || `Horse #${result.horseNumber}`}
+                      </div>
+                      <div className="text-sm text-gray-600 mb-2">
+                        {result.positionText}
+                      </div>
+                      <div className="text-xl font-bold text-green-600">
+                        ${result.prizeAmount.toFixed(2)}
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+
+            {/* Full Results Table */}
+            <Card className="shadow-lg">
+              <CardHeader>
+                <CardTitle className="flex items-center justify-between">
+                  <span>Race Results</span>
+                  <Button variant="outline" size="sm">
+                    Export Results
+                  </Button>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-0">
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead className="bg-gray-50 border-b">
+                      <tr>
+                        <th className="text-left p-4 font-medium text-gray-600">Position</th>
+                        <th className="text-left p-4 font-medium text-gray-600">Horse #</th>
+                        <th className="text-left p-4 font-medium text-gray-600">Horse Name</th>
+                        <th className="text-left p-4 font-medium text-gray-600">Participant</th>
+                        <th className="text-center p-4 font-medium text-gray-600">Status</th>
+                        <th className="text-right p-4 font-medium text-gray-600">Prize</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {publicResults.allParticipants?.map((participant, index) => (
+                        <tr key={`${participant.horseNumber}-${index}`} className="border-b hover:bg-gray-50">
+                          <td className="p-4">
+                            <div className="flex items-center space-x-2">
+                              {participant.place && participant.place <= 3 ? (
+                                <>
+                                  {participant.place === 1 && <Trophy className="h-4 w-4 text-yellow-600" />}
+                                  {participant.place === 2 && <Medal className="h-4 w-4 text-gray-500" />}
+                                  {participant.place === 3 && <Award className="h-4 w-4 text-amber-600" />}
+                                  <span className="font-medium">{participant.place}</span>
+                                </>
+                              ) : (
+                                <span className="text-gray-400">{participant.place || '—'}</span>
+                              )}
+                            </div>
+                          </td>
+                          <td className="p-4">
+                            <Badge variant="outline" className="font-mono">
+                              {participant.horseNumber}
+                            </Badge>
+                          </td>
+                          <td className="p-4">
+                            <span className="font-medium">
+                              {participant.horseName || 'VICTORY BILLINGMORE'}
+                            </span>
+                          </td>
+                          <td className="p-4">
+                            <div className="flex items-center space-x-2">
+                              <div className="w-6 h-6 rounded-full bg-pink-500 flex items-center justify-center">
+                                <span className="text-white text-xs font-bold">
+                                  {participant.participantName?.charAt(0) || 'H'}
+                                </span>
+                              </div>
+                              <span>{participant.participantName || 'No assignment'}</span>
+                            </div>
+                          </td>
+                          <td className="p-4 text-center">
+                            <Badge
+                              variant={participant.place ? 'default' : 'secondary'}
+                              className={participant.place ? 'bg-green-100 text-green-800' : ''}
+                            >
+                              {participant.place ? 'Finished' : 'Finished'}
+                            </Badge>
+                          </td>
+                          <td className="p-4 text-right font-medium">
+                            {participant.prizeAmount > 0 ? (
+                              <span className="text-green-600">
+                                ${participant.prizeAmount.toFixed(2)}
+                              </span>
+                            ) : (
+                              <span className="text-gray-400">$0.00</span>
+                            )}
+                          </td>
+                        </tr>
+                      )) || publicResults.results.map((result, index) => (
+                        <tr key={result.place} className="border-b hover:bg-gray-50">
+                          <td className="p-4">
+                            <div className="flex items-center space-x-2">
+                              {result.place <= 3 ? (
+                                <>
+                                  {result.place === 1 && <Trophy className="h-4 w-4 text-yellow-600" />}
+                                  {result.place === 2 && <Medal className="h-4 w-4 text-gray-500" />}
+                                  {result.place === 3 && <Award className="h-4 w-4 text-amber-600" />}
+                                  <span className="font-medium">{result.place}</span>
+                                </>
+                              ) : (
+                                <span className="text-gray-400">{result.place}</span>
+                              )}
+                            </div>
+                          </td>
+                          <td className="p-4">
+                            <Badge variant="outline" className="font-mono">
+                              {result.horseNumber}
+                            </Badge>
+                          </td>
+                          <td className="p-4">
+                            <span className="font-medium">
+                              {result.horseName || 'VICTORY BILLINGMORE'}
+                            </span>
+                          </td>
+                          <td className="p-4">
+                            <div className="flex items-center space-x-2">
+                              <div className="w-6 h-6 rounded-full bg-pink-500 flex items-center justify-center">
+                                <span className="text-white text-xs font-bold">
+                                  {result.winnerName?.charAt(0) || 'H'}
+                                </span>
+                              </div>
+                              <span>{result.winnerName || 'No assignment'}</span>
+                            </div>
+                          </td>
+                          <td className="p-4 text-center">
+                            <Badge variant="default" className="bg-green-100 text-green-800">
+                              Finished
+                            </Badge>
+                          </td>
+                          <td className="p-4 text-right font-medium">
+                            {result.prizeAmount > 0 ? (
+                              <span className="text-green-600">
+                                ${result.prizeAmount.toFixed(2)}
+                              </span>
+                            ) : (
+                              <span className="text-gray-400">$0.00</span>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Prize Distribution Summary */}
+            <Card className="shadow-lg">
+              <CardHeader>
+                <CardTitle>Prize Distribution</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-blue-600">
+                      ${publicResults.summary?.totalPrizes?.toFixed(2) || '0.00'}
+                    </div>
+                    <div className="text-sm text-gray-600">Total Pool</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-green-600">
+                      ${(publicResults.summary?.prizesDistributed || 0).toFixed(2)}
+                    </div>
+                    <div className="text-sm text-gray-600">Prize Pool</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-purple-600">
+                      {publicResults.summary?.winnersCount || 0}
+                    </div>
+                    <div className="text-sm text-gray-600">Prizes Yet</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-gray-600">
+                      {publicResults.summary?.totalParticipants || 0}
+                    </div>
+                    <div className="text-sm text-gray-600">Winners Notified</div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         )}
 
         {!publicResults.hasResults && (
@@ -477,7 +657,7 @@ export default function PublicResultsPage() {
                 <span>Results Pending</span>
               </CardTitle>
               <CardDescription className="text-lg">
-                {publicResults.message}
+                Results will be available once the race has finished and been processed.
               </CardDescription>
             </CardHeader>
           </Card>

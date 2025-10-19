@@ -4,7 +4,7 @@ export function GET() {
   const robotsTxt = `
 User-agent: *
 Allow: /
-Allow: /join/*
+Allow: /events/*/enter
 Allow: /event/*
 Allow: /spectator/*
 

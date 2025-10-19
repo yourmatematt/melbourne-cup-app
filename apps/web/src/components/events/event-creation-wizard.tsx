@@ -12,6 +12,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Switch } from '@/components/ui/switch'
+import { Badge } from '@/components/ui/badge'
 import { ChevronLeft, ChevronRight, Calendar, DollarSign, Clock, Users, CheckCircle2, X } from 'lucide-react'
 
 // Step 1: Event Details Component
@@ -377,26 +378,32 @@ function SettingsStep({ formData, setFormData }: {
           </div>
         </div>
 
-        {/* Promotional Incentives Toggle */}
-        <div className="bg-white border border-[rgba(0,0,0,0.08)] rounded-[16px] p-6">
+        {/* Promotional Incentives Toggle - Disabled for post-launch */}
+        <div className="bg-white border border-[rgba(0,0,0,0.08)] rounded-[16px] p-6 opacity-50">
           <div className="flex items-start justify-between mb-4">
             <div className="flex-1">
-              <h3 className="text-[16px] leading-[24px] font-['Arial:Bold',_sans-serif] font-bold text-slate-900 mb-2">
-                Promotional Incentives
-              </h3>
+              <div className="flex items-center gap-2 mb-2">
+                <h3 className="text-[16px] leading-[24px] font-['Arial:Bold',_sans-serif] font-bold text-slate-900">
+                  Promotional Incentives
+                </h3>
+                <Badge variant="secondary" className="text-xs bg-blue-100 text-blue-700">
+                  Coming Soon
+                </Badge>
+              </div>
               <p className="text-[14px] leading-[20px] font-['Arial:Regular',_sans-serif] text-slate-600">
                 Encourage quick payments with time-limited promotional offers
               </p>
             </div>
             <Switch
-              checked={formData.promoEnabled}
-              onCheckedChange={(checked) => setFormData({ promoEnabled: checked })}
+              checked={false}
+              onCheckedChange={() => {}}
+              disabled
               className="data-[state=checked]:bg-gradient-to-r data-[state=checked]:from-[#ff8a00] data-[state=checked]:to-[#ff4d8d]"
             />
           </div>
 
-          {/* Conditional Promo Fields */}
-          {formData.promoEnabled && (
+          {/* Conditional Promo Fields - Disabled for post-launch */}
+          {false && (
             <div className="mt-6 pt-6 border-t border-[rgba(0,0,0,0.08)] space-y-4">
               <div>
                 <Label className="text-[14px] leading-[20px] font-['Arial:Bold',_sans-serif] font-bold text-slate-900 mb-3 block">

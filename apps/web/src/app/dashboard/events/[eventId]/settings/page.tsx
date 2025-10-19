@@ -736,18 +736,25 @@ export default function EventSettingsPage() {
                       </div>
                     )}
 
-                    <div className="flex items-center justify-between">
+                    <div className="flex items-center justify-between opacity-50">
                       <div>
-                        <Label>Enable Promotional Messages</Label>
+                        <div className="flex items-center gap-2">
+                          <Label>Enable Promotional Messages</Label>
+                          <Badge variant="secondary" className="text-xs bg-blue-100 text-blue-700">
+                            Coming Soon
+                          </Badge>
+                        </div>
                         <p className="text-xs text-gray-500">Show promotional content during event</p>
                       </div>
                       <Switch
-                        checked={formData.promo_enabled}
-                        onCheckedChange={(checked) => updateFormData('promo_enabled', checked)}
+                        checked={false}
+                        onCheckedChange={() => {}}
+                        disabled
                       />
                     </div>
 
-                    {formData.promo_enabled && (
+                    {/* Promotional Messages section is disabled - this is a post-launch feature */}
+                    {false && (
                       <div className="space-y-4">
                         <div>
                           <Label htmlFor="promo_message">Promotional Message</Label>
