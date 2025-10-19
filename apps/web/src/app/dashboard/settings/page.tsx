@@ -9,6 +9,7 @@ import { Separator } from '@/components/ui/separator'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Badge } from '@/components/ui/badge'
 import { DashboardLayout } from '@/components/layout/dashboard-layout'
+import { ColorPicker } from '@/components/branding/color-picker'
 import { Upload, ChevronDown, Building, Palette } from 'lucide-react'
 import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase/client'
@@ -493,38 +494,22 @@ export default function VenueSettingsPage() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                     {/* Primary Color */}
                     <div>
-                      <Label className="text-[14px] text-slate-900 mb-3 block">Primary Color</Label>
-                      <div className="flex gap-3">
-                        <div
-                          className="w-12 h-12 rounded-[8px] border border-[rgba(0,0,0,0.08)]"
-                          style={{ backgroundColor: formData.color_primary }}
-                        />
-                        <Input
-                          value={formData.color_primary}
-                          onChange={(e) => updateFormData('color_primary', e.target.value)}
-                          placeholder="#1F2937"
-                          className="bg-white border border-[rgba(0,0,0,0.08)] rounded-[8px] h-[48px] px-3 w-[120px] font-mono text-[14px]"
-                          disabled={!canEdit}
-                        />
-                      </div>
+                      <ColorPicker
+                        color={formData.color_primary}
+                        onChange={(color) => updateFormData('color_primary', color)}
+                        label="Primary Color"
+                        className="w-full"
+                      />
                     </div>
 
                     {/* Secondary Color */}
                     <div>
-                      <Label className="text-[14px] text-slate-900 mb-3 block">Secondary Color</Label>
-                      <div className="flex gap-3">
-                        <div
-                          className="w-12 h-12 rounded-[8px] border border-[rgba(0,0,0,0.08)]"
-                          style={{ backgroundColor: formData.color_secondary }}
-                        />
-                        <Input
-                          value={formData.color_secondary}
-                          onChange={(e) => updateFormData('color_secondary', e.target.value)}
-                          placeholder="#6B7280"
-                          className="bg-white border border-[rgba(0,0,0,0.08)] rounded-[8px] h-[48px] px-3 w-[120px] font-mono text-[14px]"
-                          disabled={!canEdit}
-                        />
-                      </div>
+                      <ColorPicker
+                        color={formData.color_secondary}
+                        onChange={(color) => updateFormData('color_secondary', color)}
+                        label="Secondary Color"
+                        className="w-full"
+                      />
                     </div>
                   </div>
                   <p className="text-[12px] text-gray-400 mt-4">Used for printable QR displays and results posters</p>
