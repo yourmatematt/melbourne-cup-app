@@ -23,26 +23,14 @@ import {
   Activity,
   QrCode,
   ArrowRight,
-  Check,
-  Sparkles
+  Check
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { cn } from '@/lib/utils'
 import { useRealtimeAssignments } from '@/hooks/use-realtime-assignments'
 import { useRealtimeParticipants } from '@/hooks/use-realtime-participants'
 import ErrorBoundary from '@/components/error-boundary'
 import { ClientDebugBanner } from '@/components/debug/client-debug-banner'
 import { motion, AnimatePresence } from 'framer-motion'
-
-// TV-optimized text shadows for better readability
-const tvOptimizedStyles = `
-  .text-shadow-tv {
-    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8), 0 0 8px rgba(0, 0, 0, 0.5);
-  }
-  .text-shadow-strong {
-    text-shadow: 3px 3px 6px rgba(0, 0, 0, 0.9), 0 0 12px rgba(0, 0, 0, 0.6);
-  }
-`
 
 interface Event {
   id: string
@@ -144,7 +132,7 @@ function LiveViewPage() {
     setDebugMode(true)
 
     // Set join URL for QR code
-    setJoinUrl(`${window.location.origin}/events/${eventId}/enter`)
+    setJoinUrl(`${window.location.origin}/events/${eventId}/join`)
   }, [eventId])
 
   useEffect(() => {
@@ -834,16 +822,11 @@ function LiveViewPage() {
   }
 
   function formatCurrency(amount: number) {
-    // Format for TV display with clean, readable currency
-    const formatted = new Intl.NumberFormat('en-AU', {
+    return new Intl.NumberFormat('en-AU', {
       style: 'currency',
       currency: 'AUD',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0
+      minimumFractionDigits: 0
     }).format(amount)
-
-    // Replace "A$" with "$" for cleaner display
-    return formatted.replace('A$', '$')
   }
 
   function getStatusBadge(status: string) {
@@ -1092,12 +1075,6 @@ function LiveViewPage() {
     return assignments.slice().reverse() // Show in reverse order (most recent first)
   }
 
-// At the very top of DrawingStateView component
-useEffect(() => {
-  console.log('🔴 DrawingStateView MOUNTED')
-  return () => console.log('🔴 DrawingStateView UNMOUNTED')
-}, [])
-
   // DrawingStateView component with clean animations
   const DrawingStateView = () => {
     // Keep container always mounted, handle loading state internally
@@ -1216,7 +1193,7 @@ useEffect(() => {
             <div>
               <div className="flex items-center space-x-4">
                 <h1 className="text-4xl font-bold text-slate-900 font-['Arial']">
-                  {event?.name || 'Loading Event...'}
+                  {event.name}
                 </h1>
 
                 {/* DRAWING LIVE Badge */}
@@ -1251,7 +1228,7 @@ useEffect(() => {
           >
             <p className="text-white/80 text-sm font-['Arial'] mb-1">PRIZE POOL</p>
             <div className="text-3xl font-bold text-white font-['Arial']">
-              {event?.entry_fee === 0 ? 'FREE' : formatCurrency((event?.capacity || 0) * (event?.entry_fee || 0))}
+              {event.entry_fee === 0 ? 'FREE' : formatCurrency(event.capacity * (event.entry_fee || 0))}
             </div>
           </motion.div>
         </div>
@@ -1462,7 +1439,7 @@ useEffect(() => {
           >
             <p className="text-white/80 text-base font-['Arial'] mb-1">PRIZE POOL</p>
             <div className="text-4xl font-bold text-white font-['Arial']">
-              {event?.entry_fee === 0 ? 'FREE' : formatCurrency((event?.capacity || 0) * (event?.entry_fee || 0))}
+              {event.entry_fee === 0 ? 'FREE' : formatCurrency(event.capacity * (event.entry_fee || 0))}
             </div>
           </motion.div>
         </div>
@@ -1501,17 +1478,17 @@ useEffect(() => {
   })
 
   // Calculate progress percentage
-  const progressPercentage = event?.capacity ? Math.min((participants.length / event.capacity) * 100, 100) : 0
+  const progressPercentage = Math.min((participants.length / event.capacity) * 100, 100)
 
   // Calculate prize pool using event data
-  const entryFee = event?.entry_fee || 0
-  const totalPool = (event?.capacity || 0) * entryFee  // Total pool based on all spots
+  const entryFee = event.entry_fee || 0
+  const totalPool = event.capacity * entryFee  // Total pool based on all spots
   const prizePool = totalPool
 
   // Calculate prize breakdown using event percentages
-  const firstPrize = event?.first_place_percentage ? totalPool * (event.first_place_percentage / 100) : 0
-  const secondPrize = event?.second_place_percentage ? totalPool * (event.second_place_percentage / 100) : 0
-  const thirdPrize = event?.third_place_percentage ? totalPool * (event.third_place_percentage / 100) : 0
+  const firstPrize = event.first_place_percentage ? totalPool * (event.first_place_percentage / 100) : 0
+  const secondPrize = event.second_place_percentage ? totalPool * (event.second_place_percentage / 100) : 0
+  const thirdPrize = event.third_place_percentage ? totalPool * (event.third_place_percentage / 100) : 0
 
   // Get recent activity for footer with correct format
   const footerActivity = recentActivity.slice(0, 3).map(activity =>
@@ -1524,569 +1501,8 @@ useEffect(() => {
   }
 
   // ACTIVE state rendering
-  // Function to get the most recent assignment for drawing display
-  const getMostRecentAssignment = () => {
-    if (!assignments || assignments.length === 0) return null
-
-    // Sort assignments by created_at descending to get the most recent
-    const sortedAssignments = [...assignments].sort((a, b) =>
-      new Date(b.created_at || '').getTime() - new Date(a.created_at || '').getTime()
-    )
-
-    return sortedAssignments[0]
-  }
-
-  // Function to get already drawn participants for the bottom display
-  const getDrawnParticipants = () => {
-    return assignments.slice().reverse() // Show in reverse order (most recent first)
-  }
-
-  // DrawingStateView component - Exact Figma structure with comprehensive animations
-  const DrawingStateView = () => {
-    const recentAssignment = getMostRecentAssignment()
-    const [isSpinning, setIsSpinning] = useState(false)
-    const [showConfetti, setShowConfetti] = useState(false)
-    const [drawingTextVisible, setDrawingTextVisible] = useState(true)
-
-    // Trigger spin animation when new assignment comes in
-    useEffect(() => {
-      if (recentAssignment && newAssignmentId === recentAssignment.id) {
-        setIsSpinning(true)
-        setShowConfetti(true)
-
-        // Stop spinning after animation completes
-        setTimeout(() => setIsSpinning(false), 3000)
-
-        // Hide confetti after celebration
-        setTimeout(() => setShowConfetti(false), 4000)
-      }
-    }, [recentAssignment, newAssignmentId])
-
-    // Animate drawing text
-    useEffect(() => {
-      const interval = setInterval(() => {
-        setDrawingTextVisible(prev => !prev)
-      }, 1500)
-      return () => clearInterval(interval)
-    }, [])
-
-    return (
-      <div className="bg-[#f8f7f4] relative w-full h-screen overflow-hidden" style={{ minWidth: '1920px', minHeight: '1080px' }}>
-        {/* Inject TV-optimized styles */}
-        <style jsx>{tvOptimizedStyles}</style>
-
-        {/* Confetti Animation Overlay */}
-        {showConfetti && (
-          <div className="absolute inset-0 pointer-events-none z-[60]">
-            <div className="confetti-container">
-              {[...Array(50)].map((_, i) => (
-                <div
-                  key={i}
-                  className="confetti"
-                  style={{
-                    left: `${Math.random() * 100}%`,
-                    animationDelay: `${Math.random() * 3}s`,
-                    backgroundColor: ['#ff8a00', '#ff4d8d', '#8b5cf6', '#05df72', '#fbbf24'][Math.floor(Math.random() * 5)]
-                  }}
-                />
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Real-time Flash Indicator - Preserved animation */}
-        {realtimeFlash && (
-          <div className="absolute top-0 left-0 right-0 bg-green-500 text-white text-center py-3 z-50 animate-pulse">
-            <p className="text-2xl font-bold">⚡ REAL-TIME UPDATE RECEIVED!</p>
-          </div>
-        )}
-
-        <style jsx>{`
-          @keyframes scroll-left {
-            0% {
-              transform: translateX(0);
-            }
-            100% {
-              transform: translateX(-50%);
-            }
-          }
-
-          @keyframes spin-number {
-            0% {
-              transform: rotateX(0deg) scale(1);
-              opacity: 0.5;
-            }
-            50% {
-              transform: rotateX(360deg) scale(1.2);
-              opacity: 1;
-            }
-            100% {
-              transform: rotateX(720deg) scale(1);
-              opacity: 1;
-            }
-          }
-
-          @keyframes slide-up-fade {
-            0% {
-              transform: translateY(20px);
-              opacity: 0;
-            }
-            100% {
-              transform: translateY(0);
-              opacity: 1;
-            }
-          }
-
-          @keyframes typewriter {
-            0% {
-              width: 0;
-              opacity: 0;
-            }
-            10% {
-              opacity: 1;
-            }
-            100% {
-              width: 100%;
-              opacity: 1;
-            }
-          }
-
-          @keyframes confetti-fall {
-            0% {
-              transform: translateY(-100vh) rotate(0deg);
-              opacity: 1;
-            }
-            100% {
-              transform: translateY(100vh) rotate(720deg);
-              opacity: 0;
-            }
-          }
-
-          .scroll-container {
-            animation: scroll-left 20s linear infinite;
-          }
-
-          .spin-animation {
-            animation: spin-number 3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
-            transform-style: preserve-3d;
-            perspective: 1000px;
-          }
-
-          .slide-up-fade {
-            animation: slide-up-fade 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);
-            animation-delay: 3.1s;
-            animation-fill-mode: both;
-          }
-
-          .typewriter-effect {
-            overflow: hidden;
-            white-space: nowrap;
-            animation: typewriter 2s steps(40, end) infinite alternate;
-          }
-
-          .confetti {
-            position: absolute;
-            width: 10px;
-            height: 10px;
-            animation: confetti-fall 3s linear infinite;
-          }
-
-          .pill-hover {
-            transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
-          }
-
-          .pill-hover:hover {
-            transform: scale(1.05) translateY(-2px);
-            box-shadow: 0px 15px 25px -5px rgba(0,0,0,0.2);
-          }
-        `}</style>
-
-        {/* Header - Exact Figma structure */}
-        <div className="absolute bg-white border-b border-[rgba(0,0,0,0.08)] box-border flex h-[120px] items-center justify-between left-0 px-[32px] top-0 w-[1920px]">
-          <div className="h-[92px] relative w-[922px]">
-            <div className="flex gap-[24px] h-[92px] items-center relative w-[922px]">
-              <div className="bg-gradient-to-b from-[#ff8a00] relative rounded-full size-[80px] to-[#8b5cf6] via-50% via-[#ff4d8d] flex items-center justify-center">
-                <p className="font-bold text-[24px] leading-[32px] text-white">
-                  {event.tenant?.name?.charAt(0) || 'V'}
-                </p>
-              </div>
-              <div className="flex-1 h-[92px]">
-                <div className="flex flex-col gap-[4px] h-[92px] items-start w-full">
-                  <div className="flex gap-[16px] h-[58px] items-center relative w-full">
-                    <div className="h-[54px]">
-                      <p className="font-bold text-[36px] leading-[54px] text-slate-900">
-                        {event.name}
-                      </p>
-                    </div>
-                    <div
-                      className={cn(
-                        "bg-gradient-to-r from-[#fb2c36] h-[58px] rounded-full shadow-[0px_10px_15px_-3px_rgba(0,0,0,0.1),0px_4px_6px_-4px_rgba(0,0,0,0.1)] to-[#ff4d8d] px-[24px] flex items-center gap-[8px]",
-                        "animate-pulse"
-                      )}
-                    >
-                      <Radio className="size-[24px] text-white animate-spin" />
-                      <p className={cn(
-                        "font-bold text-[28px] leading-[42px] text-white transition-opacity duration-500",
-                        drawingTextVisible ? "opacity-100" : "opacity-70"
-                      )}>
-                        🎯 DRAWING LIVE
-                      </p>
-                    </div>
-                  </div>
-                  <div className="h-[30px] w-full">
-                    <p className="text-[20px] leading-[30px] text-slate-600">
-                      {event.tenant?.name || 'Live Event'}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-          <div className="bg-gradient-to-b from-[#ff8a00] h-[120px] rounded-[20px] shadow-[0px_25px_30px_-5px_rgba(0,0,0,0.15),0px_10px_15px_-6px_rgba(0,0,0,0.1)] to-[#8b5cf6] via-50% via-[#ff4d8d] w-[240px] flex flex-col items-center justify-center border-2 border-white/20">
-            <p className="text-[18px] leading-[24px] text-white font-semibold tracking-wide mb-1">
-              PRIZE POOL
-            </p>
-            <p className="font-black text-[48px] leading-[52px] text-white text-shadow-strong">
-              {entryFee === 0 ? 'FREE' : formatCurrency(prizePool)}
-            </p>
-          </div>
-        </div>
-
-        {/* Main Content Area - Dark gradient background */}
-        <div className="absolute bg-gradient-to-b from-[#1f2937] h-[780px] left-0 overflow-hidden to-[#0f172a] top-[120px] via-50% via-[#111827] w-[1920px]">
-          {/* Radial gradient overlay */}
-          <div
-            className="absolute h-[780px] left-0 opacity-30 top-0 w-[1920px]"
-            style={{
-              background: 'radial-gradient(ellipse at center, rgba(168,85,247,0.3) 0%, rgba(84,43,124,0.15) 35%, transparent 70%)'
-            }}
-          />
-
-          {/* Center Panel - Exact Figma positioning */}
-          <div className="absolute h-[752px] left-[682px] top-[14px] w-[556px]">
-            {/* Participant Avatar - Animated scale on new assignment */}
-            <div
-              className={cn(
-                "absolute bg-gradient-to-b from-[#ff8a00] rounded-full shadow-[0px_25px_50px_-12px_rgba(0,0,0,0.25)] size-[160px] to-[#8b5cf6] via-50% via-[#ff4d8d] left-[170px] top-0 flex items-center justify-center",
-                "transition-all duration-500",
-                recentAssignment ? "scale-110 shadow-2xl" : "scale-100"
-              )}
-            >
-              <p className="font-bold text-[64px] leading-[96px] text-white">
-                {recentAssignment?.patron_entries?.participant_name ?
-                  recentAssignment.patron_entries.participant_name.split(' ').map(n => n[0]).join('').toUpperCase()
-                  : 'MC'
-                }
-              </p>
-            </div>
-
-            {/* Participant Name - Animated slide up fade */}
-            <div className="absolute h-[96px] left-[13px] top-[184px] w-[474px]">
-              <p className={cn(
-                "font-bold text-[64px] leading-[96px] text-white",
-                recentAssignment && newAssignmentId === recentAssignment.id ? "slide-up-fade" : "",
-                !recentAssignment && "opacity-50"
-              )}>
-                {recentAssignment?.patron_entries?.participant_name?.toUpperCase() || 'NEXT PARTICIPANT'}
-              </p>
-            </div>
-
-            {/* Status - ✓ DRAWN! with color transition */}
-            <div className="absolute h-[72px] left-[125px] top-[320px] w-[250px]">
-              <p className={cn(
-                "font-bold text-[48px] leading-[72px]",
-                "transition-all duration-300",
-                recentAssignment ? "text-[#05df72] scale-110" : "text-gray-400 opacity-50"
-              )}>
-                {recentAssignment ? '✓ DRAWN!' : 'WAITING...'}
-              </p>
-            </div>
-
-            {/* Horse Card - Slide-in animation preserved */}
-            <div className={cn(
-              "absolute h-[300px] left-[-1px] top-[432px] w-[500px]",
-              "transition-all duration-700 transform",
-              recentAssignment
-                ? "translate-y-0 opacity-100 scale-100"
-                : "translate-y-8 opacity-0 scale-95"
-            )}>
-              {recentAssignment && (
-                <div className="bg-white border-4 border-[rgba(0,0,0,0.08)] h-[300px] rounded-[24px] w-[500px]">
-                  <div className="h-[300px] overflow-hidden relative rounded-[inherit] w-[500px]">
-                    <div className="absolute bg-gradient-to-b from-[#ff8a00] h-[292px] left-[4px] rounded-[24px] to-[#8b5cf6] top-[4px] via-50% via-[#ff4d8d] w-[492px] flex items-center justify-center">
-                      <div className="bg-white flex flex-col gap-[16px] h-[284px] items-center justify-center rounded-[24px] w-[484px]">
-                        {/* Horse Number with gradient text and spin animation */}
-                        <div className="h-[180px] w-[304px] flex items-center justify-center">
-                          <p
-                            className={cn(
-                              "font-black text-[120px] leading-[180px]",
-                              isSpinning ? "spin-animation" : ""
-                            )}
-                            style={{
-                              background: 'linear-gradient(90deg, #ff8a00 0%, #ff4d8d 50%, #8b5cf6 100%)',
-                              WebkitBackgroundClip: 'text',
-                              WebkitTextFillColor: 'transparent',
-                              backgroundClip: 'text'
-                            }}
-                          >
-                            #{recentAssignment.event_horses?.number || '--'}
-                          </p>
-                        </div>
-                        {/* Horse Name */}
-                        <div className="h-[54px] w-[304px]">
-                          <p className="text-[36px] leading-[54px] text-slate-600 text-center">
-                            {recentAssignment.event_horses?.name?.toUpperCase() || 'HORSE NAME'}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* Footer - Already Drawn Section */}
-        <div className="absolute bg-gray-800 flex h-[180px] items-center justify-between left-0 px-[32px] top-[900px] w-[1920px]">
-          <div className="h-[103px] w-[1888px]">
-            <div className="flex flex-col gap-[16px] h-[103px] items-start overflow-hidden w-[1888px]">
-              <div className="h-[30px] w-full">
-                <p className="text-[20px] leading-[30px] text-[rgba(255,255,255,0.7)]">
-                  ALREADY DRAWN:
-                </p>
-              </div>
-              <div className="flex h-[57px] w-full overflow-hidden relative">
-                {/* Scrolling container with unique participants only */}
-                <div className="flex gap-[16px] items-center scroll-container">
-                  {/* Deduplicated pills by patron_entry_id for reliability */}
-                  {assignments
-                    .filter((assignment, index, self) => {
-                      // Filter by patron_entry_id to ensure uniqueness (more reliable than name)
-                      const firstOccurrence = self.findIndex(a =>
-                        a.patron_entry_id === assignment.patron_entry_id &&
-                        a.patron_entries?.participant_name === assignment.patron_entries?.participant_name
-                      ) === index
-                      // Also ensure we have participant data
-                      return firstOccurrence && assignment.patron_entries?.participant_name
-                    })
-                    .slice(-10).reverse().map((assignment, index) => {
-                      const participantName = assignment.patron_entries?.participant_name || 'Unknown'
-                      const firstName = participantName.split(' ')[0] || 'Unknown'
-                      const lastInitial = participantName.split(' ')[1]?.[0] || ''
-
-                      return (
-                        <div
-                          key={`participant-${assignment.patron_entry_id}`}
-                          className={cn(
-                            "bg-gradient-to-b from-[#ff8a00] h-[57px] rounded-full shadow-[0px_10px_15px_-3px_rgba(0,0,0,0.1),0px_4px_6px_-4px_rgba(0,0,0,0.1)] to-[#8b5cf6] via-50% via-[#ff4d8d] px-[24px] flex items-center gap-[12px] flex-shrink-0",
-                            "pill-hover",
-                            index === 0 && newAssignmentId === assignment.id && "ring-2 ring-yellow-400 scale-105"
-                          )}
-                        >
-                          <Trophy className="size-[20px] text-white" />
-                          <p className="font-bold text-[22px] leading-[33px] text-white whitespace-nowrap">
-                            {firstName} {lastInitial}{lastInitial ? '.' : ''}
-                            {lastInitial ? ' ' : ''}
-                            → #{assignment.event_horses?.number || '--'}
-                          </p>
-                        </div>
-                      )
-                    })
-                  }
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    )
-  }
-
-  // CompletedStateView component - Show all participant-horse assignments
-  const CompletedStateView = () => {
-    // Get results sorted by place (if any)
-    const sortedResults = results.sort((a, b) => a.place - b.place)
-    const firstPlace = sortedResults.find(r => r.place === 1)
-    const secondPlace = sortedResults.find(r => r.place === 2)
-    const thirdPlace = sortedResults.find(r => r.place === 3)
-
-    // Get all assignments sorted by horse number
-    const sortedAssignments = assignments
-      .filter(a => a.event_horses && a.patron_entries)
-      .sort((a, b) => a.event_horses.number - b.event_horses.number)
-
-    const getPlaceInfo = (horseNumber: number) => {
-      if (firstPlace?.event_horses?.number === horseNumber) return { place: '1st', color: 'bg-yellow-400', textColor: 'text-yellow-800' }
-      if (secondPlace?.event_horses?.number === horseNumber) return { place: '2nd', color: 'bg-gray-300', textColor: 'text-gray-800' }
-      if (thirdPlace?.event_horses?.number === horseNumber) return { place: '3rd', color: 'bg-orange-400', textColor: 'text-orange-800' }
-      return null
-    }
-
-    return (
-      <div className="min-h-screen bg-[#f8f7f4] overflow-hidden w-screen h-screen relative" style={{ minWidth: '1920px', minHeight: '1080px' }}>
-        {/* Header */}
-        <div className="h-[120px] bg-white border-b border-[rgba(0,0,0,0.08)] flex items-center justify-between px-8">
-          <div className="flex items-center space-x-6">
-            <div
-              className="w-20 h-20 rounded-full flex items-center justify-center"
-              style={{
-                background: 'linear-gradient(180deg, #ff8a00 0%, #ff4d8d 50%, #8b5cf6 100%)'
-              }}
-            >
-              <p className="font-bold text-[24px] leading-[32px] text-white">
-                {event.tenant?.name?.charAt(0) || 'V'}
-              </p>
-            </div>
-            <div>
-              <h1 className="text-[36px] font-bold text-slate-900 leading-[54px]">
-                {event.name}
-              </h1>
-              <p className="text-[20px] text-slate-600">
-                {event.tenant?.name || 'Live Event'}
-              </p>
-            </div>
-          </div>
-          <div className="bg-[#05df72] rounded-full px-6 py-3 flex items-center gap-2">
-            <Check className="w-6 h-6 text-white" />
-            <span className="text-white font-bold text-[24px]">DRAW COMPLETE</span>
-          </div>
-        </div>
-
-        {/* Title Section */}
-        <div className="h-[100px] flex items-center justify-center bg-white border-b border-gray-200">
-          <div className="flex items-center gap-6">
-            <Trophy className="w-[60px] h-[60px] text-[#8b5cf6]" />
-            <h2 className="text-[48px] font-bold bg-gradient-to-r from-[#ff8a00] via-[#ff4d8d] to-[#8b5cf6] bg-clip-text text-transparent">
-              ALL ASSIGNMENTS
-            </h2>
-            <Trophy className="w-[60px] h-[60px] text-[#8b5cf6]" />
-          </div>
-        </div>
-
-        {/* Assignments Table */}
-        <div className="h-[700px] overflow-y-auto p-8">
-          <div className="max-w-[1600px] mx-auto">
-            <div className="grid grid-cols-2 gap-6">
-              {sortedAssignments.map((assignment, index) => {
-                const placeInfo = getPlaceInfo(assignment.event_horses.number)
-                const isPaid = assignment.patron_entries.payment_status === 'paid'
-
-                return (
-                  <div
-                    key={assignment.id}
-                    className={cn(
-                      "bg-white rounded-xl p-6 shadow-lg border-2 transition-all duration-300",
-                      isPaid ? "border-[#05df72]" : "border-[#fe9a00]",
-                      placeInfo && "ring-4 ring-yellow-400 scale-[1.02]"
-                    )}
-                  >
-                    <div className="flex items-center justify-between">
-                      {/* Horse Info */}
-                      <div className="flex items-center gap-4">
-                        <div className={cn(
-                          "w-16 h-16 rounded-full flex items-center justify-center text-white font-bold text-[24px]",
-                          isPaid ? "bg-[#05df72]" : "bg-[#fe9a00]"
-                        )}>
-                          #{assignment.event_horses.number}
-                        </div>
-                        <div>
-                          <h3 className="text-[24px] font-bold text-slate-900">
-                            {assignment.event_horses.name}
-                          </h3>
-                          <p className="text-[16px] text-slate-600">
-                            {assignment.event_horses.jockey || 'No jockey listed'}
-                          </p>
-                        </div>
-                      </div>
-
-                      {/* Arrow */}
-                      <ArrowRight className="w-8 h-8 text-slate-400" />
-
-                      {/* Participant Info */}
-                      <div className="text-right">
-                        <h3 className="text-[24px] font-bold text-slate-900">
-                          {assignment.patron_entries.participant_name}
-                        </h3>
-                        <div className="flex items-center gap-2 justify-end mt-1">
-                          <div className={cn(
-                            "px-3 py-1 rounded-full flex items-center gap-1",
-                            isPaid ? "bg-[#05df72]" : "bg-[#fe9a00]"
-                          )}>
-                            {isPaid ? (
-                              <Check className="w-4 h-4 text-white" />
-                            ) : (
-                              <Clock className="w-4 h-4 text-white" />
-                            )}
-                            <span className="text-white font-bold text-[12px]">
-                              {isPaid ? 'PAID' : 'PENDING'}
-                            </span>
-                          </div>
-                          {placeInfo && (
-                            <div className={cn(
-                              "px-3 py-1 rounded-full font-bold text-[12px]",
-                              placeInfo.color,
-                              placeInfo.textColor
-                            )}>
-                              {placeInfo.place} PLACE
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-          </div>
-        </div>
-
-        {/* Footer Stats */}
-        <div className="absolute bottom-0 left-0 right-0 h-[160px] bg-[#1f2937] flex items-center justify-around px-10">
-          <div className="text-center">
-            <p className="text-[#94a3b8] text-[18px] mb-2">Total Drawn</p>
-            <p className="text-white text-[48px] font-bold">{assignments.length}</p>
-          </div>
-
-          <div className="text-center">
-            <p className="text-[#94a3b8] text-[18px] mb-2">Paid & Ready</p>
-            <p className="text-[#05df72] text-[48px] font-bold">
-              {assignments.filter(a => a.patron_entries?.payment_status === 'paid').length}
-            </p>
-          </div>
-
-          <div className="text-center">
-            <p className="text-[#94a3b8] text-[18px] mb-2">Payment Pending</p>
-            <p className="text-[#fe9a00] text-[48px] font-bold">
-              {assignments.filter(a => a.patron_entries?.payment_status !== 'paid').length}
-            </p>
-          </div>
-
-          <div className="text-center">
-            <p className="text-[#94a3b8] text-[24px] mb-3 font-semibold tracking-wide">PRIZE POOL</p>
-            <p className="text-white text-[64px] font-black text-shadow-strong">
-              {entryFee === 0 ? 'FREE EVENT' : formatCurrency(prizePool)}
-            </p>
-          </div>
-        </div>
-      </div>
-    )
-  }
-
-  // Conditional rendering based on event status
-  if (event.status === 'drawing') {
-    return <DrawingStateView />
-  }
-
-  if (event.status === 'completed') {
-    return <CompletedStateView />
-  }
-
   return (
     <div className="min-h-screen bg-[#f8f7f4] overflow-hidden w-screen h-screen relative" style={{ minWidth: '1920px', minHeight: '1080px' }}>
-      {/* Inject TV-optimized styles */}
-      <style jsx>{tvOptimizedStyles}</style>
-
       {/* Real-time Flash Indicator */}
       {realtimeFlash && (
         <div className="absolute top-0 left-0 right-0 bg-green-500 text-white text-center py-3 z-50 animate-pulse">
@@ -2105,19 +1521,19 @@ useEffect(() => {
               background: 'linear-gradient(180deg, #ff8a00 0%, #ff4d8d 50%, #8b5cf6 100%)'
             }}
           >
-            {event?.tenant?.name?.charAt(0)?.toUpperCase() || 'V'}
+            {event.tenant.name.charAt(0).toUpperCase()}
           </div>
 
           {/* Event Details */}
           <div className="text-left">
             <h1 className="text-4xl font-bold text-slate-900 leading-tight">
-              {event?.name || 'Event'}
+              {event.name}
             </h1>
             <p className="text-2xl text-slate-600 mt-1">
-              {event?.tenant?.name || 'Venue'}
+              {event.tenant.name}
             </p>
             <p className="text-xl text-slate-600 mt-1">
-              {event?.starts_at ? formatDateTime(event.starts_at) : ''}
+              {formatDateTime(event.starts_at)}
             </p>
           </div>
         </div>
@@ -2141,6 +1557,7 @@ useEffect(() => {
           </div>
           <div className="text-right">
             <p className="text-2xl font-bold text-slate-900">Scan to Join</p>
+            <p className="text-lg text-slate-600">/events/{eventId}/enter</p>
           </div>
         </div>
       </div>
@@ -2154,7 +1571,7 @@ useEffect(() => {
       >
         <div className="text-center">
           <p className="font-bold text-white mb-3" style={{ fontSize: '48px' }}>
-            {(event?.capacity || 0) - participants.length} / {event?.capacity || 0} SPOTS REMAINING
+            {event.capacity - participants.length} / {event.capacity} SPOTS REMAINING
           </p>
           <div className="w-[600px] h-3 bg-white bg-opacity-30 rounded-full overflow-hidden">
             <div
@@ -2195,7 +1612,7 @@ useEffect(() => {
 
             // In ACTIVE status, show participants in order even without horse assignments
             let assignedParticipant = null
-            if (event?.status === 'active') {
+            if (event.status === 'active') {
               // Show participants in the first available slots (index order)
               assignedParticipant = participantStatuses[index] || null
             } else {
@@ -2332,26 +1749,22 @@ useEffect(() => {
         {/* Right: Prize Pool Display */}
         <div className="flex items-center justify-center p-8">
           <div
-            className="w-[580px] h-[160px] rounded-2xl flex flex-col items-center justify-center border-4 border-white/30 shadow-2xl"
+            className="w-[547px] h-[136px] rounded-xl flex flex-col items-center justify-center"
             style={{
               background: 'linear-gradient(180deg, #ff8a00 0%, #ff4d8d 50%, #8b5cf6 100%)'
             }}
           >
-            <p className="text-xl text-white font-bold tracking-wider mb-3 drop-shadow-lg">PRIZE POOL</p>
-            <div className="text-7xl font-black text-white mb-2 text-shadow-strong">
+            <p className="text-lg text-white opacity-80 mb-2">PRIZE POOL</p>
+            <div className="text-6xl font-bold text-white mb-1">
               {entryFee === 0 ? 'FREE EVENT' : formatCurrency(prizePool)}
             </div>
             {entryFee > 0 ? (
               <div className="text-sm text-white opacity-70 text-center">
-                <div>1st: {formatCurrency(firstPrize)} ({event?.first_place_percentage || 0}%) | 2nd: {formatCurrency(secondPrize)} ({event?.second_place_percentage || 0}%) | 3rd: {formatCurrency(thirdPrize)} ({event?.third_place_percentage || 0}%)</div>
-                <div className="mt-1">{(event?.capacity || 0) - participants.length}/{event?.capacity || 0} spots remaining</div>
-              <div className="text-base text-white font-semibold text-center leading-tight px-4">
-                <div className="bg-black/20 rounded-lg px-3 py-1">
-                  1st: {formatCurrency(firstPrize)} ({event.first_place_percentage}%) • 2nd: {formatCurrency(secondPrize)} ({event.second_place_percentage}%) • 3rd: {formatCurrency(thirdPrize)} ({event.third_place_percentage}%)
-                </div>
+                <div>1st: {formatCurrency(firstPrize)} ({event.first_place_percentage}%) | 2nd: {formatCurrency(secondPrize)} ({event.second_place_percentage}%) | 3rd: {formatCurrency(thirdPrize)} ({event.third_place_percentage}%)</div>
+                <div className="mt-1">{event.capacity - participants.length}/{event.capacity} spots remaining</div>
               </div>
             ) : (
-              <p className="text-lg text-white font-semibold bg-black/20 rounded-lg px-4 py-1">Free to enter!</p>
+              <p className="text-base text-white opacity-70">Free to enter!</p>
             )}
           </div>
         </div>
