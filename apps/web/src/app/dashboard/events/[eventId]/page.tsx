@@ -492,6 +492,9 @@ function ParticipantRow({ participant, onToggleClick }: {
           <p className="text-sm text-slate-500 truncate mt-0.5">
             {participant.email}
           </p>
+          <p className="text-xs text-slate-400 mt-1 font-mono">
+            {participant.join_code ? `Code: ${participant.join_code}` : 'Code: —'}
+          </p>
         </div>
       </div>
 
