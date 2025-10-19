@@ -12,6 +12,7 @@ export const newEventSchema = z.object({
     required_error: 'Please select an event mode'
   }),
   entryFee: z.number().min(1, 'Entry fee must be at least $1 (leave empty for free events)').max(999.99, 'Entry fee too high').optional(),
+  requiresPayment: z.boolean().default(false),
   leadCapture: z.boolean().default(false),
   customTerms: z.string().optional(),
   customRules: z.string().optional(),

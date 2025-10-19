@@ -186,7 +186,7 @@ export default function EventSettingsPage() {
         capacity: settings.event.capacity || 100,
         mode: settings.event.mode || 'sweep',
         lead_capture: settings.event.lead_capture || false,
-        requires_payment: settings.event.requires_payment || false,
+        requires_payment: settings.event.requires_payment ?? ((settings.event.entry_fee || 0) > 0),
         entry_fee: settings.event.entry_fee || 0,
         payment_timeout_minutes: settings.event.payment_timeout_minutes || 30,
         promo_enabled: settings.event.promo_enabled || false,
@@ -314,7 +314,16 @@ export default function EventSettingsPage() {
   }
 
   function updateFormData(field: keyof FormData, value: any) {
-    setFormData(prev => ({ ...prev, [field]: value }))
+    setFormData(prev => {
+      const newData = { ...prev, [field]: value }
+
+      // Auto-enable payment requirement when entry fee is set
+      if (field === 'entry_fee' && value > 0 && !prev.requires_payment) {
+        newData.requires_payment = true
+      }
+
+      return newData
+    })
     setHasUnsavedChanges(true)
   }
 

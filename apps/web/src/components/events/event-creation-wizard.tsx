@@ -757,6 +757,7 @@ export function EventCreationWizard() {
       timezone: 'Australia/Melbourne',
       capacity: 24,
       mode: 'sweep',
+      requiresPayment: false,
       leadCapture: false,
       customTerms: '',
       customRules: '',
@@ -801,6 +802,11 @@ export function EventCreationWizard() {
   }, [router, supabase])
 
   const updateFormData = (data: Partial<NewEventFormData>) => {
+    // Auto-enable payment requirement when entry fee is set
+    if (data.entryFee && data.entryFee > 0 && !formData.requiresPayment) {
+      data.requiresPayment = true
+    }
+
     Object.entries(data).forEach(([key, value]) => {
       form.setValue(key as keyof NewEventFormData, value)
     })
