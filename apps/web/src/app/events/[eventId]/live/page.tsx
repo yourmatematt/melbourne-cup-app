@@ -1307,7 +1307,7 @@ function LiveViewPage() {
                 onAnimationEnd={(e) => {
                   if (animationStep === STEPS.REMOVE_PARTICIPANT && e.animationName === 'fade-out') {
                     console.log('Step 1 complete: Participant removed')
-                    setAnimationStep(STEPS.REMOVE_NUMBER)
+                    setTimeout(() => setAnimationStep(STEPS.REMOVE_NUMBER), 50)
                   }
                 }}
               >
@@ -1353,7 +1353,7 @@ function LiveViewPage() {
                             onAnimationEnd={(e) => {
                               if (animationStep === STEPS.REMOVE_NUMBER && e.animationName === 'fade-out') {
                                 console.log('Step 2 complete: Horse number removed')
-                                setAnimationStep(STEPS.REMOVE_HORSE_NAME)
+                                setTimeout(() => setAnimationStep(STEPS.REMOVE_HORSE_NAME), 50)
                               }
                             }}
                           >
@@ -1371,7 +1371,7 @@ function LiveViewPage() {
                             onAnimationEnd={(e) => {
                               if (animationStep === STEPS.REMOVE_HORSE_NAME && e.animationName === 'fade-out') {
                                 console.log('Step 3 complete: Horse name removed')
-                                setAnimationStep(STEPS.SHOW_DRAWING)
+                                setTimeout(() => setAnimationStep(STEPS.SHOW_DRAWING), 50)
                               }
                             }}
                           >
