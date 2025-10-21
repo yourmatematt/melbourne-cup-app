@@ -985,6 +985,19 @@ function LiveViewPage() {
       }
     }, [animationStep])
 
+    // Simple step progression with immediate setTimeout
+    useEffect(() => {
+      if (animationStep === STEPS.REMOVE_PARTICIPANT) {
+        setTimeout(() => setAnimationStep(STEPS.REMOVE_NUMBER), 5000)
+      }
+      if (animationStep === STEPS.REMOVE_NUMBER) {
+        setTimeout(() => setAnimationStep(STEPS.REMOVE_HORSE_NAME), 5000)
+      }
+      if (animationStep === STEPS.REMOVE_HORSE_NAME) {
+        setTimeout(() => setAnimationStep(STEPS.SHOW_DRAWING), 5000)
+      }
+    }, [animationStep])
+
     // Animate drawing text
     useEffect(() => {
       const interval = setInterval(() => {
@@ -1085,16 +1098,6 @@ function LiveViewPage() {
             }
           }
 
-          @keyframes fade-out {
-            0% {
-              opacity: 1;
-              transform: translateY(0);
-            }
-            100% {
-              opacity: 0;
-              transform: translateY(-10px);
-            }
-          }
 
           .scroll-container {
             /* animation: scroll-left 20s linear infinite; */ /* TEMPORARILY DISABLED FOR TESTING */
@@ -1211,9 +1214,6 @@ function LiveViewPage() {
             box-shadow: 0px 15px 25px -5px rgba(0,0,0,0.2);
           }
 
-          .remove-anim {
-            animation: fade-out 0.3s ease-out forwards;
-          }
         `}</style>
 
         {/* Header - Exact Figma structure */}
@@ -1295,20 +1295,13 @@ function LiveViewPage() {
               </p>
             </div>
 
-            {/* Participant Name - CSS-driven animation */}
+            {/* Participant Name - Simple show/hide */}
             <div className="absolute h-[96px] left-[13px] top-[184px] w-[474px] flex items-center justify-center">
               <p
-                className={cn(
-                  "font-bold text-[64px] leading-[96px] text-white text-center whitespace-nowrap overflow-hidden text-ellipsis max-w-full",
-                  recentAssignment && "opacity-100", // Visible when assignment exists
-                  animationStep === STEPS.REMOVE_PARTICIPANT && "remove-anim", // Step 1: Remove participant
-                  !recentAssignment && "opacity-50"
-                )}
-                onAnimationEnd={(e) => {
-                  if (animationStep === STEPS.REMOVE_PARTICIPANT && e.animationName === 'fade-out') {
-                    console.log('Step 1 complete: Participant removed')
-                    setTimeout(() => setAnimationStep(STEPS.REMOVE_NUMBER), 5000)
-                  }
+                className="font-bold text-[64px] leading-[96px] text-white text-center whitespace-nowrap overflow-hidden text-ellipsis max-w-full"
+                style={{
+                  opacity: animationStep === STEPS.REMOVE_PARTICIPANT ? 0 : 1,
+                  display: animationStep === STEPS.REMOVE_PARTICIPANT ? 'none' : 'block'
                 }}
               >
                 {recentAssignment?.patron_entries?.participant_name?.toUpperCase() || 'NEXT PARTICIPANT'}
@@ -1336,43 +1329,29 @@ function LiveViewPage() {
                 <div className="h-[300px] rounded-[24px] w-[700px] overflow-hidden relative">
                   <div className="absolute bg-gradient-to-b from-[#ff8a00] h-[300px] left-0 rounded-[24px] to-[#8b5cf6] top-0 via-50% via-[#ff4d8d] w-[700px] flex items-center justify-center">
                     <div className="bg-white flex flex-col gap-[16px] h-[284px] items-center justify-center rounded-[20px] w-[684px]">
-                        {/* Horse Number with gradient text and CSS-driven spin animation */}
+                        {/* Horse Number - Simple show/hide */}
                         <div className="h-[180px] w-[304px] flex items-center justify-center">
                           <p
-                            className={cn(
-                              "font-black text-[120px] leading-[180px]",
-                              recentAssignment && "opacity-100", // Visible when assignment exists
-                              animationStep === STEPS.REMOVE_NUMBER && "remove-anim", // Step 2: Remove horse number
-                            )}
+                            className="font-black text-[120px] leading-[180px]"
                             style={{
                               background: 'linear-gradient(90deg, #ff8a00 0%, #ff4d8d 50%, #8b5cf6 100%)',
                               WebkitBackgroundClip: 'text',
                               WebkitTextFillColor: 'transparent',
-                              backgroundClip: 'text'
-                            }}
-                            onAnimationEnd={(e) => {
-                              if (animationStep === STEPS.REMOVE_NUMBER && e.animationName === 'fade-out') {
-                                console.log('Step 2 complete: Horse number removed')
-                                setTimeout(() => setAnimationStep(STEPS.REMOVE_HORSE_NAME), 5000)
-                              }
+                              backgroundClip: 'text',
+                              opacity: animationStep === STEPS.REMOVE_NUMBER ? 0 : 1,
+                              display: animationStep === STEPS.REMOVE_NUMBER ? 'none' : 'block'
                             }}
                           >
                             #{recentAssignment.event_horses?.number || '--'}
                           </p>
                         </div>
-                        {/* Horse Name - CSS-driven animation */}
+                        {/* Horse Name - Simple show/hide */}
                         <div className="h-[54px] w-[600px] flex items-center justify-center">
                           <p
-                            className={cn(
-                              "text-[36px] leading-[54px] text-slate-600 text-center whitespace-nowrap overflow-hidden text-ellipsis max-w-full",
-                              recentAssignment && "opacity-100", // Visible when assignment exists
-                              animationStep === STEPS.REMOVE_HORSE_NAME && "remove-anim", // Step 3: Remove horse name
-                            )}
-                            onAnimationEnd={(e) => {
-                              if (animationStep === STEPS.REMOVE_HORSE_NAME && e.animationName === 'fade-out') {
-                                console.log('Step 3 complete: Horse name removed')
-                                setTimeout(() => setAnimationStep(STEPS.SHOW_DRAWING), 5000)
-                              }
+                            className="text-[36px] leading-[54px] text-slate-600 text-center whitespace-nowrap overflow-hidden text-ellipsis max-w-full"
+                            style={{
+                              opacity: animationStep === STEPS.REMOVE_HORSE_NAME ? 0 : 1,
+                              display: animationStep === STEPS.REMOVE_HORSE_NAME ? 'none' : 'block'
                             }}
                           >
                             {recentAssignment.event_horses?.name?.toUpperCase() || 'HORSE NAME'}
