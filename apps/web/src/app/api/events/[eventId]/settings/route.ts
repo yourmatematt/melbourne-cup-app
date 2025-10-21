@@ -551,13 +551,13 @@ async function validateStatusTransition(
   }
 
   if (newStatus === 'completed') {
-    const { data: results } = await supabase
-      .from('event_results')
+    const { data: assignments } = await supabase
+      .from('assignments')
       .select('id')
       .eq('event_id', eventId)
 
-    if (!results || results.length === 0) {
-      return 'Cannot complete event without entering results'
+    if (!assignments || assignments.length === 0) {
+      return 'Cannot complete event without completing the draw'
     }
   }
 
