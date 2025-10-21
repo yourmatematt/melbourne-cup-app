@@ -1300,8 +1300,8 @@ function LiveViewPage() {
               <p
                 className="font-bold text-[64px] leading-[96px] text-white text-center whitespace-nowrap overflow-hidden text-ellipsis max-w-full"
                 style={{
-                  opacity: animationStep === STEPS.REMOVE_PARTICIPANT ? 0 : 1,
-                  display: animationStep === STEPS.REMOVE_PARTICIPANT ? 'none' : 'block'
+                  opacity: animationStep >= STEPS.REMOVE_PARTICIPANT ? 0 : 1,
+                  display: animationStep >= STEPS.REMOVE_PARTICIPANT ? 'none' : 'block'
                 }}
               >
                 {recentAssignment?.patron_entries?.participant_name?.toUpperCase() || 'NEXT PARTICIPANT'}
@@ -1338,8 +1338,8 @@ function LiveViewPage() {
                               WebkitBackgroundClip: 'text',
                               WebkitTextFillColor: 'transparent',
                               backgroundClip: 'text',
-                              opacity: animationStep === STEPS.REMOVE_NUMBER ? 0 : 1,
-                              display: animationStep === STEPS.REMOVE_NUMBER ? 'none' : 'block'
+                              opacity: animationStep >= STEPS.REMOVE_NUMBER ? 0 : 1,
+                              display: animationStep >= STEPS.REMOVE_NUMBER ? 'none' : 'block'
                             }}
                           >
                             #{recentAssignment.event_horses?.number || '--'}
@@ -1350,8 +1350,8 @@ function LiveViewPage() {
                           <p
                             className="text-[36px] leading-[54px] text-slate-600 text-center whitespace-nowrap overflow-hidden text-ellipsis max-w-full"
                             style={{
-                              opacity: animationStep === STEPS.REMOVE_HORSE_NAME ? 0 : 1,
-                              display: animationStep === STEPS.REMOVE_HORSE_NAME ? 'none' : 'block'
+                              opacity: animationStep >= STEPS.REMOVE_HORSE_NAME ? 0 : 1,
+                              display: animationStep >= STEPS.REMOVE_HORSE_NAME ? 'none' : 'block'
                             }}
                           >
                             {recentAssignment.event_horses?.name?.toUpperCase() || 'HORSE NAME'}
