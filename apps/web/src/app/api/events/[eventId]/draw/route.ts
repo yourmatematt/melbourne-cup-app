@@ -148,13 +148,18 @@ export async function POST(
   { params }: { params: { eventId: string } }
 ) {
   const supabase = createClient()
+  const startTime = Date.now()
 
   try {
     const { eventId } = params
     const body: DrawRequest = await request.json()
     const { drawType = 'all', skipScratched = true, dryRun = false } = body
 
-    console.log(`🎯 Draw API: ${drawType} draw requested for event ${eventId}`, { body })
+    console.log(`🎯 Draw API: ${drawType} draw requested for event ${eventId}`, {
+      body,
+      timestamp: new Date().toISOString(),
+      requestId: `draw_${eventId}_${Date.now()}`
+    })
 
     // Validate event exists and is in correct state
     const { data: event, error: eventError } = await supabase
@@ -185,13 +190,22 @@ export async function POST(
     // For single draw, we allow existing assignments
     if (drawType === 'all') {
       // Check if full draw already exists
-      const { data: existingAssignments } = await supabase
+      const { data: existingAssignments, error: existingError } = await supabase
         .from('assignments')
         .select('id')
         .eq('event_id', eventId)
         .limit(1)
 
+      if (existingError) {
+        console.error('❌ Draw API: Error checking existing assignments:', existingError)
+        return NextResponse.json(
+          { success: false, error: 'Database error while checking existing assignments' },
+          { status: 500 }
+        )
+      }
+
       if (existingAssignments && existingAssignments.length > 0) {
+        console.log('❌ Draw API: Full draw already exists, rejecting request')
         return NextResponse.json(
           { success: false, error: 'Draw has already been executed for this event. Use single draw or clear assignments first.' },
           { status: 400 }
@@ -335,61 +349,95 @@ export async function POST(
       })
     }
 
-    // Execute assignments directly (simplified approach)
-    const createdAssignments = []
+    // Execute assignments using batch insert for reliability
+    console.log(`📝 Draw API: Preparing ${assignmentPlan.length} assignments for batch insert`)
 
-    for (const assignment of assignmentPlan) {
-      const { data: newAssignment, error: insertError } = await supabase
-        .from('assignments')
-        .insert({
-          event_id: eventId,
-          patron_entry_id: assignment.participantId,
-          event_horse_id: assignment.horseId,
-          horse_number: assignment.horseNumber
-        })
-        .select(`
-          id,
-          patron_entry_id,
-          event_horse_id,
-          created_at,
-          patron_entries!patron_entry_id (
-            participant_name,
-            email
-          ),
-          event_horses!event_horse_id (
-            number,
-            name,
-            jockey
-          )
-        `)
-        .single()
+    const assignmentsToInsert = assignmentPlan.map(assignment => ({
+      event_id: eventId,
+      patron_entry_id: assignment.participantId,
+      event_horse_id: assignment.horseId,
+      horse_number: assignment.horseNumber
+    }))
 
-      if (insertError) {
-        console.error('Assignment insert error:', insertError)
-        return NextResponse.json(
-          { success: false, error: `Failed to create assignment: ${insertError.message}` },
-          { status: 500 }
+    console.log(`💾 Draw API: Executing batch insert for ${assignmentsToInsert.length} assignments`)
+
+    // Use batch insert for all assignments at once (atomic operation)
+    const { data: insertedAssignments, error: batchInsertError } = await supabase
+      .from('assignments')
+      .insert(assignmentsToInsert)
+      .select(`
+        id,
+        patron_entry_id,
+        event_horse_id,
+        created_at,
+        patron_entries!patron_entry_id (
+          participant_name,
+          email
+        ),
+        event_horses!event_horse_id (
+          number,
+          name,
+          jockey
         )
+      `)
+
+    if (batchInsertError) {
+      console.error('❌ Draw API: Batch assignment insert failed:', {
+        error: batchInsertError,
+        eventId,
+        assignmentCount: assignmentsToInsert.length,
+        errorCode: batchInsertError.code,
+        errorDetails: batchInsertError.details,
+        errorMessage: batchInsertError.message
+      })
+
+      // Provide more specific error messages based on error type
+      let errorMessage = `Failed to create assignments: ${batchInsertError.message}`
+
+      if (batchInsertError.code === '23505') { // Unique constraint violation
+        errorMessage = 'Assignment conflict detected. Some participants or horses may already be assigned.'
+      } else if (batchInsertError.code === '23503') { // Foreign key violation
+        errorMessage = 'Invalid participant or horse reference. Please refresh and try again.'
+      } else if (batchInsertError.code === '42P01') { // Table doesn't exist
+        errorMessage = 'Database configuration error. Please contact support.'
       }
 
-      createdAssignments.push(newAssignment)
+      return NextResponse.json(
+        { success: false, error: errorMessage, details: batchInsertError },
+        { status: 500 }
+      )
     }
+
+    const createdAssignments = insertedAssignments || []
+    console.log(`✅ Draw API: Batch insert successful - created ${createdAssignments.length} assignments`)
 
     // Update event status to 'drawing' if this was a full draw
     if (drawType === 'all') {
-      await supabase
+      console.log(`📊 Draw API: Updating event status to 'drawing' for full draw`)
+      const { error: statusUpdateError } = await supabase
         .from('events')
         .update({ status: 'drawing' })
         .eq('id', eventId)
+
+      if (statusUpdateError) {
+        console.error('❌ Draw API: Failed to update event status:', statusUpdateError)
+        // Don't fail the entire operation for this, but log it
+        console.warn('⚠️ Draw API: Draw completed successfully but event status update failed')
+      } else {
+        console.log(`✅ Draw API: Event status updated to 'drawing'`)
+      }
     }
 
     // Broadcast results
     await broadcastDrawResults(supabase, eventId, createdAssignments)
 
+    const executionTime = Date.now() - startTime
     console.log(`✅ Draw API: ${drawType} draw completed successfully`, {
       assignmentsCreated: createdAssignments.length,
       participants: participants.length,
-      availableHorses: availableHorses.length
+      availableHorses: availableHorses.length,
+      executionTimeMs: executionTime,
+      timestamp: new Date().toISOString()
     })
 
     return NextResponse.json({
@@ -400,7 +448,8 @@ export async function POST(
         totalParticipants: participants.length,
         totalHorses: availableHorses.length,
         assignmentsCreated: assignmentPlan.length,
-        seed: usedSeed
+        seed: usedSeed,
+        executionTimeMs: executionTime
       }
     })
 
