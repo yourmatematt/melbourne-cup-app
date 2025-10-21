@@ -1153,9 +1153,9 @@ function LiveViewPage() {
             </div>
 
             {/* Participant Name - Animated slide up fade */}
-            <div className="absolute h-[96px] left-[13px] top-[184px] w-[474px]">
+            <div className="absolute h-[96px] left-[13px] top-[184px] w-[474px] flex items-center justify-center">
               <p className={cn(
-                "font-bold text-[64px] leading-[96px] text-white",
+                "font-bold text-[64px] leading-[96px] text-white text-center whitespace-nowrap overflow-hidden text-ellipsis max-w-full",
                 recentAssignment && newAssignmentId === recentAssignment.id ? "slide-up-fade" : "",
                 !recentAssignment && "opacity-50"
               )}>
