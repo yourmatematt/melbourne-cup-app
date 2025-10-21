@@ -1242,8 +1242,8 @@ function LiveViewPage() {
             <div className="absolute h-[96px] left-[13px] top-[184px] w-[474px] flex items-center justify-center">
               <p className={cn(
                 "font-bold text-[64px] leading-[96px] text-white text-center whitespace-nowrap overflow-hidden text-ellipsis max-w-full",
-                "participant-reveal-anim",
-                isAnimating && "animate",
+                recentAssignment && "opacity-100", // Visible when assignment exists
+                isAnimating && recentAssignment && "participant-reveal-anim animate", // Trigger animation only when animating
                 !recentAssignment && "opacity-50"
               )}>
                 {recentAssignment?.patron_entries?.participant_name?.toUpperCase() || 'NEXT PARTICIPANT'}
@@ -1264,8 +1264,8 @@ function LiveViewPage() {
             {/* Horse Card - CSS-driven animation */}
             <div className={cn(
               "absolute h-[300px] left-[-101px] top-[432px] w-[700px]",
-              "card-reveal-anim",
-              isAnimating && "animate"
+              recentAssignment && "opacity-100", // Visible when assignment exists
+              isAnimating && recentAssignment && "card-reveal-anim animate" // Trigger animation only when animating
             )}>
               {recentAssignment && (
                 <div className="h-[300px] rounded-[24px] w-[700px] overflow-hidden relative">
@@ -1276,8 +1276,8 @@ function LiveViewPage() {
                           <p
                             className={cn(
                               "font-black text-[120px] leading-[180px]",
-                              "spin-animation-delayed",
-                              isAnimating && "animate"
+                              recentAssignment && "opacity-100", // Visible when assignment exists
+                              isAnimating && recentAssignment && "spin-animation-delayed animate" // Trigger animation only when animating
                             )}
                             style={{
                               background: 'linear-gradient(90deg, #ff8a00 0%, #ff4d8d 50%, #8b5cf6 100%)',
@@ -1293,8 +1293,8 @@ function LiveViewPage() {
                         <div className="h-[54px] w-[600px] flex items-center justify-center">
                           <p className={cn(
                             "text-[36px] leading-[54px] text-slate-600 text-center whitespace-nowrap overflow-hidden text-ellipsis max-w-full",
-                            "name-fade-in-anim",
-                            isAnimating && "animate"
+                            recentAssignment && "opacity-100", // Visible when assignment exists
+                            isAnimating && recentAssignment && "name-fade-in-anim animate" // Trigger animation only when animating
                           )}>
                             {recentAssignment.event_horses?.name?.toUpperCase() || 'HORSE NAME'}
                           </p>
