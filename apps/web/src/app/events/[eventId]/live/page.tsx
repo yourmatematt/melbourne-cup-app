@@ -1391,76 +1391,100 @@ function LiveViewPage() {
           </div>
         </div>
 
-        {/* Assignments Grid - Compact Layout */}
+        {/* Assignments Grid - Full-Size Cards */}
         <div className="h-[680px] p-4">
-          <div className="max-w-[1800px] mx-auto h-full">
-            <div className="grid grid-cols-3 gap-3 h-full overflow-hidden">
+          <div className="max-w-[1600px] mx-auto h-full">
+            <div className="grid grid-cols-2 gap-6 h-full overflow-hidden">
               {sortedAssignments.map((assignment, index) => {
                 const placeInfo = getPlaceInfo(assignment.event_horses.number)
                 const isPaid = assignment.patron_entries.payment_status === 'paid'
 
                 return (
-                  <div
-                    key={assignment.id}
-                    className={cn(
-                      "bg-white rounded-lg p-3 shadow-md border-2 transition-all duration-300",
-                      isPaid ? "border-[#05df72]" : "border-[#fe9a00]",
-                      placeInfo && "ring-2 ring-yellow-400"
-                    )}
-                  >
-                    <div className="flex items-center justify-between">
-                      {/* Horse Info */}
-                      <div className="flex items-center gap-2">
-                        <div className={cn(
-                          "w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-[14px]",
-                          isPaid ? "bg-[#05df72]" : "bg-[#fe9a00]"
-                        )}>
-                          #{assignment.event_horses.number}
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <h3 className="text-[14px] font-bold text-slate-900 truncate">
-                            {assignment.event_horses.name}
-                          </h3>
-                          <p className="text-[11px] text-slate-600 truncate">
-                            {assignment.event_horses.jockey || 'No jockey'}
-                          </p>
-                        </div>
-                      </div>
+                  <div key={assignment.id} className="relative">
+                    {/* Participant Name */}
+                    <div className="absolute h-[96px] left-[13px] top-[24px] w-[474px] flex items-center justify-center">
+                      <p className="font-bold text-[64px] leading-[96px] text-white text-center whitespace-nowrap overflow-hidden text-ellipsis max-w-full">
+                        {assignment.patron_entries.participant_name?.toUpperCase() || 'PARTICIPANT'}
+                      </p>
+                    </div>
 
-                      {/* Arrow */}
-                      <ArrowRight className="w-4 h-4 text-slate-400 flex-shrink-0" />
+                    {/* Status */}
+                    <div className="absolute h-[72px] left-[125px] top-[140px] w-[250px]">
+                      <p className={cn(
+                        "font-bold text-[48px] leading-[72px]",
+                        "transition-all duration-300",
+                        "text-[#05df72] scale-110"
+                      )}>
+                        ✓ DRAWN!
+                      </p>
+                    </div>
 
-                      {/* Participant Info */}
-                      <div className="text-right min-w-0 flex-1">
-                        <h3 className="text-[14px] font-bold text-slate-900 truncate">
-                          {assignment.patron_entries.participant_name}
-                        </h3>
-                        <div className="flex items-center gap-1 justify-end mt-1">
-                          <div className={cn(
-                            "px-2 py-1 rounded-full flex items-center gap-1",
-                            isPaid ? "bg-[#05df72]" : "bg-[#fe9a00]"
-                          )}>
-                            {isPaid ? (
-                              <Check className="w-3 h-3 text-white" />
-                            ) : (
-                              <Clock className="w-3 h-3 text-white" />
-                            )}
-                            <span className="text-white font-bold text-[10px]">
-                              {isPaid ? 'PAID' : 'PENDING'}
-                            </span>
-                          </div>
-                          {placeInfo && (
-                            <div className={cn(
-                              "px-2 py-1 rounded-full font-bold text-[10px]",
-                              placeInfo.color,
-                              placeInfo.textColor
-                            )}>
-                              {placeInfo.place}
+                    {/* Horse Card - Exact copy from DrawingStateView */}
+                    <div className="absolute h-[300px] left-[-101px] top-[200px] w-[700px]">
+                      <div className="h-[300px] rounded-[24px] w-[700px] overflow-hidden relative">
+                        <div className="absolute bg-gradient-to-b from-[#ff8a00] h-[300px] left-0 rounded-[24px] to-[#8b5cf6] top-0 via-50% via-[#ff4d8d] w-[700px] flex items-center justify-center">
+                          <div className="bg-white flex flex-col gap-[16px] h-[284px] items-center justify-center rounded-[20px] w-[684px]">
+                            {/* Horse Number - Exact same styling as DrawingStateView */}
+                            <div className="h-[180px] w-[304px] flex items-center justify-center">
+                              <p
+                                className="font-black text-[120px] leading-[180px]"
+                                style={{
+                                  background: 'linear-gradient(90deg, #ff8a00 0%, #ff4d8d 50%, #8b5cf6 100%)',
+                                  WebkitBackgroundClip: 'text',
+                                  WebkitTextFillColor: 'transparent',
+                                  backgroundClip: 'text'
+                                }}
+                              >
+                                #{assignment.event_horses.number || '--'}
+                              </p>
                             </div>
-                          )}
+                            {/* Horse Name - Exact same styling as DrawingStateView */}
+                            <div className="h-[54px] w-[600px] flex items-center justify-center">
+                              <p className="text-[36px] leading-[54px] text-slate-600 text-center whitespace-nowrap overflow-hidden text-ellipsis max-w-full">
+                                {assignment.event_horses.name?.toUpperCase() || 'HORSE NAME'}
+                              </p>
+                            </div>
+                          </div>
                         </div>
                       </div>
                     </div>
+
+                    {/* Payment Status Badge - Top Right */}
+                    <div className="absolute top-[24px] right-[24px]">
+                      <div className={cn(
+                        "px-4 py-2 rounded-full flex items-center gap-2",
+                        isPaid ? "bg-[#05df72]" : "bg-[#fe9a00]"
+                      )}>
+                        {isPaid ? (
+                          <Check className="w-5 h-5 text-white" />
+                        ) : (
+                          <Clock className="w-5 h-5 text-white" />
+                        )}
+                        <span className="text-white font-bold text-[14px]">
+                          {isPaid ? 'PAID' : 'PENDING'}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Place Badge - Top Left if applicable */}
+                    {placeInfo && (
+                      <div className="absolute top-[24px] left-[24px]">
+                        <div className={cn(
+                          "px-4 py-2 rounded-full font-bold text-[14px]",
+                          placeInfo.color,
+                          placeInfo.textColor
+                        )}>
+                          {placeInfo.place} PLACE
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Background card container */}
+                    <div className={cn(
+                      "h-[520px] w-full bg-[#1a1f36] rounded-[24px] border-2 relative",
+                      isPaid ? "border-[#05df72]" : "border-[#fe9a00]",
+                      placeInfo && "ring-4 ring-yellow-400"
+                    )} />
                   </div>
                 )
               })}
