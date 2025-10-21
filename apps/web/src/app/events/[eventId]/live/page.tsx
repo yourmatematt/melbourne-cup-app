@@ -1242,7 +1242,7 @@ function LiveViewPage() {
                       // Also ensure we have participant data
                       return firstOccurrence && assignment.patron_entries?.participant_name
                     })
-                    .slice(-10).reverse().map((assignment, index) => {
+                    .slice(-10).map((assignment, index) => {
                       const participantName = assignment.patron_entries?.participant_name || 'Unknown'
                       const firstName = participantName.split(' ')[0] || 'Unknown'
                       const lastInitial = participantName.split(' ')[1]?.[0] || ''
@@ -1253,7 +1253,7 @@ function LiveViewPage() {
                           className={cn(
                             "bg-gradient-to-b from-[#ff8a00] h-[57px] rounded-full shadow-[0px_10px_15px_-3px_rgba(0,0,0,0.1),0px_4px_6px_-4px_rgba(0,0,0,0.1)] to-[#8b5cf6] via-50% via-[#ff4d8d] px-[24px] flex items-center gap-[12px] flex-shrink-0",
                             "pill-hover",
-                            index === 0 && newAssignmentId === assignment.id && "ring-2 ring-yellow-400 scale-105"
+                            newAssignmentId === assignment.id && "ring-2 ring-yellow-400 scale-105"
                           )}
                         >
                           <Trophy className="size-[20px] text-white" />
