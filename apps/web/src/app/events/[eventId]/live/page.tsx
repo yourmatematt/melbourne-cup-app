@@ -1183,10 +1183,9 @@ function LiveViewPage() {
                 : "translate-y-8 opacity-0 scale-95"
             )}>
               {recentAssignment && (
-                <div className="bg-white border-4 border-[rgba(0,0,0,0.08)] h-[300px] rounded-[24px] w-[500px]">
-                  <div className="h-[300px] overflow-hidden relative rounded-[inherit] w-[500px]">
-                    <div className="absolute bg-gradient-to-b from-[#ff8a00] h-[292px] left-[4px] rounded-[24px] to-[#8b5cf6] top-[4px] via-50% via-[#ff4d8d] w-[492px] flex items-center justify-center">
-                      <div className="bg-white flex flex-col gap-[16px] h-[284px] items-center justify-center rounded-[24px] w-[484px]">
+                <div className="h-[300px] rounded-[24px] w-[500px] overflow-hidden relative">
+                  <div className="absolute bg-gradient-to-b from-[#ff8a00] h-[300px] left-0 rounded-[24px] to-[#8b5cf6] top-0 via-50% via-[#ff4d8d] w-[500px] flex items-center justify-center">
+                    <div className="bg-white flex flex-col gap-[16px] h-[284px] items-center justify-center rounded-[20px] w-[484px]">
                         {/* Horse Number with gradient text and spin animation */}
                         <div className="h-[180px] w-[304px] flex items-center justify-center">
                           <p
@@ -1213,7 +1212,6 @@ function LiveViewPage() {
                       </div>
                     </div>
                   </div>
-                </div>
               )}
             </div>
           </div>
