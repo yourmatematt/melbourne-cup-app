@@ -1097,7 +1097,7 @@ function LiveViewPage() {
           }
 
           .scroll-container {
-            animation: scroll-left 20s linear infinite;
+            /* animation: scroll-left 20s linear infinite; */ /* TEMPORARILY DISABLED FOR TESTING */
           }
 
           .spin-animation {
@@ -1236,13 +1236,13 @@ function LiveViewPage() {
                     <div
                       className={cn(
                         "bg-gradient-to-r from-[#fb2c36] h-[58px] rounded-full shadow-[0px_10px_15px_-3px_rgba(0,0,0,0.1),0px_4px_6px_-4px_rgba(0,0,0,0.1)] to-[#ff4d8d] px-[24px] flex items-center gap-[8px]",
-                        "animate-pulse"
+                        // "animate-pulse" // TEMPORARILY DISABLED FOR TESTING
                       )}
                     >
-                      <Radio className="size-[24px] text-white animate-spin" />
+                      <Radio className="size-[24px] text-white" /* animate-spin TEMPORARILY DISABLED FOR TESTING */ />
                       <p className={cn(
-                        "font-bold text-[28px] leading-[42px] text-white transition-opacity duration-500",
-                        drawingTextVisible ? "opacity-100" : "opacity-70"
+                        "font-bold text-[28px] leading-[42px] text-white", // transition-opacity duration-500 TEMPORARILY DISABLED FOR TESTING
+                        // drawingTextVisible ? "opacity-100" : "opacity-70" // TEMPORARILY DISABLED FOR TESTING
                       )}>
                         🎯 DRAWING LIVE
                       </p>
