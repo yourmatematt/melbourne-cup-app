@@ -916,32 +916,66 @@ function LiveViewPage() {
   // DrawingStateView component - Exact Figma structure with comprehensive animations
   const DrawingStateView = () => {
     const recentAssignment = getMostRecentAssignment()
-    const [isAnimating, setIsAnimating] = useState(false)
+
+    // Animation state machine - 11-step drawing sequence
+    const [animationStep, setAnimationStep] = useState(0)
     const [showConfetti, setShowConfetti] = useState(false)
     const [drawingTextVisible, setDrawingTextVisible] = useState(true)
 
-    // Simplified animation trigger - let CSS handle timing
+    // Animation step constants for clarity
+    const STEPS = {
+      IDLE: 0,
+      REMOVE_PARTICIPANT: 1,
+      REMOVE_NUMBER: 2,
+      REMOVE_HORSE_NAME: 3,
+      SHOW_DRAWING: 4,
+      REVEAL_PARTICIPANT: 5,
+      SPIN_NUMBER: 6,
+      LOCK_NUMBER: 7,
+      REVEAL_HORSE_NAME: 8,
+      SHOW_DRAWN: 9,
+      CONFETTI: 10,
+      ADD_PILL: 11
+    }
+
+    // State machine trigger - start animation sequence
     useEffect(() => {
       if (recentAssignment && newAssignmentId === recentAssignment.id) {
-        console.log('🎬 Starting CSS-driven animation sequence for:', newAssignmentId)
-
-        // Single trigger for entire CSS animation sequence
-        setIsAnimating(true)
-        setShowConfetti(false)
-
-        // Confetti at 4s (after all reveals complete)
-        setTimeout(() => {
-          console.log('🎉 Confetti explosion!')
-          setShowConfetti(true)
-        }, 4000)
-
-        // Hide confetti at 8s
-        setTimeout(() => {
-          console.log('✨ Hiding confetti')
-          setShowConfetti(false)
-        }, 8000)
+        console.log('🎬 New draw triggered, starting animation sequence')
+        setAnimationStep(STEPS.REMOVE_PARTICIPANT) // Start the sequence
+        setShowConfetti(false) // Reset confetti
       }
     }, [recentAssignment, newAssignmentId])
+
+    // When sequence completes, return to idle
+    useEffect(() => {
+      if (animationStep === STEPS.ADD_PILL) {
+        console.log('✅ Animation sequence complete, returning to idle')
+        setTimeout(() => setAnimationStep(STEPS.IDLE), 100)
+      }
+    }, [animationStep])
+
+    // Debug logging for step transitions
+    useEffect(() => {
+      const stepNames = {
+        [STEPS.IDLE]: 'IDLE',
+        [STEPS.REMOVE_PARTICIPANT]: 'REMOVE_PARTICIPANT',
+        [STEPS.REMOVE_NUMBER]: 'REMOVE_NUMBER',
+        [STEPS.REMOVE_HORSE_NAME]: 'REMOVE_HORSE_NAME',
+        [STEPS.SHOW_DRAWING]: 'SHOW_DRAWING',
+        [STEPS.REVEAL_PARTICIPANT]: 'REVEAL_PARTICIPANT',
+        [STEPS.SPIN_NUMBER]: 'SPIN_NUMBER',
+        [STEPS.LOCK_NUMBER]: 'LOCK_NUMBER',
+        [STEPS.REVEAL_HORSE_NAME]: 'REVEAL_HORSE_NAME',
+        [STEPS.SHOW_DRAWN]: 'SHOW_DRAWN',
+        [STEPS.CONFETTI]: 'CONFETTI',
+        [STEPS.ADD_PILL]: 'ADD_PILL'
+      }
+
+      if (animationStep !== STEPS.IDLE) {
+        console.log(`Step ${animationStep}: ${stepNames[animationStep]}`)
+      }
+    }, [animationStep])
 
     // Animate drawing text
     useEffect(() => {
@@ -1243,7 +1277,7 @@ function LiveViewPage() {
               <p className={cn(
                 "font-bold text-[64px] leading-[96px] text-white text-center whitespace-nowrap overflow-hidden text-ellipsis max-w-full",
                 recentAssignment && "opacity-100", // Visible when assignment exists
-                isAnimating && recentAssignment && "participant-reveal-anim animate", // Trigger animation only when animating
+                // TODO: Replace with animationStep logic in next implementation
                 !recentAssignment && "opacity-50"
               )}>
                 {recentAssignment?.patron_entries?.participant_name?.toUpperCase() || 'NEXT PARTICIPANT'}
@@ -1265,7 +1299,7 @@ function LiveViewPage() {
             <div className={cn(
               "absolute h-[300px] left-[-101px] top-[432px] w-[700px]",
               recentAssignment && "opacity-100", // Visible when assignment exists
-              isAnimating && recentAssignment && "card-reveal-anim animate" // Trigger animation only when animating
+              // TODO: Replace with animationStep logic in next implementation
             )}>
               {recentAssignment && (
                 <div className="h-[300px] rounded-[24px] w-[700px] overflow-hidden relative">
@@ -1277,7 +1311,7 @@ function LiveViewPage() {
                             className={cn(
                               "font-black text-[120px] leading-[180px]",
                               recentAssignment && "opacity-100", // Visible when assignment exists
-                              isAnimating && recentAssignment && "spin-animation-delayed animate" // Trigger animation only when animating
+                              // TODO: Replace with animationStep logic in next implementation
                             )}
                             style={{
                               background: 'linear-gradient(90deg, #ff8a00 0%, #ff4d8d 50%, #8b5cf6 100%)',
@@ -1294,7 +1328,7 @@ function LiveViewPage() {
                           <p className={cn(
                             "text-[36px] leading-[54px] text-slate-600 text-center whitespace-nowrap overflow-hidden text-ellipsis max-w-full",
                             recentAssignment && "opacity-100", // Visible when assignment exists
-                            isAnimating && recentAssignment && "name-fade-in-anim animate" // Trigger animation only when animating
+                            // TODO: Replace with animationStep logic in next implementation
                           )}>
                             {recentAssignment.event_horses?.name?.toUpperCase() || 'HORSE NAME'}
                           </p>
