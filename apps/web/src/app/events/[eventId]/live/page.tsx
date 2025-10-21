@@ -920,17 +920,39 @@ function LiveViewPage() {
     const [showConfetti, setShowConfetti] = useState(false)
     const [drawingTextVisible, setDrawingTextVisible] = useState(true)
 
-    // Trigger spin animation when new assignment comes in
+    // Trigger dramatic animation sequence when new assignment comes in
     useEffect(() => {
       if (recentAssignment && newAssignmentId === recentAssignment.id) {
-        setIsSpinning(true)
-        setShowConfetti(true)
+        console.log('🎭 Starting dramatic animation sequence for:', newAssignmentId)
 
-        // Stop spinning after animation completes
-        setTimeout(() => setIsSpinning(false), 3000)
+        // Reset confetti state
+        setShowConfetti(false)
 
-        // Hide confetti after celebration
-        setTimeout(() => setShowConfetti(false), 4000)
+        // Step 1: Participant name appears immediately (slide-up-fade already triggered by newAssignmentId)
+
+        // Step 2: Start horse number spin after brief pause (500ms)
+        setTimeout(() => {
+          console.log('🎰 Starting horse number spin')
+          setIsSpinning(true)
+        }, 500)
+
+        // Step 3: Stop spinning after 3 seconds (3500ms total)
+        setTimeout(() => {
+          console.log('⏹️ Stopping horse number spin')
+          setIsSpinning(false)
+        }, 3500)
+
+        // Step 4: Trigger confetti when spin completes (3600ms total)
+        setTimeout(() => {
+          console.log('🎉 Confetti explosion!')
+          setShowConfetti(true)
+        }, 3600)
+
+        // Step 5: Hide confetti after celebration (7600ms total)
+        setTimeout(() => {
+          console.log('✨ Hiding confetti')
+          setShowConfetti(false)
+        }, 7600)
       }
     }, [recentAssignment, newAssignmentId])
 
