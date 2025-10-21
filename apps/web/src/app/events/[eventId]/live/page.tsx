@@ -917,86 +917,9 @@ function LiveViewPage() {
   const DrawingStateView = () => {
     const recentAssignment = getMostRecentAssignment()
 
-    // Animation state machine - 11-step drawing sequence
-    const [animationStep, setAnimationStep] = useState(0)
     const [showConfetti, setShowConfetti] = useState(false)
     const [drawingTextVisible, setDrawingTextVisible] = useState(true)
 
-    // Animation step constants for clarity
-    const STEPS = {
-      IDLE: 0,
-      REMOVE_PARTICIPANT: 1,
-      REMOVE_NUMBER: 2,
-      REMOVE_HORSE_NAME: 3,
-      SHOW_DRAWING: 4,
-      REVEAL_PARTICIPANT: 5,
-      SPIN_NUMBER: 6,
-      LOCK_NUMBER: 7,
-      REVEAL_HORSE_NAME: 8,
-      SHOW_DRAWN: 9,
-      CONFETTI: 10,
-      ADD_PILL: 11
-    }
-
-    // State machine trigger - start animation sequence
-    useEffect(() => {
-      if (recentAssignment && newAssignmentId === recentAssignment.id) {
-        console.log('🎬 New draw triggered, starting animation sequence')
-        setShowConfetti(false) // Reset confetti
-
-        // Handle edge case: first draw (no previous assignment to remove)
-        if (assignments.length === 1) {
-          console.log('🔄 First draw detected, skipping removal steps')
-          setAnimationStep(STEPS.REVEAL_PARTICIPANT) // Skip directly to reveal
-        } else {
-          console.log('🗑️ Previous assignment exists, starting with removal')
-          setAnimationStep(STEPS.REMOVE_PARTICIPANT) // Start with removal sequence
-        }
-      }
-    }, [recentAssignment, newAssignmentId, assignments.length])
-
-    // When sequence completes, return to idle
-    useEffect(() => {
-      if (animationStep === STEPS.ADD_PILL) {
-        console.log('✅ Animation sequence complete, returning to idle')
-        setTimeout(() => setAnimationStep(STEPS.IDLE), 100)
-      }
-    }, [animationStep])
-
-    // Debug logging for step transitions
-    useEffect(() => {
-      const stepNames = {
-        [STEPS.IDLE]: 'IDLE',
-        [STEPS.REMOVE_PARTICIPANT]: 'REMOVE_PARTICIPANT',
-        [STEPS.REMOVE_NUMBER]: 'REMOVE_NUMBER',
-        [STEPS.REMOVE_HORSE_NAME]: 'REMOVE_HORSE_NAME',
-        [STEPS.SHOW_DRAWING]: 'SHOW_DRAWING',
-        [STEPS.REVEAL_PARTICIPANT]: 'REVEAL_PARTICIPANT',
-        [STEPS.SPIN_NUMBER]: 'SPIN_NUMBER',
-        [STEPS.LOCK_NUMBER]: 'LOCK_NUMBER',
-        [STEPS.REVEAL_HORSE_NAME]: 'REVEAL_HORSE_NAME',
-        [STEPS.SHOW_DRAWN]: 'SHOW_DRAWN',
-        [STEPS.CONFETTI]: 'CONFETTI',
-        [STEPS.ADD_PILL]: 'ADD_PILL'
-      }
-
-      if (animationStep !== STEPS.IDLE) {
-        console.log(`Step ${animationStep}: ${stepNames[animationStep]}`)
-      }
-    }, [animationStep])
-
-    // Simple step progression with immediate setTimeout
-    useEffect(() => {
-      if (animationStep === STEPS.REMOVE_PARTICIPANT) {
-        setTimeout(() => setAnimationStep(STEPS.REMOVE_NUMBER), 5000)
-      }
-      if (animationStep === STEPS.REMOVE_NUMBER) {
-        setTimeout(() => setAnimationStep(STEPS.REMOVE_HORSE_NAME), 5000)
-      }
-      if (animationStep === STEPS.REMOVE_HORSE_NAME) {
-        setTimeout(() => setAnimationStep(STEPS.SHOW_DRAWING), 5000)
-      }
-    }, [animationStep])
 
     // Animate drawing text
     useEffect(() => {
@@ -1100,7 +1023,7 @@ function LiveViewPage() {
 
 
           .scroll-container {
-            /* animation: scroll-left 20s linear infinite; */ /* TEMPORARILY DISABLED FOR TESTING */
+            animation: scroll-left 20s linear infinite;
           }
 
           .spin-animation {
@@ -1236,13 +1159,13 @@ function LiveViewPage() {
                     <div
                       className={cn(
                         "bg-gradient-to-r from-[#fb2c36] h-[58px] rounded-full shadow-[0px_10px_15px_-3px_rgba(0,0,0,0.1),0px_4px_6px_-4px_rgba(0,0,0,0.1)] to-[#ff4d8d] px-[24px] flex items-center gap-[8px]",
-                        // "animate-pulse" // TEMPORARILY DISABLED FOR TESTING
+                        "animate-pulse"
                       )}
                     >
-                      <Radio className="size-[24px] text-white" /* animate-spin TEMPORARILY DISABLED FOR TESTING */ />
+                      <Radio className="size-[24px] text-white animate-spin" />
                       <p className={cn(
-                        "font-bold text-[28px] leading-[42px] text-white", // transition-opacity duration-500 TEMPORARILY DISABLED FOR TESTING
-                        // drawingTextVisible ? "opacity-100" : "opacity-70" // TEMPORARILY DISABLED FOR TESTING
+                        "font-bold text-[28px] leading-[42px] text-white transition-opacity duration-500",
+                        drawingTextVisible ? "opacity-100" : "opacity-70"
                       )}>
                         🎯 DRAWING LIVE
                       </p>
@@ -1295,27 +1218,21 @@ function LiveViewPage() {
               </p>
             </div>
 
-            {/* Participant Name - Simple show/hide */}
+            {/* Participant Name - Always visible */}
             <div className="absolute h-[96px] left-[13px] top-[184px] w-[474px] flex items-center justify-center">
-              <p
-                className="font-bold text-[64px] leading-[96px] text-white text-center whitespace-nowrap overflow-hidden text-ellipsis max-w-full"
-                style={{
-                  opacity: animationStep >= STEPS.REMOVE_PARTICIPANT ? 0 : 1,
-                  display: animationStep >= STEPS.REMOVE_PARTICIPANT ? 'none' : 'block'
-                }}
-              >
+              <p className="font-bold text-[64px] leading-[96px] text-white text-center whitespace-nowrap overflow-hidden text-ellipsis max-w-full">
                 {recentAssignment?.patron_entries?.participant_name?.toUpperCase() || 'NEXT PARTICIPANT'}
               </p>
             </div>
 
-            {/* Status - ✓ DRAWN! with color transition */}
+            {/* Status - Simple DRAWING/DRAWN text swap */}
             <div className="absolute h-[72px] left-[125px] top-[320px] w-[250px]">
               <p className={cn(
                 "font-bold text-[48px] leading-[72px]",
                 "transition-all duration-300",
                 recentAssignment ? "text-[#05df72] scale-110" : "text-gray-400 opacity-50"
               )}>
-                {recentAssignment ? '✓ DRAWN!' : 'WAITING...'}
+                {event.status === 'drawing' ? 'DRAWING...' : recentAssignment ? '✓ DRAWN!' : 'WAITING...'}
               </p>
             </div>
 
@@ -1329,7 +1246,7 @@ function LiveViewPage() {
                 <div className="h-[300px] rounded-[24px] w-[700px] overflow-hidden relative">
                   <div className="absolute bg-gradient-to-b from-[#ff8a00] h-[300px] left-0 rounded-[24px] to-[#8b5cf6] top-0 via-50% via-[#ff4d8d] w-[700px] flex items-center justify-center">
                     <div className="bg-white flex flex-col gap-[16px] h-[284px] items-center justify-center rounded-[20px] w-[684px]">
-                        {/* Horse Number - Simple show/hide */}
+                        {/* Horse Number - Always visible */}
                         <div className="h-[180px] w-[304px] flex items-center justify-center">
                           <p
                             className="font-black text-[120px] leading-[180px]"
@@ -1337,23 +1254,15 @@ function LiveViewPage() {
                               background: 'linear-gradient(90deg, #ff8a00 0%, #ff4d8d 50%, #8b5cf6 100%)',
                               WebkitBackgroundClip: 'text',
                               WebkitTextFillColor: 'transparent',
-                              backgroundClip: 'text',
-                              opacity: animationStep >= STEPS.REMOVE_NUMBER ? 0 : 1,
-                              display: animationStep >= STEPS.REMOVE_NUMBER ? 'none' : 'block'
+                              backgroundClip: 'text'
                             }}
                           >
                             #{recentAssignment.event_horses?.number || '--'}
                           </p>
                         </div>
-                        {/* Horse Name - Simple show/hide */}
+                        {/* Horse Name - Always visible */}
                         <div className="h-[54px] w-[600px] flex items-center justify-center">
-                          <p
-                            className="text-[36px] leading-[54px] text-slate-600 text-center whitespace-nowrap overflow-hidden text-ellipsis max-w-full"
-                            style={{
-                              opacity: animationStep >= STEPS.REMOVE_HORSE_NAME ? 0 : 1,
-                              display: animationStep >= STEPS.REMOVE_HORSE_NAME ? 'none' : 'block'
-                            }}
-                          >
+                          <p className="text-[36px] leading-[54px] text-slate-600 text-center whitespace-nowrap overflow-hidden text-ellipsis max-w-full">
                             {recentAssignment.event_horses?.name?.toUpperCase() || 'HORSE NAME'}
                           </p>
                         </div>
@@ -1482,10 +1391,10 @@ function LiveViewPage() {
           </div>
         </div>
 
-        {/* Assignments Table */}
-        <div className="h-[700px] overflow-y-auto p-8">
-          <div className="max-w-[1600px] mx-auto">
-            <div className="grid grid-cols-2 gap-6">
+        {/* Assignments Grid - Compact Layout */}
+        <div className="h-[680px] p-4">
+          <div className="max-w-[1800px] mx-auto h-full">
+            <div className="grid grid-cols-3 gap-3 h-full overflow-hidden">
               {sortedAssignments.map((assignment, index) => {
                 const placeInfo = getPlaceInfo(assignment.event_horses.number)
                 const isPaid = assignment.patron_entries.payment_status === 'paid'
@@ -1494,59 +1403,59 @@ function LiveViewPage() {
                   <div
                     key={assignment.id}
                     className={cn(
-                      "bg-white rounded-xl p-6 shadow-lg border-2 transition-all duration-300",
+                      "bg-white rounded-lg p-3 shadow-md border-2 transition-all duration-300",
                       isPaid ? "border-[#05df72]" : "border-[#fe9a00]",
-                      placeInfo && "ring-4 ring-yellow-400 scale-[1.02]"
+                      placeInfo && "ring-2 ring-yellow-400"
                     )}
                   >
                     <div className="flex items-center justify-between">
                       {/* Horse Info */}
-                      <div className="flex items-center gap-4">
+                      <div className="flex items-center gap-2">
                         <div className={cn(
-                          "w-16 h-16 rounded-full flex items-center justify-center text-white font-bold text-[24px]",
+                          "w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-[14px]",
                           isPaid ? "bg-[#05df72]" : "bg-[#fe9a00]"
                         )}>
                           #{assignment.event_horses.number}
                         </div>
-                        <div>
-                          <h3 className="text-[24px] font-bold text-slate-900">
+                        <div className="min-w-0 flex-1">
+                          <h3 className="text-[14px] font-bold text-slate-900 truncate">
                             {assignment.event_horses.name}
                           </h3>
-                          <p className="text-[16px] text-slate-600">
-                            {assignment.event_horses.jockey || 'No jockey listed'}
+                          <p className="text-[11px] text-slate-600 truncate">
+                            {assignment.event_horses.jockey || 'No jockey'}
                           </p>
                         </div>
                       </div>
 
                       {/* Arrow */}
-                      <ArrowRight className="w-8 h-8 text-slate-400" />
+                      <ArrowRight className="w-4 h-4 text-slate-400 flex-shrink-0" />
 
                       {/* Participant Info */}
-                      <div className="text-right">
-                        <h3 className="text-[24px] font-bold text-slate-900">
+                      <div className="text-right min-w-0 flex-1">
+                        <h3 className="text-[14px] font-bold text-slate-900 truncate">
                           {assignment.patron_entries.participant_name}
                         </h3>
-                        <div className="flex items-center gap-2 justify-end mt-1">
+                        <div className="flex items-center gap-1 justify-end mt-1">
                           <div className={cn(
-                            "px-3 py-1 rounded-full flex items-center gap-1",
+                            "px-2 py-1 rounded-full flex items-center gap-1",
                             isPaid ? "bg-[#05df72]" : "bg-[#fe9a00]"
                           )}>
                             {isPaid ? (
-                              <Check className="w-4 h-4 text-white" />
+                              <Check className="w-3 h-3 text-white" />
                             ) : (
-                              <Clock className="w-4 h-4 text-white" />
+                              <Clock className="w-3 h-3 text-white" />
                             )}
-                            <span className="text-white font-bold text-[12px]">
+                            <span className="text-white font-bold text-[10px]">
                               {isPaid ? 'PAID' : 'PENDING'}
                             </span>
                           </div>
                           {placeInfo && (
                             <div className={cn(
-                              "px-3 py-1 rounded-full font-bold text-[12px]",
+                              "px-2 py-1 rounded-full font-bold text-[10px]",
                               placeInfo.color,
                               placeInfo.textColor
                             )}>
-                              {placeInfo.place} PLACE
+                              {placeInfo.place}
                             </div>
                           )}
                         </div>
