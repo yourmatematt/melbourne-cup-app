@@ -916,51 +916,30 @@ function LiveViewPage() {
   // DrawingStateView component - Exact Figma structure with comprehensive animations
   const DrawingStateView = () => {
     const recentAssignment = getMostRecentAssignment()
-    const [isSpinning, setIsSpinning] = useState(false)
+    const [isAnimating, setIsAnimating] = useState(false)
     const [showConfetti, setShowConfetti] = useState(false)
-    const [showHorseName, setShowHorseName] = useState(false)
     const [drawingTextVisible, setDrawingTextVisible] = useState(true)
 
-    // Trigger dramatic animation sequence when new assignment comes in
+    // Simplified animation trigger - let CSS handle timing
     useEffect(() => {
       if (recentAssignment && newAssignmentId === recentAssignment.id) {
-        console.log('🎭 Starting dramatic animation sequence for:', newAssignmentId)
+        console.log('🎬 Starting CSS-driven animation sequence for:', newAssignmentId)
 
-        // Reset states
+        // Single trigger for entire CSS animation sequence
+        setIsAnimating(true)
         setShowConfetti(false)
-        setShowHorseName(false)
 
-        // Step 1: Participant name appears immediately (slide-up-fade already triggered by newAssignmentId)
-
-        // Step 2: Start horse number spin after brief pause (500ms)
-        setTimeout(() => {
-          console.log('🎰 Starting horse number spin')
-          setIsSpinning(true)
-        }, 500)
-
-        // Step 3: Stop spinning after 3 seconds (3500ms total)
-        setTimeout(() => {
-          console.log('⏹️ Stopping horse number spin')
-          setIsSpinning(false)
-        }, 3500)
-
-        // Step 3.5: Show horse name after spin completes (3600ms total)
-        setTimeout(() => {
-          console.log('🐎 Revealing horse name')
-          setShowHorseName(true)
-        }, 3600)
-
-        // Step 4: Trigger confetti slightly after name appears (3800ms total)
+        // Confetti at 4s (after all reveals complete)
         setTimeout(() => {
           console.log('🎉 Confetti explosion!')
           setShowConfetti(true)
-        }, 3800)
+        }, 4000)
 
-        // Step 5: Hide confetti after celebration (7600ms total)
+        // Hide confetti at 8s
         setTimeout(() => {
           console.log('✨ Hiding confetti')
           setShowConfetti(false)
-        }, 7600)
+        }, 8000)
       }
     }, [recentAssignment, newAssignmentId])
 
@@ -1093,6 +1072,83 @@ function LiveViewPage() {
             animation: confetti-fall 3s linear infinite;
           }
 
+          /* CSS-driven animation sequence keyframes */
+          @keyframes participant-reveal {
+            0% {
+              opacity: 0;
+              transform: translateY(20px);
+            }
+            100% {
+              opacity: 1;
+              transform: translateY(0);
+            }
+          }
+
+          @keyframes card-reveal {
+            0% {
+              opacity: 0;
+              transform: translateY(20px) scale(0.95);
+            }
+            100% {
+              opacity: 1;
+              transform: translateY(0) scale(1);
+            }
+          }
+
+          @keyframes name-fade-in {
+            0% {
+              opacity: 0;
+              transform: translateY(10px);
+            }
+            100% {
+              opacity: 1;
+              transform: translateY(0);
+            }
+          }
+
+          /* CSS-driven animation classes */
+          .participant-reveal-anim {
+            opacity: 0;
+          }
+
+          .participant-reveal-anim.animate {
+            animation: participant-reveal 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+            animation-delay: 0s;
+            animation-fill-mode: forwards;
+          }
+
+          .card-reveal-anim {
+            opacity: 0;
+            transform: translateY(20px) scale(0.95);
+          }
+
+          .card-reveal-anim.animate {
+            animation: card-reveal 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+            animation-delay: 0.3s;
+            animation-fill-mode: forwards;
+          }
+
+          .spin-animation-delayed {
+            transform-style: preserve-3d;
+            perspective: 1000px;
+          }
+
+          .spin-animation-delayed.animate {
+            animation: spin-number 3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+            animation-delay: 0.8s;
+            animation-fill-mode: forwards;
+          }
+
+          .name-fade-in-anim {
+            opacity: 0;
+          }
+
+          .name-fade-in-anim.animate {
+            animation: name-fade-in 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+            animation-delay: 3.8s;
+            animation-fill-mode: forwards;
+          }
+
           .pill-hover {
             transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
           }
@@ -1182,11 +1238,12 @@ function LiveViewPage() {
               </p>
             </div>
 
-            {/* Participant Name - Animated slide up fade */}
+            {/* Participant Name - CSS-driven animation */}
             <div className="absolute h-[96px] left-[13px] top-[184px] w-[474px] flex items-center justify-center">
               <p className={cn(
                 "font-bold text-[64px] leading-[96px] text-white text-center whitespace-nowrap overflow-hidden text-ellipsis max-w-full",
-                recentAssignment && newAssignmentId === recentAssignment.id ? "slide-up-fade" : "",
+                "participant-reveal-anim",
+                isAnimating && "animate",
                 !recentAssignment && "opacity-50"
               )}>
                 {recentAssignment?.patron_entries?.participant_name?.toUpperCase() || 'NEXT PARTICIPANT'}
@@ -1204,24 +1261,23 @@ function LiveViewPage() {
               </p>
             </div>
 
-            {/* Horse Card - Slide-in animation preserved */}
+            {/* Horse Card - CSS-driven animation */}
             <div className={cn(
               "absolute h-[300px] left-[-101px] top-[432px] w-[700px]",
-              "transition-all duration-700 transform",
-              recentAssignment
-                ? "translate-y-0 opacity-100 scale-100"
-                : "translate-y-8 opacity-0 scale-95"
+              "card-reveal-anim",
+              isAnimating && "animate"
             )}>
               {recentAssignment && (
                 <div className="h-[300px] rounded-[24px] w-[700px] overflow-hidden relative">
                   <div className="absolute bg-gradient-to-b from-[#ff8a00] h-[300px] left-0 rounded-[24px] to-[#8b5cf6] top-0 via-50% via-[#ff4d8d] w-[700px] flex items-center justify-center">
                     <div className="bg-white flex flex-col gap-[16px] h-[284px] items-center justify-center rounded-[20px] w-[684px]">
-                        {/* Horse Number with gradient text and spin animation */}
+                        {/* Horse Number with gradient text and CSS-driven spin animation */}
                         <div className="h-[180px] w-[304px] flex items-center justify-center">
                           <p
                             className={cn(
                               "font-black text-[120px] leading-[180px]",
-                              isSpinning ? "spin-animation" : ""
+                              "spin-animation-delayed",
+                              isAnimating && "animate"
                             )}
                             style={{
                               background: 'linear-gradient(90deg, #ff8a00 0%, #ff4d8d 50%, #8b5cf6 100%)',
@@ -1233,11 +1289,12 @@ function LiveViewPage() {
                             #{recentAssignment.event_horses?.number || '--'}
                           </p>
                         </div>
-                        {/* Horse Name */}
+                        {/* Horse Name - CSS-driven animation */}
                         <div className="h-[54px] w-[600px] flex items-center justify-center">
                           <p className={cn(
-                            "text-[36px] leading-[54px] text-slate-600 text-center whitespace-nowrap overflow-hidden text-ellipsis max-w-full transition-all duration-500",
-                            showHorseName ? "opacity-100 slide-up-fade" : "opacity-0"
+                            "text-[36px] leading-[54px] text-slate-600 text-center whitespace-nowrap overflow-hidden text-ellipsis max-w-full",
+                            "name-fade-in-anim",
+                            isAnimating && "animate"
                           )}>
                             {recentAssignment.event_horses?.name?.toUpperCase() || 'HORSE NAME'}
                           </p>
