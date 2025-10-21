@@ -918,6 +918,7 @@ function LiveViewPage() {
     const recentAssignment = getMostRecentAssignment()
     const [isSpinning, setIsSpinning] = useState(false)
     const [showConfetti, setShowConfetti] = useState(false)
+    const [showHorseName, setShowHorseName] = useState(false)
     const [drawingTextVisible, setDrawingTextVisible] = useState(true)
 
     // Trigger dramatic animation sequence when new assignment comes in
@@ -925,8 +926,9 @@ function LiveViewPage() {
       if (recentAssignment && newAssignmentId === recentAssignment.id) {
         console.log('🎭 Starting dramatic animation sequence for:', newAssignmentId)
 
-        // Reset confetti state
+        // Reset states
         setShowConfetti(false)
+        setShowHorseName(false)
 
         // Step 1: Participant name appears immediately (slide-up-fade already triggered by newAssignmentId)
 
@@ -942,11 +944,17 @@ function LiveViewPage() {
           setIsSpinning(false)
         }, 3500)
 
-        // Step 4: Trigger confetti when spin completes (3600ms total)
+        // Step 3.5: Show horse name after spin completes (3600ms total)
+        setTimeout(() => {
+          console.log('🐎 Revealing horse name')
+          setShowHorseName(true)
+        }, 3600)
+
+        // Step 4: Trigger confetti slightly after name appears (3800ms total)
         setTimeout(() => {
           console.log('🎉 Confetti explosion!')
           setShowConfetti(true)
-        }, 3600)
+        }, 3800)
 
         // Step 5: Hide confetti after celebration (7600ms total)
         setTimeout(() => {
@@ -1198,16 +1206,16 @@ function LiveViewPage() {
 
             {/* Horse Card - Slide-in animation preserved */}
             <div className={cn(
-              "absolute h-[300px] left-[-1px] top-[432px] w-[500px]",
+              "absolute h-[300px] left-[-101px] top-[432px] w-[700px]",
               "transition-all duration-700 transform",
               recentAssignment
                 ? "translate-y-0 opacity-100 scale-100"
                 : "translate-y-8 opacity-0 scale-95"
             )}>
               {recentAssignment && (
-                <div className="h-[300px] rounded-[24px] w-[500px] overflow-hidden relative">
-                  <div className="absolute bg-gradient-to-b from-[#ff8a00] h-[300px] left-0 rounded-[24px] to-[#8b5cf6] top-0 via-50% via-[#ff4d8d] w-[500px] flex items-center justify-center">
-                    <div className="bg-white flex flex-col gap-[16px] h-[284px] items-center justify-center rounded-[20px] w-[484px]">
+                <div className="h-[300px] rounded-[24px] w-[700px] overflow-hidden relative">
+                  <div className="absolute bg-gradient-to-b from-[#ff8a00] h-[300px] left-0 rounded-[24px] to-[#8b5cf6] top-0 via-50% via-[#ff4d8d] w-[700px] flex items-center justify-center">
+                    <div className="bg-white flex flex-col gap-[16px] h-[284px] items-center justify-center rounded-[20px] w-[684px]">
                         {/* Horse Number with gradient text and spin animation */}
                         <div className="h-[180px] w-[304px] flex items-center justify-center">
                           <p
@@ -1226,8 +1234,11 @@ function LiveViewPage() {
                           </p>
                         </div>
                         {/* Horse Name */}
-                        <div className="h-[54px] w-[304px]">
-                          <p className="text-[36px] leading-[54px] text-slate-600 text-center">
+                        <div className="h-[54px] w-[600px] flex items-center justify-center">
+                          <p className={cn(
+                            "text-[36px] leading-[54px] text-slate-600 text-center whitespace-nowrap overflow-hidden text-ellipsis max-w-full transition-all duration-500",
+                            showHorseName ? "opacity-100 slide-up-fade" : "opacity-0"
+                          )}>
                             {recentAssignment.event_horses?.name?.toUpperCase() || 'HORSE NAME'}
                           </p>
                         </div>
