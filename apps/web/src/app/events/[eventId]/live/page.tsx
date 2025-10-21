@@ -1025,7 +1025,7 @@ function LiveViewPage() {
 
           @keyframes confetti-fall {
             0% {
-              transform: translateY(-100vh) rotate(0deg);
+              transform: translateY(-89vh) rotate(0deg);
               opacity: 1;
             }
             100% {
