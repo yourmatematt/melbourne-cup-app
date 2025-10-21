@@ -920,82 +920,19 @@ function LiveViewPage() {
     const [showConfetti, setShowConfetti] = useState(false)
     const [drawingTextVisible, setDrawingTextVisible] = useState(true)
 
-    // New animation states for 11-second sequence
-    const [showDrawingIndicator, setShowDrawingIndicator] = useState(false)
-    const [showPlaceholder, setShowPlaceholder] = useState(false)
-    const [showHorseName, setShowHorseName] = useState(false)
-    const [showParticipantName, setShowParticipantName] = useState(false)
-    const [showHorseCard, setShowHorseCard] = useState(false)
-    const [currentSequenceId, setCurrentSequenceId] = useState<string | null>(null)
-
-    // 11-second orchestrated animation sequence
+    // Trigger spin animation when new assignment comes in
     useEffect(() => {
-      if (!recentAssignment || !newAssignmentId || newAssignmentId === currentSequenceId) return
-
-      console.log('🎬 Starting 11-second dramatic sequence for:', newAssignmentId)
-      setCurrentSequenceId(newAssignmentId)
-
-      // T+0.0s: Draw triggered - Clear previous display
-      setShowParticipantName(false)
-      setShowHorseCard(false)
-      setShowHorseName(false)
-      setShowPlaceholder(false)
-      setIsSpinning(false)
-      setShowConfetti(false)
-      setShowDrawingIndicator(false)
-
-      // T+1.0s: Show "DRAWING..." indicator
-      setTimeout(() => {
-        console.log('T+1.0s: Showing DRAWING indicator')
-        setShowDrawingIndicator(true)
-      }, 1000)
-
-      // T+3.0s: Participant name slides up, show "?" placeholder
-      setTimeout(() => {
-        console.log('T+3.0s: Revealing participant name and ? placeholder')
-        setShowParticipantName(true)
-        setShowHorseCard(true)
-        setShowPlaceholder(true)
-      }, 3000)
-
-      // T+4.0s: Transform "?" to number, start spin
-      setTimeout(() => {
-        console.log('T+4.0s: Starting horse number spin')
-        setShowPlaceholder(false)
+      if (recentAssignment && newAssignmentId === recentAssignment.id) {
         setIsSpinning(true)
-      }, 4000)
-
-      // T+7.0s: Complete spin reveal
-      setTimeout(() => {
-        console.log('T+7.0s: Completing spin')
-        setIsSpinning(false)
-      }, 7000)
-
-      // T+7.5s: Show horse name
-      setTimeout(() => {
-        console.log('T+7.5s: Revealing horse name')
-        setShowHorseName(true)
-      }, 7500)
-
-      // T+7.7s: Change back to "✓ DRAWN!"
-      setTimeout(() => {
-        console.log('T+7.7s: Showing DRAWN confirmation')
-        setShowDrawingIndicator(false)
-      }, 7700)
-
-      // T+7.9s: Trigger confetti
-      setTimeout(() => {
-        console.log('T+7.9s: Confetti explosion!')
         setShowConfetti(true)
-      }, 7900)
 
-      // T+11.0s: Hide confetti (3.1s after trigger)
-      setTimeout(() => {
-        console.log('T+11.0s: Sequence complete')
-        setShowConfetti(false)
-      }, 11000)
+        // Stop spinning after animation completes
+        setTimeout(() => setIsSpinning(false), 3000)
 
-    }, [recentAssignment, newAssignmentId, currentSequenceId])
+        // Hide confetti after celebration
+        setTimeout(() => setShowConfetti(false), 4000)
+      }
+    }, [recentAssignment, newAssignmentId])
 
     // Animate drawing text
     useEffect(() => {
@@ -1134,25 +1071,6 @@ function LiveViewPage() {
             transform: scale(1.05) translateY(-2px);
             box-shadow: 0px 15px 25px -5px rgba(0,0,0,0.2);
           }
-
-          @keyframes pulse-glow {
-            0% {
-              transform: scale(1);
-              filter: brightness(1);
-            }
-            50% {
-              transform: scale(1.1);
-              filter: brightness(1.3);
-            }
-            100% {
-              transform: scale(1);
-              filter: brightness(1);
-            }
-          }
-
-          .pulse-glow {
-            animation: pulse-glow 1.5s ease-in-out infinite;
-          }
         `}</style>
 
         {/* Header - Exact Figma structure */}
@@ -1237,24 +1155,22 @@ function LiveViewPage() {
             {/* Participant Name - Animated slide up fade */}
             <div className="absolute h-[96px] left-[13px] top-[184px] w-[474px] flex items-center justify-center">
               <p className={cn(
-                "font-bold text-[64px] leading-[96px] text-white text-center whitespace-nowrap overflow-hidden text-ellipsis max-w-full transition-all duration-500",
-                showParticipantName ? "slide-up-fade opacity-100" : "opacity-0",
+                "font-bold text-[64px] leading-[96px] text-white text-center whitespace-nowrap overflow-hidden text-ellipsis max-w-full",
+                recentAssignment && newAssignmentId === recentAssignment.id ? "slide-up-fade" : "",
                 !recentAssignment && "opacity-50"
               )}>
                 {recentAssignment?.patron_entries?.participant_name?.toUpperCase() || 'NEXT PARTICIPANT'}
               </p>
             </div>
 
-            {/* Status - ✓ DRAWN! / DRAWING... with color transition */}
+            {/* Status - ✓ DRAWN! with color transition */}
             <div className="absolute h-[72px] left-[125px] top-[320px] w-[250px]">
               <p className={cn(
                 "font-bold text-[48px] leading-[72px]",
                 "transition-all duration-300",
-                showDrawingIndicator ? "text-gray-400 scale-100" :
                 recentAssignment ? "text-[#05df72] scale-110" : "text-gray-400 opacity-50"
               )}>
-                {showDrawingIndicator ? 'DRAWING...' :
-                 recentAssignment ? '✓ DRAWN!' : 'WAITING...'}
+                {recentAssignment ? '✓ DRAWN!' : 'WAITING...'}
               </p>
             </div>
 
@@ -1262,21 +1178,20 @@ function LiveViewPage() {
             <div className={cn(
               "absolute h-[300px] left-[-1px] top-[432px] w-[500px]",
               "transition-all duration-700 transform",
-              showHorseCard
+              recentAssignment
                 ? "translate-y-0 opacity-100 scale-100"
                 : "translate-y-8 opacity-0 scale-95"
             )}>
-              {showHorseCard && recentAssignment && (
+              {recentAssignment && (
                 <div className="h-[300px] rounded-[24px] w-[500px] overflow-hidden relative">
                   <div className="absolute bg-gradient-to-b from-[#ff8a00] h-[300px] left-0 rounded-[24px] to-[#8b5cf6] top-0 via-50% via-[#ff4d8d] w-[500px] flex items-center justify-center">
                     <div className="bg-white flex flex-col gap-[16px] h-[284px] items-center justify-center rounded-[20px] w-[484px]">
-                        {/* Horse Number with gradient text, spin animation, and placeholder */}
+                        {/* Horse Number with gradient text and spin animation */}
                         <div className="h-[180px] w-[304px] flex items-center justify-center">
                           <p
                             className={cn(
                               "font-black text-[120px] leading-[180px]",
-                              isSpinning ? "spin-animation" : "",
-                              showPlaceholder ? "pulse-glow" : ""
+                              isSpinning ? "spin-animation" : ""
                             )}
                             style={{
                               background: 'linear-gradient(90deg, #ff8a00 0%, #ff4d8d 50%, #8b5cf6 100%)',
@@ -1285,15 +1200,12 @@ function LiveViewPage() {
                               backgroundClip: 'text'
                             }}
                           >
-                            {showPlaceholder ? '?' : `#${recentAssignment.event_horses?.number || '--'}`}
+                            #{recentAssignment.event_horses?.number || '--'}
                           </p>
                         </div>
                         {/* Horse Name */}
                         <div className="h-[54px] w-[304px]">
-                          <p className={cn(
-                            "text-[36px] leading-[54px] text-slate-600 text-center transition-all duration-500",
-                            showHorseName ? "opacity-100 slide-up-fade" : "opacity-0"
-                          )}>
+                          <p className="text-[36px] leading-[54px] text-slate-600 text-center">
                             {recentAssignment.event_horses?.name?.toUpperCase() || 'HORSE NAME'}
                           </p>
                         </div>
