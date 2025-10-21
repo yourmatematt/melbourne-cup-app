@@ -942,10 +942,18 @@ function LiveViewPage() {
     useEffect(() => {
       if (recentAssignment && newAssignmentId === recentAssignment.id) {
         console.log('🎬 New draw triggered, starting animation sequence')
-        setAnimationStep(STEPS.REMOVE_PARTICIPANT) // Start the sequence
         setShowConfetti(false) // Reset confetti
+
+        // Handle edge case: first draw (no previous assignment to remove)
+        if (assignments.length === 1) {
+          console.log('🔄 First draw detected, skipping removal steps')
+          setAnimationStep(STEPS.REVEAL_PARTICIPANT) // Skip directly to reveal
+        } else {
+          console.log('🗑️ Previous assignment exists, starting with removal')
+          setAnimationStep(STEPS.REMOVE_PARTICIPANT) // Start with removal sequence
+        }
       }
-    }, [recentAssignment, newAssignmentId])
+    }, [recentAssignment, newAssignmentId, assignments.length])
 
     // When sequence completes, return to idle
     useEffect(() => {
@@ -1077,6 +1085,17 @@ function LiveViewPage() {
             }
           }
 
+          @keyframes fade-out {
+            0% {
+              opacity: 1;
+              transform: translateY(0);
+            }
+            100% {
+              opacity: 0;
+              transform: translateY(-10px);
+            }
+          }
+
           .scroll-container {
             animation: scroll-left 20s linear infinite;
           }
@@ -1191,6 +1210,10 @@ function LiveViewPage() {
             transform: scale(1.05) translateY(-2px);
             box-shadow: 0px 15px 25px -5px rgba(0,0,0,0.2);
           }
+
+          .remove-anim {
+            animation: fade-out 0.3s ease-out forwards;
+          }
         `}</style>
 
         {/* Header - Exact Figma structure */}
@@ -1274,12 +1297,20 @@ function LiveViewPage() {
 
             {/* Participant Name - CSS-driven animation */}
             <div className="absolute h-[96px] left-[13px] top-[184px] w-[474px] flex items-center justify-center">
-              <p className={cn(
-                "font-bold text-[64px] leading-[96px] text-white text-center whitespace-nowrap overflow-hidden text-ellipsis max-w-full",
-                recentAssignment && "opacity-100", // Visible when assignment exists
-                // TODO: Replace with animationStep logic in next implementation
-                !recentAssignment && "opacity-50"
-              )}>
+              <p
+                className={cn(
+                  "font-bold text-[64px] leading-[96px] text-white text-center whitespace-nowrap overflow-hidden text-ellipsis max-w-full",
+                  recentAssignment && "opacity-100", // Visible when assignment exists
+                  animationStep === STEPS.REMOVE_PARTICIPANT && "remove-anim", // Step 1: Remove participant
+                  !recentAssignment && "opacity-50"
+                )}
+                onAnimationEnd={(e) => {
+                  if (animationStep === STEPS.REMOVE_PARTICIPANT && e.animationName === 'fade-out') {
+                    console.log('Step 1 complete: Participant removed')
+                    setAnimationStep(STEPS.REMOVE_NUMBER)
+                  }
+                }}
+              >
                 {recentAssignment?.patron_entries?.participant_name?.toUpperCase() || 'NEXT PARTICIPANT'}
               </p>
             </div>
@@ -1311,7 +1342,7 @@ function LiveViewPage() {
                             className={cn(
                               "font-black text-[120px] leading-[180px]",
                               recentAssignment && "opacity-100", // Visible when assignment exists
-                              // TODO: Replace with animationStep logic in next implementation
+                              animationStep === STEPS.REMOVE_NUMBER && "remove-anim", // Step 2: Remove horse number
                             )}
                             style={{
                               background: 'linear-gradient(90deg, #ff8a00 0%, #ff4d8d 50%, #8b5cf6 100%)',
@@ -1319,17 +1350,31 @@ function LiveViewPage() {
                               WebkitTextFillColor: 'transparent',
                               backgroundClip: 'text'
                             }}
+                            onAnimationEnd={(e) => {
+                              if (animationStep === STEPS.REMOVE_NUMBER && e.animationName === 'fade-out') {
+                                console.log('Step 2 complete: Horse number removed')
+                                setAnimationStep(STEPS.REMOVE_HORSE_NAME)
+                              }
+                            }}
                           >
                             #{recentAssignment.event_horses?.number || '--'}
                           </p>
                         </div>
                         {/* Horse Name - CSS-driven animation */}
                         <div className="h-[54px] w-[600px] flex items-center justify-center">
-                          <p className={cn(
-                            "text-[36px] leading-[54px] text-slate-600 text-center whitespace-nowrap overflow-hidden text-ellipsis max-w-full",
-                            recentAssignment && "opacity-100", // Visible when assignment exists
-                            // TODO: Replace with animationStep logic in next implementation
-                          )}>
+                          <p
+                            className={cn(
+                              "text-[36px] leading-[54px] text-slate-600 text-center whitespace-nowrap overflow-hidden text-ellipsis max-w-full",
+                              recentAssignment && "opacity-100", // Visible when assignment exists
+                              animationStep === STEPS.REMOVE_HORSE_NAME && "remove-anim", // Step 3: Remove horse name
+                            )}
+                            onAnimationEnd={(e) => {
+                              if (animationStep === STEPS.REMOVE_HORSE_NAME && e.animationName === 'fade-out') {
+                                console.log('Step 3 complete: Horse name removed')
+                                setAnimationStep(STEPS.SHOW_DRAWING)
+                              }
+                            }}
+                          >
                             {recentAssignment.event_horses?.name?.toUpperCase() || 'HORSE NAME'}
                           </p>
                         </div>
